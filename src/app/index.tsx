@@ -4,6 +4,7 @@ import { Redirect } from "expo-router";
 
 import { supabase } from "@/lib/supabase/client";
 import { useAuthStore } from "@/stores/auth-store";
+import { useAppStore } from "@/stores/app-store";
 import { useSecurityStore } from "@/stores/security-store";
 
 export default function Index() {
@@ -12,6 +13,15 @@ export default function Index() {
   const isReady = useAuthStore((state) => state.isReady);
   const status = useAuthStore((state) => state.status);
   const user = useAuthStore((state) => state.user);
+  const error = useAppStore((state) => state.error);
+  const hasCompletedOnboarding = useAppStore(
+    (state) => state.hasCompletedOnboarding,
+  );
+  const isAppLoading = useAppStore((state) => state.isLoading);
+  const isAppReady = useAppStore((state) => state.isReady);
+  const selectedWalletId = useAppStore((state) => state.selectedWalletId);
+  const settings = useAppStore((state) => state.settings);
+  const wallets = useAppStore((state) => state.wallets);
   const isSecurityLoaded = useSecurityStore((state) => state.isLoaded);
   const pinStatus = useSecurityStore((state) => state.pinStatus);
 
@@ -19,7 +29,7 @@ export default function Index() {
     return (
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.container}>
-          <Text style={styles.loadingText}>Restaurando sesión...</Text>
+          <Text style={styles.loadingText}>Restaurando sesion...</Text>
         </View>
       </SafeAreaView>
     );
@@ -56,10 +66,9 @@ export default function Index() {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <View style={styles.card}>
-          <Text style={styles.title}>Sesión activa</Text>
+          <Text style={styles.title}>Dominio base listo</Text>
           <Text style={styles.subtitle}>
-            La autenticación y el PIN local ya están conectados. El siguiente
-            paso es construir wallets y settings de dominio.
+            Wallets y settings ya se cargan como capa de dominio compartida.
           </Text>
 
           <View style={styles.userBlock}>
@@ -67,10 +76,45 @@ export default function Index() {
             <Text style={styles.userValue}>{user?.email ?? "Sin email"}</Text>
             {isDevBypass ? (
               <Text style={styles.devHint}>
-                Sesión simulada solo para desarrollo
+                Sesion simulada solo para desarrollo
               </Text>
             ) : null}
           </View>
+
+          <View style={styles.infoPanel}>
+            <Text style={styles.infoTitle}>Estado de app</Text>
+            <Text style={styles.infoValue}>
+              {isAppLoading
+                ? "Cargando datos..."
+                : isAppReady
+                  ? "Datos cargados"
+                  : "Pendiente"}
+            </Text>
+            <Text style={styles.infoMeta}>
+              Onboarding completo: {hasCompletedOnboarding ? "si" : "no"}
+            </Text>
+            <Text style={styles.infoMeta}>Wallets: {wallets.length}</Text>
+            <Text style={styles.infoMeta}>
+              Wallet activa: {selectedWalletId ?? "ninguna"}
+            </Text>
+            <Text style={styles.infoMeta}>
+              Meta de ahorro: {settings?.savingsGoalPercent ?? "--"}%
+            </Text>
+            <Text style={styles.infoMeta}>
+              Moneda principal: {settings?.primaryCurrency ?? "--"}
+            </Text>
+          </View>
+
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+          {!wallets.length ? (
+            <View style={styles.emptyBlock}>
+              <Text style={styles.emptyTitle}>Sin wallets todavia</Text>
+              <Text style={styles.emptyText}>
+                La siguiente fase montara onboarding y creacion del primer wallet.
+              </Text>
+            </View>
+          ) : null}
 
           <Pressable
             onPress={() => {
@@ -81,7 +125,7 @@ export default function Index() {
               pressed && styles.buttonPressed,
             ]}
           >
-            <Text style={styles.buttonText}>Cerrar sesión</Text>
+            <Text style={styles.buttonText}>Cerrar sesion</Text>
           </Pressable>
         </View>
       </View>
@@ -102,13 +146,13 @@ const styles = StyleSheet.create({
   },
   card: {
     width: "100%",
-    maxWidth: 420,
+    maxWidth: 460,
     borderRadius: 24,
     borderWidth: 1,
     borderColor: "rgba(99, 102, 241, 0.2)",
     backgroundColor: "#11182D",
     padding: 24,
-    gap: 20,
+    gap: 18,
   },
   title: {
     color: "#F8FAFC",
@@ -140,6 +184,50 @@ const styles = StyleSheet.create({
     color: "#C7D2FE",
     fontSize: 12,
     fontWeight: "600",
+  },
+  infoPanel: {
+    borderRadius: 16,
+    backgroundColor: "#0B1222",
+    padding: 16,
+    gap: 6,
+  },
+  infoTitle: {
+    color: "#E2E8F0",
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  infoValue: {
+    color: "#F8FAFC",
+    fontSize: 18,
+    fontWeight: "800",
+  },
+  infoMeta: {
+    color: "#94A3B8",
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  emptyBlock: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(99, 102, 241, 0.2)",
+    backgroundColor: "rgba(37, 99, 235, 0.08)",
+    padding: 16,
+    gap: 8,
+  },
+  emptyTitle: {
+    color: "#E2E8F0",
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  emptyText: {
+    color: "#CBD5E1",
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  errorText: {
+    color: "#FCA5A5",
+    fontSize: 13,
+    lineHeight: 20,
   },
   loadingText: {
     color: "#E2E8F0",
