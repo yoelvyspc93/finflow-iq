@@ -1,6 +1,6 @@
 import "./load-env.mjs";
 
-import { spawnSync } from "node:child_process";
+import { execSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -11,37 +11,41 @@ if (!projectId) {
   process.exit(1);
 }
 
-const npxCommand = "npx";
-const result = spawnSync(
-  npxCommand,
-  [
-    "supabase",
-    "gen",
-    "types",
-    "typescript",
-    "--project-id",
-    projectId,
-    "--schema",
-    "public",
-  ],
-  {
+const command = [
+  "npx",
+  "supabase",
+  "gen",
+  "types",
+  "typescript",
+  "--project-id",
+  projectId,
+  "--schema",
+  "public",
+].join(" ");
+
+let stdout = "";
+
+try {
+  stdout = execSync(command, {
     cwd: process.cwd(),
     encoding: "utf8",
+    maxBuffer: 10 * 1024 * 1024,
     shell: true,
     stdio: ["inherit", "pipe", "inherit"],
-  },
-);
-
-if (result.error) {
-  console.error(result.error.message);
+    windowsHide: true,
+  });
+} catch (error) {
+  if (error instanceof Error) {
+    console.error(error.message);
+  }
   process.exit(1);
 }
 
-if (result.status !== 0 || !result.stdout) {
-  process.exit(result.status ?? 1);
+if (!stdout) {
+  process.exit(1);
 }
 
 const targetPath = resolve(process.cwd(), "src/types/supabase.ts");
-writeFileSync(targetPath, result.stdout);
+writeFileSync(targetPath, stdout);
 
 console.log(`Wrote remote database types to ${targetPath}`);
