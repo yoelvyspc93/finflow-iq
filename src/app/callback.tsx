@@ -1,0 +1,70 @@
+import { SafeAreaView, StyleSheet, Text, View } from "react-native";
+
+import { Link, Redirect } from "expo-router";
+
+import { useAuthStore } from "@/stores/auth-store";
+
+export default function CallbackScreen() {
+  const error = useAuthStore((state) => state.error);
+  const isReady = useAuthStore((state) => state.isReady);
+  const status = useAuthStore((state) => state.status);
+
+  if (isReady && status === "authenticated") {
+    return <Redirect href="/" />;
+  }
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <Text style={styles.title}>Procesando acceso</Text>
+        <Text style={styles.subtitle}>
+          Estamos validando el enlace mágico y restaurando tu sesión.
+        </Text>
+
+        {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+        {isReady && status === "unauthenticated" ? (
+          <Link href="/login" style={styles.link}>
+            Volver al login
+          </Link>
+        ) : null}
+      </View>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#090D1A",
+  },
+  container: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+    gap: 12,
+  },
+  title: {
+    color: "#F8FAFC",
+    fontSize: 28,
+    fontWeight: "800",
+  },
+  subtitle: {
+    color: "#94A3B8",
+    fontSize: 15,
+    textAlign: "center",
+    lineHeight: 22,
+  },
+  errorText: {
+    color: "#FCA5A5",
+    fontSize: 14,
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  link: {
+    color: "#7C8CFF",
+    fontSize: 15,
+    fontWeight: "700",
+  },
+});
