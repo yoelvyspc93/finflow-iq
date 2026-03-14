@@ -40,3 +40,28 @@ export function mapWallet(row: WalletRow): Wallet {
     userId: row.user_id,
   };
 }
+
+export function createMockWallet(input: {
+  color?: string | null;
+  currency: string;
+  icon?: string | null;
+  name: string;
+  position?: number;
+  userId: string;
+}): Wallet {
+  const now = new Date().toISOString();
+
+  return {
+    balance: 0,
+    color: input.color ?? null,
+    createdAt: now,
+    currency: input.currency,
+    icon: input.icon ?? null,
+    id: "dev-wallet-primary",
+    isActive: true,
+    name: input.name.trim(),
+    position: input.position ?? 0,
+    updatedAt: now,
+    userId: input.userId,
+  };
+}

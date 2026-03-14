@@ -5,7 +5,13 @@ import { createMockSettings, type AppSettings } from "@/modules/settings/types";
 import { listWallets } from "@/modules/wallets/service";
 import type { Wallet } from "@/modules/wallets/types";
 
+type LocalAppDataInput = {
+  settings: AppSettings;
+  wallets: Wallet[];
+};
+
 type AppStore = {
+  applyLocalAppData: (input: LocalAppDataInput) => void;
   error: string | null;
   hasCompletedOnboarding: boolean;
   isLoading: boolean;
@@ -37,22 +43,39 @@ function resolveSelectedWalletId(wallets: Wallet[], current: string | null) {
   return activeWallet?.id ?? wallets[0]?.id ?? null;
 }
 
+function buildStateFromData(
+  input: LocalAppDataInput,
+  currentSelectedWalletId: string | null,
+) {
+  return {
+    error: null,
+    hasCompletedOnboarding: input.wallets.length > 0,
+    isLoading: false,
+    isReady: true,
+    selectedWalletId: resolveSelectedWalletId(
+      input.wallets,
+      currentSelectedWalletId,
+    ),
+    settings: input.settings,
+    wallets: input.wallets,
+  };
+}
+
 export const useAppStore = create<AppStore>((set, get) => ({
   ...initialState,
+  applyLocalAppData: (input) =>
+    set((state) => buildStateFromData(input, state.selectedWalletId)),
   refreshAppData: async ({ isDevBypass, userId }) => {
     set({ error: null, isLoading: true });
 
     try {
       if (isDevBypass) {
-        set({
-          error: null,
-          hasCompletedOnboarding: false,
-          isLoading: false,
-          isReady: true,
-          selectedWalletId: null,
-          settings: createMockSettings(userId),
-          wallets: [],
-        });
+        const wallets = get().wallets;
+        const settings = get().settings ?? createMockSettings(userId);
+
+        set((state) =>
+          buildStateFromData({ settings, wallets }, state.selectedWalletId),
+        );
         return;
       }
 
@@ -61,20 +84,15 @@ export const useAppStore = create<AppStore>((set, get) => ({
         listWallets({ userId }),
       ]);
 
-      const selectedWalletId = resolveSelectedWalletId(
-        wallets,
-        get().selectedWalletId,
+      set((state) =>
+        buildStateFromData(
+          {
+            settings: settings ?? createMockSettings(userId),
+            wallets,
+          },
+          state.selectedWalletId,
+        ),
       );
-
-      set({
-        error: null,
-        hasCompletedOnboarding: Boolean(settings) && wallets.length > 0,
-        isLoading: false,
-        isReady: true,
-        selectedWalletId,
-        settings,
-        wallets,
-      });
     } catch (error) {
       set({
         error:
