@@ -68,6 +68,208 @@ export type Database = {
         }
         Relationships: []
       }
+      ledger_entries: {
+        Row: {
+          amount: number
+          category_id: string | null
+          created_at: string
+          date: string
+          description: string | null
+          id: string
+          income_source_id: string | null
+          type: string
+          user_id: string
+          wallet_id: string
+        }
+        Insert: {
+          amount: number
+          category_id?: string | null
+          created_at?: string
+          date: string
+          description?: string | null
+          id?: string
+          income_source_id?: string | null
+          type: string
+          user_id: string
+          wallet_id: string
+        }
+        Update: {
+          amount?: number
+          category_id?: string | null
+          created_at?: string
+          date?: string
+          description?: string | null
+          id?: string
+          income_source_id?: string | null
+          type?: string
+          user_id?: string
+          wallet_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ledger_entries_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ledger_entries_income_source_id_fkey"
+            columns: ["income_source_id"]
+            isOneToOne: false
+            referencedRelation: "income_sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ledger_entries_wallet_id_fkey"
+            columns: ["wallet_id"]
+            isOneToOne: false
+            referencedRelation: "wallets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      salary_allocations: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          salary_payment_id: string
+          salary_period_id: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          salary_payment_id: string
+          salary_period_id: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          salary_payment_id?: string
+          salary_period_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "salary_allocations_salary_payment_id_fkey"
+            columns: ["salary_payment_id"]
+            isOneToOne: false
+            referencedRelation: "salary_payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_allocations_salary_period_id_fkey"
+            columns: ["salary_period_id"]
+            isOneToOne: false
+            referencedRelation: "salary_periods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      salary_payments: {
+        Row: {
+          allocated_amount: number
+          created_at: string
+          currency: string
+          description: string | null
+          gross_amount: number
+          id: string
+          ledger_entry_id: string
+          payment_date: string
+          status: string
+          updated_at: string
+          user_id: string
+          wallet_id: string
+        }
+        Insert: {
+          allocated_amount?: number
+          created_at?: string
+          currency: string
+          description?: string | null
+          gross_amount: number
+          id?: string
+          ledger_entry_id: string
+          payment_date: string
+          status?: string
+          updated_at?: string
+          user_id: string
+          wallet_id: string
+        }
+        Update: {
+          allocated_amount?: number
+          created_at?: string
+          currency?: string
+          description?: string | null
+          gross_amount?: number
+          id?: string
+          ledger_entry_id?: string
+          payment_date?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+          wallet_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "salary_payments_ledger_entry_id_fkey"
+            columns: ["ledger_entry_id"]
+            isOneToOne: true
+            referencedRelation: "ledger_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_payments_wallet_id_fkey"
+            columns: ["wallet_id"]
+            isOneToOne: false
+            referencedRelation: "wallets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      salary_periods: {
+        Row: {
+          covered_amount: number
+          created_at: string
+          currency: string
+          expected_amount: number
+          id: string
+          notes: string | null
+          period_month: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          covered_amount?: number
+          created_at?: string
+          currency: string
+          expected_amount: number
+          id?: string
+          notes?: string | null
+          period_month: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          covered_amount?: number
+          created_at?: string
+          currency?: string
+          expected_amount?: number
+          id?: string
+          notes?: string | null
+          period_month?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       settings: {
         Row: {
           ai_analysis_frequency: string
@@ -175,6 +377,160 @@ export type Database = {
       bootstrap_user_defaults: {
         Args: { target_user_id: string }
         Returns: undefined
+      }
+      create_adjustment: {
+        Args: {
+          entry_date: string
+          entry_description?: string
+          signed_amount: number
+          target_wallet_id: string
+        }
+        Returns: {
+          amount: number
+          category_id: string | null
+          created_at: string
+          date: string
+          description: string | null
+          id: string
+          income_source_id: string | null
+          type: string
+          user_id: string
+          wallet_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "ledger_entries"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_expense: {
+        Args: {
+          entry_date: string
+          entry_description?: string
+          gross_amount: number
+          target_category_id?: string
+          target_wallet_id: string
+        }
+        Returns: {
+          amount: number
+          category_id: string | null
+          created_at: string
+          date: string
+          description: string | null
+          id: string
+          income_source_id: string | null
+          type: string
+          user_id: string
+          wallet_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "ledger_entries"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_manual_income: {
+        Args: {
+          entry_date: string
+          entry_description?: string
+          gross_amount: number
+          target_income_source_id?: string
+          target_wallet_id: string
+        }
+        Returns: {
+          amount: number
+          category_id: string | null
+          created_at: string
+          date: string
+          description: string | null
+          id: string
+          income_source_id: string | null
+          type: string
+          user_id: string
+          wallet_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "ledger_entries"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_salary_period: {
+        Args: {
+          expected_salary_amount: number
+          target_currency: string
+          target_notes?: string
+          target_period_month: string
+        }
+        Returns: {
+          covered_amount: number
+          created_at: string
+          currency: string
+          expected_amount: number
+          id: string
+          notes: string | null
+          period_month: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "salary_periods"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      reconcile_wallet_balance: {
+        Args: { target_wallet_id: string }
+        Returns: {
+          corrected: boolean
+          previous_balance: number
+          recalculated_balance: number
+          wallet_id: string
+        }[]
+      }
+      refresh_salary_payment_snapshot: {
+        Args: { target_salary_payment_id: string }
+        Returns: undefined
+      }
+      refresh_salary_period_snapshot: {
+        Args: { target_salary_period_id: string }
+        Returns: undefined
+      }
+      register_salary_payment: {
+        Args: {
+          allocation_amounts?: number[]
+          allocation_period_ids?: string[]
+          payment_amount: number
+          payment_currency: string
+          payment_description?: string
+          target_payment_date: string
+          target_wallet_id: string
+        }
+        Returns: {
+          allocated_amount: number
+          created_at: string
+          currency: string
+          description: string | null
+          gross_amount: number
+          id: string
+          ledger_entry_id: string
+          payment_date: string
+          status: string
+          updated_at: string
+          user_id: string
+          wallet_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "salary_payments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
     }
     Enums: {

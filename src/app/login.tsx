@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -14,6 +14,7 @@ import { Redirect } from "expo-router";
 import { sendMagicLink } from "@/lib/auth/session";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 import { useAuthStore } from "@/stores/auth-store";
+import { useSecurityStore } from "@/stores/security-store";
 
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
@@ -23,23 +24,65 @@ export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [remainingSeconds, setRemainingSeconds] = useState(0);
 
   const authError = useAuthStore((state) => state.error);
+  const enableDevBypass = useAuthStore((state) => state.enableDevBypass);
   const isReady = useAuthStore((state) => state.isReady);
   const lastMagicLinkEmail = useAuthStore((state) => state.lastMagicLinkEmail);
+  const magicLinkCooldownUntil = useAuthStore(
+    (state) => state.magicLinkCooldownUntil,
+  );
   const setError = useAuthStore((state) => state.setError);
   const setLastMagicLinkEmail = useAuthStore(
     (state) => state.setLastMagicLinkEmail,
   );
+  const setMagicLinkCooldownUntil = useAuthStore(
+    (state) => state.setMagicLinkCooldownUntil,
+  );
   const status = useAuthStore((state) => state.status);
+  const pinStatus = useSecurityStore((state) => state.pinStatus);
+
+  const isDevBypassEnabled = __DEV__;
 
   const canSubmit = useMemo(
-    () => isSupabaseConfigured && isValidEmail(email) && !isSubmitting,
-    [email, isSubmitting],
+    () =>
+      isSupabaseConfigured &&
+      isValidEmail(email) &&
+      !isSubmitting &&
+      remainingSeconds <= 0,
+    [email, isSubmitting, remainingSeconds],
   );
 
+  useEffect(() => {
+    if (!magicLinkCooldownUntil) {
+      setRemainingSeconds(0);
+      return;
+    }
+
+    const cooldownUntil = magicLinkCooldownUntil;
+
+    function syncCooldown() {
+      const seconds = Math.max(
+        0,
+        Math.ceil((cooldownUntil - Date.now()) / 1000),
+      );
+
+      setRemainingSeconds(seconds);
+
+      if (seconds <= 0) {
+        setMagicLinkCooldownUntil(null);
+      }
+    }
+
+    syncCooldown();
+    const timer = setInterval(syncCooldown, 1000);
+
+    return () => clearInterval(timer);
+  }, [magicLinkCooldownUntil, setMagicLinkCooldownUntil]);
+
   if (isReady && status === "authenticated") {
-    return <Redirect href="/" />;
+    return <Redirect href={pinStatus === "unlocked" ? "/" : "/pin"} />;
   }
 
   async function handleSubmit() {
@@ -57,15 +100,40 @@ export default function LoginScreen() {
     const { error } = await sendMagicLink(normalizedEmail);
 
     if (error) {
-      setFeedback(error.message);
+      const authErrorStatus =
+        typeof error === "object" &&
+        error !== null &&
+        "status" in error &&
+        typeof error.status === "number"
+          ? error.status
+          : null;
+
+      if (authErrorStatus === 429) {
+        setMagicLinkCooldownUntil(Date.now() + 60_000);
+        setFeedback(
+          "Supabase bloqueó temporalmente más envíos. Espera 60 segundos antes de reintentar.",
+        );
+      } else {
+        setFeedback(error.message);
+      }
     } else {
       setLastMagicLinkEmail(normalizedEmail);
+      setMagicLinkCooldownUntil(Date.now() + 60_000);
       setFeedback(
         "Enviamos el enlace. Abre tu correo en este mismo dispositivo para completar el acceso.",
       );
     }
 
     setIsSubmitting(false);
+  }
+
+  function handleDevBypass() {
+    const normalizedEmail = email.trim().toLowerCase();
+    const safeEmail = isValidEmail(normalizedEmail)
+      ? normalizedEmail
+      : "dev@finflow.local";
+
+    enableDevBypass(safeEmail);
   }
 
   return (
@@ -114,6 +182,11 @@ export default function LoginScreen() {
               Último enlace enviado a {lastMagicLinkEmail}
             </Text>
           ) : null}
+          {remainingSeconds > 0 ? (
+            <Text style={styles.cooldownText}>
+              Reenvío disponible en {remainingSeconds}s
+            </Text>
+          ) : null}
 
           <Pressable
             disabled={!canSubmit}
@@ -129,9 +202,27 @@ export default function LoginScreen() {
             {isSubmitting ? (
               <ActivityIndicator color="#F8FAFC" />
             ) : (
-              <Text style={styles.buttonText}>Enviar enlace de acceso</Text>
+              <Text style={styles.buttonText}>
+                {remainingSeconds > 0
+                  ? `Espera ${remainingSeconds}s`
+                  : "Enviar enlace de acceso"}
+              </Text>
             )}
           </Pressable>
+
+          {isDevBypassEnabled ? (
+            <Pressable
+              onPress={handleDevBypass}
+              style={({ pressed }) => [
+                styles.secondaryButton,
+                pressed && styles.buttonPressed,
+              ]}
+            >
+              <Text style={styles.secondaryButtonText}>
+                Entrar en modo desarrollo
+              </Text>
+            </Pressable>
+          ) : null}
         </View>
       </View>
     </SafeAreaView>
@@ -227,6 +318,11 @@ const styles = StyleSheet.create({
     color: "#94A3B8",
     fontSize: 12,
   },
+  cooldownText: {
+    color: "#F8FAFC",
+    fontSize: 12,
+    fontWeight: "700",
+  },
   button: {
     minHeight: 54,
     borderRadius: 16,
@@ -244,6 +340,21 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "#F8FAFC",
     fontSize: 15,
+    fontWeight: "700",
+  },
+  secondaryButton: {
+    minHeight: 50,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(99, 102, 241, 0.28)",
+    backgroundColor: "#16203A",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 20,
+  },
+  secondaryButtonText: {
+    color: "#C7D2FE",
+    fontSize: 14,
     fontWeight: "700",
   },
 });
