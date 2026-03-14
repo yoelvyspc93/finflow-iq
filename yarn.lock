@@ -3642,6 +3642,11 @@ expo-router@~55.0.5:
     use-latest-callback "^0.2.1"
     vaul "^1.1.2"
 
+expo-secure-store@~55.0.8:
+  version "55.0.8"
+  resolved "https://registry.yarnpkg.com/expo-secure-store/-/expo-secure-store-55.0.8.tgz#741eb2c074cc6754e650f35f4e33df8213c95f0d"
+  integrity sha512-8w9tQe8U6oRo5YIzqCqVhRrOnfoODNDoitBtLXEx+zS6WLUnkRq5kH7ViJuOgiM7PzLr9pvAliRiDOKyvFbTuQ==
+
 expo-server@^55.0.6:
   version "55.0.6"
   resolved "https://registry.yarnpkg.com/expo-server/-/expo-server-55.0.6.tgz#db8c2e13e82537a398ea4a420903499efe89235c"

@@ -4,11 +4,16 @@ import { Redirect } from "expo-router";
 
 import { supabase } from "@/lib/supabase/client";
 import { useAuthStore } from "@/stores/auth-store";
+import { useSecurityStore } from "@/stores/security-store";
 
 export default function Index() {
+  const clearAuth = useAuthStore((state) => state.clearAuth);
+  const isDevBypass = useAuthStore((state) => state.isDevBypass);
   const isReady = useAuthStore((state) => state.isReady);
   const status = useAuthStore((state) => state.status);
   const user = useAuthStore((state) => state.user);
+  const isSecurityLoaded = useSecurityStore((state) => state.isLoaded);
+  const pinStatus = useSecurityStore((state) => state.pinStatus);
 
   if (!isReady || status === "idle" || status === "loading") {
     return (
@@ -24,7 +29,26 @@ export default function Index() {
     return <Redirect href="/login" />;
   }
 
+  if (!isSecurityLoaded || pinStatus === "unknown") {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.container}>
+          <Text style={styles.loadingText}>Preparando seguridad local...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (pinStatus !== "unlocked") {
+    return <Redirect href="/pin" />;
+  }
+
   async function handleSignOut() {
+    if (isDevBypass) {
+      clearAuth();
+      return;
+    }
+
     await supabase.auth.signOut();
   }
 
@@ -34,13 +58,18 @@ export default function Index() {
         <View style={styles.card}>
           <Text style={styles.title}>Sesión activa</Text>
           <Text style={styles.subtitle}>
-            La Fase 2 está lista. El siguiente paso es construir el PIN local y
-            el bloqueo de la app.
+            La autenticación y el PIN local ya están conectados. El siguiente
+            paso es construir wallets y settings de dominio.
           </Text>
 
           <View style={styles.userBlock}>
             <Text style={styles.userLabel}>Usuario autenticado</Text>
             <Text style={styles.userValue}>{user?.email ?? "Sin email"}</Text>
+            {isDevBypass ? (
+              <Text style={styles.devHint}>
+                Sesión simulada solo para desarrollo
+              </Text>
+            ) : null}
           </View>
 
           <Pressable
@@ -106,6 +135,11 @@ const styles = StyleSheet.create({
     color: "#E2E8F0",
     fontSize: 16,
     fontWeight: "700",
+  },
+  devHint: {
+    color: "#C7D2FE",
+    fontSize: 12,
+    fontWeight: "600",
   },
   loadingText: {
     color: "#E2E8F0",
