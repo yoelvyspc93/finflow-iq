@@ -14,6 +14,66 @@ export type Database = {
   }
   public: {
     Tables: {
+      budget_provisions: {
+        Row: {
+          amount: number
+          category_id: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          month: string
+          name: string
+          notes: string | null
+          recurrence: string
+          updated_at: string
+          user_id: string
+          wallet_id: string
+        }
+        Insert: {
+          amount: number
+          category_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          month: string
+          name: string
+          notes?: string | null
+          recurrence: string
+          updated_at?: string
+          user_id: string
+          wallet_id: string
+        }
+        Update: {
+          amount?: number
+          category_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          month?: string
+          name?: string
+          notes?: string | null
+          recurrence?: string
+          updated_at?: string
+          user_id?: string
+          wallet_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budget_provisions_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budget_provisions_wallet_id_fkey"
+            columns: ["wallet_id"]
+            isOneToOne: false
+            referencedRelation: "wallets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           color: string
@@ -145,41 +205,54 @@ export type Database = {
       ledger_entries: {
         Row: {
           amount: number
+          budget_provision_id: string | null
           category_id: string | null
           created_at: string
           date: string
           description: string | null
           id: string
           income_source_id: string | null
+          recurring_expense_id: string | null
           type: string
           user_id: string
           wallet_id: string
         }
         Insert: {
           amount: number
+          budget_provision_id?: string | null
           category_id?: string | null
           created_at?: string
           date: string
           description?: string | null
           id?: string
           income_source_id?: string | null
+          recurring_expense_id?: string | null
           type: string
           user_id: string
           wallet_id: string
         }
         Update: {
           amount?: number
+          budget_provision_id?: string | null
           category_id?: string | null
           created_at?: string
           date?: string
           description?: string | null
           id?: string
           income_source_id?: string | null
+          recurring_expense_id?: string | null
           type?: string
           user_id?: string
           wallet_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "ledger_entries_budget_provision_id_fkey"
+            columns: ["budget_provision_id"]
+            isOneToOne: false
+            referencedRelation: "budget_provisions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ledger_entries_category_id_fkey"
             columns: ["category_id"]
@@ -195,7 +268,80 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "ledger_entries_recurring_expense_id_fkey"
+            columns: ["recurring_expense_id"]
+            isOneToOne: false
+            referencedRelation: "recurring_expenses"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "ledger_entries_wallet_id_fkey"
+            columns: ["wallet_id"]
+            isOneToOne: false
+            referencedRelation: "wallets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recurring_expenses: {
+        Row: {
+          amount: number
+          billing_day: number
+          billing_month: number | null
+          category_id: string | null
+          created_at: string
+          frequency: string
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          type: string
+          updated_at: string
+          user_id: string
+          wallet_id: string
+        }
+        Insert: {
+          amount: number
+          billing_day: number
+          billing_month?: number | null
+          category_id?: string | null
+          created_at?: string
+          frequency: string
+          id?: string
+          is_active?: boolean
+          name: string
+          notes?: string | null
+          type: string
+          updated_at?: string
+          user_id: string
+          wallet_id: string
+        }
+        Update: {
+          amount?: number
+          billing_day?: number
+          billing_month?: number | null
+          category_id?: string | null
+          created_at?: string
+          frequency?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          notes?: string | null
+          type?: string
+          updated_at?: string
+          user_id?: string
+          wallet_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_expenses_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_expenses_wallet_id_fkey"
             columns: ["wallet_id"]
             isOneToOne: false
             referencedRelation: "wallets"
@@ -461,12 +607,14 @@ export type Database = {
         }
         Returns: {
           amount: number
+          budget_provision_id: string | null
           category_id: string | null
           created_at: string
           date: string
           description: string | null
           id: string
           income_source_id: string | null
+          recurring_expense_id: string | null
           type: string
           user_id: string
           wallet_id: string
@@ -474,6 +622,37 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "ledger_entries"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_budget_provision: {
+        Args: {
+          planned_amount: number
+          provision_name: string
+          target_category_id?: string
+          target_month: string
+          target_notes?: string
+          target_recurrence?: string
+          target_wallet_id: string
+        }
+        Returns: {
+          amount: number
+          category_id: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          month: string
+          name: string
+          notes: string | null
+          recurrence: string
+          updated_at: string
+          user_id: string
+          wallet_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "budget_provisions"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -488,12 +667,14 @@ export type Database = {
         }
         Returns: {
           amount: number
+          budget_provision_id: string | null
           category_id: string | null
           created_at: string
           date: string
           description: string | null
           id: string
           income_source_id: string | null
+          recurring_expense_id: string | null
           type: string
           user_id: string
           wallet_id: string
@@ -515,12 +696,14 @@ export type Database = {
         }
         Returns: {
           amount: number
+          budget_provision_id: string | null
           category_id: string | null
           created_at: string
           date: string
           description: string | null
           id: string
           income_source_id: string | null
+          recurring_expense_id: string | null
           type: string
           user_id: string
           wallet_id: string
@@ -528,6 +711,41 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "ledger_entries"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_recurring_expense: {
+        Args: {
+          committed_amount: number
+          expense_frequency: string
+          expense_name: string
+          expense_type: string
+          target_billing_day: number
+          target_billing_month?: number
+          target_category_id?: string
+          target_notes?: string
+          target_wallet_id: string
+        }
+        Returns: {
+          amount: number
+          billing_day: number
+          billing_month: number | null
+          category_id: string | null
+          created_at: string
+          frequency: string
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          type: string
+          updated_at: string
+          user_id: string
+          wallet_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "recurring_expenses"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -602,6 +820,62 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "salary_payments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      settle_budget_provision: {
+        Args: {
+          payment_amount: number
+          payment_description?: string
+          target_budget_provision_id: string
+          target_payment_date: string
+        }
+        Returns: {
+          amount: number
+          budget_provision_id: string | null
+          category_id: string | null
+          created_at: string
+          date: string
+          description: string | null
+          id: string
+          income_source_id: string | null
+          recurring_expense_id: string | null
+          type: string
+          user_id: string
+          wallet_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "ledger_entries"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      settle_recurring_expense: {
+        Args: {
+          payment_amount: number
+          payment_description?: string
+          target_payment_date: string
+          target_recurring_expense_id: string
+        }
+        Returns: {
+          amount: number
+          budget_provision_id: string | null
+          category_id: string | null
+          created_at: string
+          date: string
+          description: string | null
+          id: string
+          income_source_id: string | null
+          recurring_expense_id: string | null
+          type: string
+          user_id: string
+          wallet_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "ledger_entries"
           isOneToOne: true
           isSetofReturn: false
         }

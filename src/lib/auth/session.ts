@@ -1,4 +1,5 @@
 import * as Linking from "expo-linking";
+import { Platform } from "react-native";
 
 import { supabase } from "@/lib/supabase/client";
 
@@ -18,7 +19,42 @@ type ParsedAuthUrl = {
   errorDescription: string | null;
 };
 
+const webRouteSegments = new Set([
+  "callback",
+  "dashboard",
+  "finances",
+  "login",
+  "onboarding",
+  "pin",
+  "planning",
+  "settings",
+]);
+
+function getWebBasePath(pathname: string) {
+  const normalizedPath = pathname.replace(/\/+$/, "");
+
+  if (!normalizedPath) {
+    return "";
+  }
+
+  const segments = normalizedPath.split("/").filter(Boolean);
+  const lastSegment = segments.at(-1);
+
+  if (lastSegment && webRouteSegments.has(lastSegment)) {
+    segments.pop();
+  }
+
+  return segments.length > 0 ? `/${segments.join("/")}` : "";
+}
+
 export function getAuthRedirectUrl() {
+  if (Platform.OS === "web" && typeof window !== "undefined") {
+    const callbackPath = `${getWebBasePath(window.location.pathname)}/callback`
+      .replace(/\/{2,}/g, "/");
+
+    return new URL(callbackPath, window.location.origin).toString();
+  }
+
   return Linking.createURL("callback");
 }
 
