@@ -7,9 +7,10 @@ export default function DashboardScreen() {
     <SafeAreaView style={styles.safeArea}>
       <LedgerWorkspace
         accentColor="#9FB0FF"
-        description="La vista principal ya puede registrar ingresos y gastos sobre el ledger, cambiar entre wallets activas y mostrar el historial reciente sin salir del panel."
+        description="El panel principal ya muestra disponible, comprometido, libre y asignable, sin perder el acceso rapido a ingresos, gastos y el historial reciente de la wallet activa."
         eyebrow="Panel"
-        title="Operacion diaria lista para usar"
+        showFinancialCards
+        title="Radar operativo del bolsillo activo"
       />
     </SafeAreaView>
   );

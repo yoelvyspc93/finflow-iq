@@ -1,8 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
+import { FinancialCards } from "@/components/dashboard/financial-cards";
+import { ExchangeComposerCard } from "@/components/exchanges/exchange-composer-card";
+import { ExchangeListCard } from "@/components/exchanges/exchange-list-card";
 import { listCategories } from "@/modules/categories/service";
 import type { Category } from "@/modules/categories/types";
+import { transferBetweenWallets } from "@/modules/exchanges/service";
+import { createLocalCurrencyExchange } from "@/modules/exchanges/types";
 import { listIncomeSources } from "@/modules/income-sources/service";
 import type { IncomeSource } from "@/modules/income-sources/types";
 import {
@@ -11,6 +16,7 @@ import {
 } from "@/modules/ledger/service";
 import { createLocalLedgerEntry } from "@/modules/ledger/types";
 import { selectActiveWallet, selectRecentLedgerEntries } from "@/modules/ledger/selectors";
+import { createMockSalaryPeriods, createMockSalaryPayments } from "@/modules/salary/types";
 import {
   MovementComposerCard,
   type MovementMode,
@@ -20,12 +26,18 @@ import { MovementHistoryCard } from "@/components/ledger/movement-history-card";
 import { WalletSwitcher } from "@/components/ledger/wallet-switcher";
 import { useAuthStore } from "@/stores/auth-store";
 import { useAppStore } from "@/stores/app-store";
+import { useCommitmentStore } from "@/stores/commitment-store";
+import { useExchangeStore } from "@/stores/exchange-store";
 import { useLedgerStore } from "@/stores/ledger-store";
+import { useSalaryStore } from "@/stores/salary-store";
+import { calculateSalaryOverview } from "@/modules/salary/calculations";
 
 type LedgerWorkspaceProps = {
   accentColor: string;
   description: string;
   eyebrow: string;
+  showExchangeTools?: boolean;
+  showFinancialCards?: boolean;
   title: string;
 };
 
@@ -47,14 +59,19 @@ export function LedgerWorkspace({
   accentColor,
   description,
   eyebrow,
+  showExchangeTools = false,
+  showFinancialCards = false,
   title,
 }: LedgerWorkspaceProps) {
   const [mode, setMode] = useState<MovementMode>("income");
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [exchangeError, setExchangeError] = useState<string | null>(null);
   const [referenceError, setReferenceError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmittingExchange, setIsSubmittingExchange] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [incomeSources, setIncomeSources] = useState<IncomeSource[]>([]);
+  const currentMonth = `${new Date().toISOString().slice(0, 7)}-01`;
 
   const isDevBypass = useAuthStore((state) => state.isDevBypass);
   const user = useAuthStore((state) => state.user);
@@ -66,14 +83,55 @@ export function LedgerWorkspace({
   const setSelectedWalletId = useAppStore((state) => state.setSelectedWalletId);
   const settings = useAppStore((state) => state.settings);
   const wallets = useAppStore((state) => state.wallets);
+  const commitmentOverview = useCommitmentStore((state) => state.overview);
+  const commitmentLoading = useCommitmentStore((state) => state.isLoading);
+  const refreshCommitmentData = useCommitmentStore(
+    (state) => state.refreshCommitmentData,
+  );
+  const exchanges = useExchangeStore((state) => state.exchanges);
+  const exchangeLoading = useExchangeStore((state) => state.isLoading);
+  const refreshExchangeData = useExchangeStore((state) => state.refreshExchangeData);
+  const addLocalExchange = useExchangeStore((state) => state.addLocalExchange);
   const addLocalEntry = useLedgerStore((state) => state.addLocalEntry);
   const entries = useLedgerStore((state) => state.entries);
   const isLedgerLoading = useLedgerStore((state) => state.isLoading);
   const ledgerError = useLedgerStore((state) => state.error);
   const refreshLedger = useLedgerStore((state) => state.refreshLedger);
+  const refreshSalaryData = useSalaryStore((state) => state.refreshSalaryData);
+  const salaryOverview = useSalaryStore((state) => state.overview);
 
   const activeWallet = selectActiveWallet(wallets, selectedWalletId);
   const recentEntries = selectRecentLedgerEntries(entries, 8);
+  const visibleExchanges = useMemo(
+    () =>
+      exchanges.filter(
+        (exchange) =>
+          exchange.fromWalletId === selectedWalletId ||
+          exchange.toWalletId === selectedWalletId,
+      ),
+    [exchanges, selectedWalletId],
+  );
+  const effectiveSalaryOverview = useMemo(() => {
+    if (salaryOverview) {
+      return salaryOverview;
+    }
+
+    if (!isDevBypass || !user?.id) {
+      return null;
+    }
+
+    return calculateSalaryOverview(
+      createMockSalaryPeriods(user.id),
+      createMockSalaryPayments(user.id),
+    );
+  }, [isDevBypass, salaryOverview, user?.id]);
+  const committedAmount = commitmentOverview?.totalRemaining ?? 0;
+  const freeAmount = (activeWallet?.balance ?? 0) - committedAmount;
+  const reserveAmount =
+    (commitmentOverview?.recurringCommitted ?? 0) *
+    (effectiveSalaryOverview?.monthsWithoutPayment ?? 0) *
+    (1 + (settings?.savingsGoalPercent ?? 0) / 100);
+  const assignableAmount = freeAmount - reserveAmount;
 
   useEffect(() => {
     if (!user?.id) {
@@ -116,6 +174,44 @@ export function LedgerWorkspace({
       isMounted = false;
     };
   }, [isDevBypass, user?.id]);
+
+  useEffect(() => {
+    if (!user?.id || !selectedWalletId) {
+      return;
+    }
+
+    if (showExchangeTools) {
+      void refreshExchangeData({
+        isDevBypass,
+        userId: user.id,
+      });
+    }
+
+    if (showFinancialCards) {
+      void Promise.all([
+        refreshCommitmentData({
+          isDevBypass,
+          month: currentMonth,
+          userId: user.id,
+          walletId: selectedWalletId,
+        }),
+        refreshSalaryData({
+          isDevBypass,
+          userId: user.id,
+        }),
+      ]);
+    }
+  }, [
+    currentMonth,
+    isDevBypass,
+    refreshCommitmentData,
+    refreshExchangeData,
+    refreshSalaryData,
+    selectedWalletId,
+    showExchangeTools,
+    showFinancialCards,
+    user?.id,
+  ]);
 
   async function handleSubmit(values: SubmitMovementValues) {
     if (!user?.id || !selectedWalletId) {
@@ -189,6 +285,112 @@ export function LedgerWorkspace({
     }
   }
 
+  async function handleTransfer(values: {
+    date: string;
+    description: string | null;
+    destinationAmount: number;
+    destinationWalletId: string;
+    exchangeRate: number;
+    sourceAmount: number;
+  }) {
+    if (!user?.id || !selectedWalletId) {
+      setExchangeError("Selecciona una wallet valida antes de transferir.");
+      return false;
+    }
+
+    setIsSubmittingExchange(true);
+    setExchangeError(null);
+
+    try {
+      if (isDevBypass) {
+        const exchange = createLocalCurrencyExchange({
+          description: values.description,
+          destinationAmount: values.destinationAmount,
+          destinationWalletId: values.destinationWalletId,
+          exchangeInEntryId: `local-ledger-in-${Date.now()}`,
+          exchangeOutEntryId: `local-ledger-out-${Date.now()}`,
+          exchangeRate: values.exchangeRate,
+          sourceAmount: values.sourceAmount,
+          sourceWalletId: selectedWalletId,
+          transferDate: values.date,
+          userId: user.id,
+        });
+
+        addLocalExchange(exchange);
+        addLocalEntry(
+          createLocalLedgerEntry({
+            amount: values.sourceAmount * -1,
+            date: values.date,
+            description: values.description,
+            type: "exchange_out",
+            userId: user.id,
+            walletId: selectedWalletId,
+          }),
+        );
+        addLocalEntry(
+          createLocalLedgerEntry({
+            amount: values.destinationAmount,
+            date: values.date,
+            description: values.description,
+            type: "exchange_in",
+            userId: user.id,
+            walletId: values.destinationWalletId,
+          }),
+        );
+        applyWalletBalanceDelta({
+          amount: values.sourceAmount * -1,
+          walletId: selectedWalletId,
+        });
+        applyWalletBalanceDelta({
+          amount: values.destinationAmount,
+          walletId: values.destinationWalletId,
+        });
+        await refreshLedger({
+          isDevBypass: true,
+          userId: user.id,
+          walletId: selectedWalletId,
+        });
+      } else {
+        await transferBetweenWallets({
+          description: values.description,
+          destinationAmount: values.destinationAmount,
+          destinationWalletId: values.destinationWalletId,
+          exchangeRate: values.exchangeRate,
+          sourceAmount: values.sourceAmount,
+          sourceWalletId: selectedWalletId,
+          transferDate: values.date,
+        });
+
+        await Promise.all([
+          refreshAppData({
+            isDevBypass: false,
+            userId: user.id,
+          }),
+          refreshLedger({
+            isDevBypass: false,
+            userId: user.id,
+            walletId: selectedWalletId,
+          }),
+          refreshExchangeData({
+            isDevBypass: false,
+            userId: user.id,
+          }),
+        ]);
+      }
+
+      return true;
+    } catch (error) {
+      setExchangeError(
+        error instanceof Error
+          ? error.message
+          : "No se pudo registrar la transferencia.",
+      );
+      return false;
+    } finally {
+      setIsSubmittingExchange(false);
+    }
+  }
+
   return (
     <ScrollView
       contentContainerStyle={styles.content}
@@ -224,6 +426,17 @@ export function LedgerWorkspace({
         </View>
       </View>
 
+      {showFinancialCards ? (
+        <FinancialCards
+          assignableAmount={assignableAmount}
+          committedAmount={committedAmount}
+          currency={activeWallet?.currency ?? null}
+          freeAmount={freeAmount}
+          isLoading={commitmentLoading}
+          reserveAmount={reserveAmount}
+        />
+      ) : null}
+
       <WalletSwitcher
         onSelect={setSelectedWalletId}
         selectedWalletId={selectedWalletId}
@@ -242,6 +455,23 @@ export function LedgerWorkspace({
 
       {referenceError ? <Text style={styles.errorText}>{referenceError}</Text> : null}
       {ledgerError ? <Text style={styles.errorText}>{ledgerError}</Text> : null}
+
+      {showExchangeTools ? (
+        <>
+          <ExchangeComposerCard
+            activeWallet={activeWallet}
+            isSubmitting={isSubmittingExchange}
+            onSubmit={handleTransfer}
+            submitError={exchangeError}
+            wallets={wallets}
+          />
+          <ExchangeListCard
+            exchanges={visibleExchanges}
+            isLoading={exchangeLoading}
+            wallets={wallets}
+          />
+        </>
+      ) : null}
 
       <MovementHistoryCard entries={recentEntries} isLoading={isLedgerLoading} />
     </ScrollView>

@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Pressable, SafeAreaView, StyleSheet, Text, View } from "react-native";
 
+import { CommitmentWorkspace } from "@/components/commitments/commitment-workspace";
 import { LedgerWorkspace } from "@/components/ledger/ledger-workspace";
 import { SalaryWorkspace } from "@/components/salary/salary-workspace";
 
-type FinanceView = "movements" | "salary";
+type FinanceView = "commitments" | "movements" | "salary";
 
 export default function FinancesScreen() {
   const [view, setView] = useState<FinanceView>("movements");
@@ -46,21 +47,46 @@ export default function FinancesScreen() {
               Salario
             </Text>
           </Pressable>
+
+          <Pressable
+            onPress={() => setView("commitments")}
+            style={[
+              styles.segmentButton,
+              view === "commitments" && styles.segmentButtonActive,
+            ]}
+          >
+            <Text
+              style={[
+                styles.segmentButtonText,
+                view === "commitments" && styles.segmentButtonTextActive,
+              ]}
+            >
+              Compromisos
+            </Text>
+          </Pressable>
         </View>
 
         {view === "movements" ? (
           <LedgerWorkspace
             accentColor="#D9F99D"
-            description="Finanzas concentra la captura de movimientos base del producto. Desde aqui puedes registrar flujo de caja manual mientras las demas capas del dominio siguen entrando por fases."
+            description="Movimientos ya no es solo captura manual: desde aqui registras ingresos, gastos y transferencias entre wallets con trazabilidad doble en el ledger."
             eyebrow="Finanzas"
-            title="Captura manual sobre el ledger"
+            showExchangeTools
+            title="Operacion diaria y cambios internos"
           />
-        ) : (
+        ) : view === "salary" ? (
           <SalaryWorkspace
             accentColor="#7DD3FC"
             description="El modulo salarial ya permite crear periodos, registrar cobros y distribuirlos contra meses pendientes usando el backend que acabas de cerrar."
             eyebrow="Salario"
             title="Nomina y cobros reales"
+          />
+        ) : (
+          <CommitmentWorkspace
+            accentColor="#FDE68A"
+            description="Los compromisos y eventos presupuestados ahora tienen alta propia, calculo mensual y pago real conectado al ledger para no duplicar dinero comprometido."
+            eyebrow="Compromisos"
+            title="Suscripciones, gastos fijos y eventos"
           />
         )}
       </View>
@@ -78,13 +104,15 @@ const styles = StyleSheet.create({
   },
   segment: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 10,
     paddingHorizontal: 24,
     paddingTop: 18,
     paddingBottom: 4,
   },
   segmentButton: {
-    flex: 1,
+    minWidth: 108,
+    flexGrow: 1,
     minHeight: 48,
     borderRadius: 18,
     alignItems: "center",
