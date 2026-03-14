@@ -66,6 +66,30 @@ export type RegisterSalaryPaymentInput = {
   walletId: string;
 };
 
+export type CreateLocalSalaryPeriodInput = {
+  currency: SalaryCurrency;
+  expectedAmount: number;
+  notes?: string | null;
+  periodMonth: string;
+  userId: string;
+};
+
+export type CreateLocalSalaryPaymentInput = {
+  amount: number;
+  currency: SalaryCurrency;
+  description?: string | null;
+  paymentDate: string;
+  userId: string;
+  walletId: string;
+};
+
+export type CreateLocalSalaryAllocationInput = {
+  amount: number;
+  salaryPaymentId: string;
+  salaryPeriodId: string;
+  userId: string;
+};
+
 export function mapSalaryPeriod(row: SalaryPeriodRow): SalaryPeriod {
   return {
     coveredAmount: row.covered_amount,
@@ -158,4 +182,57 @@ export function createMockSalaryAllocations(userId: string): SalaryAllocation[] 
       userId,
     },
   ].filter((allocation) => allocation.amount > 0);
+}
+
+export function createLocalSalaryPeriod(
+  input: CreateLocalSalaryPeriodInput,
+): SalaryPeriod {
+  const now = new Date().toISOString();
+
+  return {
+    coveredAmount: 0,
+    createdAt: now,
+    currency: input.currency,
+    expectedAmount: input.expectedAmount,
+    id: `local-salary-period-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    notes: input.notes ?? null,
+    periodMonth: input.periodMonth,
+    status: "pending",
+    updatedAt: now,
+    userId: input.userId,
+  };
+}
+
+export function createLocalSalaryPayment(
+  input: CreateLocalSalaryPaymentInput,
+): SalaryPayment {
+  const now = new Date().toISOString();
+
+  return {
+    allocatedAmount: 0,
+    createdAt: now,
+    currency: input.currency,
+    description: input.description ?? null,
+    grossAmount: input.amount,
+    id: `local-salary-payment-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    ledgerEntryId: `local-ledger-salary-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    paymentDate: input.paymentDate,
+    status: "unallocated",
+    updatedAt: now,
+    userId: input.userId,
+    walletId: input.walletId,
+  };
+}
+
+export function createLocalSalaryAllocation(
+  input: CreateLocalSalaryAllocationInput,
+): SalaryAllocation {
+  return {
+    amount: input.amount,
+    createdAt: new Date().toISOString(),
+    id: `local-salary-allocation-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    salaryPaymentId: input.salaryPaymentId,
+    salaryPeriodId: input.salaryPeriodId,
+    userId: input.userId,
+  };
 }
