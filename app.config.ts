@@ -9,7 +9,7 @@ const easProjectId =
 
 const config: ExpoConfig = {
   name: "FinFlow IQ",
-  slug: "finflow-iq",
+  slug: "finflow-iq-dmcp3hamwrbmrhyf9vz6n",
   version: "1.0.0",
   orientation: "portrait",
   icon: "./assets/logo.png",
@@ -57,6 +57,7 @@ const config: ExpoConfig = {
     reactCompiler: true,
     baseUrl: "/finflow-iq",
   },
+  owner: "yoelvyspc93",
 };
 
 if (easProjectId) {
