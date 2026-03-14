@@ -1,0 +1,18 @@
+{
+  "name": "FinFlow IQ",
+  "short_name": "FinFlow IQ",
+  "description": "FinFlow IQ es una app de finanzas personales que te ayuda a controlar tu dinero.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0F1223",
+  "theme_color": "#3D5EFF",
+  "icons": [
+    {
+      "src": "./icon.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
