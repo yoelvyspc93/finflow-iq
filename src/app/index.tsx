@@ -3,8 +3,14 @@ import { Pressable, SafeAreaView, StyleSheet, Text, View } from "react-native";
 import { Redirect } from "expo-router";
 
 import { supabase } from "@/lib/supabase/client";
+import {
+  selectActiveWallet,
+  selectActiveWalletBalance,
+  selectRecentLedgerEntries,
+} from "@/modules/ledger/selectors";
 import { useAuthStore } from "@/stores/auth-store";
 import { useAppStore } from "@/stores/app-store";
+import { useLedgerStore } from "@/stores/ledger-store";
 import { useSecurityStore } from "@/stores/security-store";
 
 export default function Index() {
@@ -13,7 +19,7 @@ export default function Index() {
   const isReady = useAuthStore((state) => state.isReady);
   const status = useAuthStore((state) => state.status);
   const user = useAuthStore((state) => state.user);
-  const error = useAppStore((state) => state.error);
+  const appError = useAppStore((state) => state.error);
   const hasCompletedOnboarding = useAppStore(
     (state) => state.hasCompletedOnboarding,
   );
@@ -22,6 +28,9 @@ export default function Index() {
   const selectedWalletId = useAppStore((state) => state.selectedWalletId);
   const settings = useAppStore((state) => state.settings);
   const wallets = useAppStore((state) => state.wallets);
+  const entries = useLedgerStore((state) => state.entries);
+  const isLedgerLoading = useLedgerStore((state) => state.isLoading);
+  const ledgerError = useLedgerStore((state) => state.error);
   const isSecurityLoaded = useSecurityStore((state) => state.isLoaded);
   const pinStatus = useSecurityStore((state) => state.pinStatus);
 
@@ -53,6 +62,10 @@ export default function Index() {
     return <Redirect href="/pin" />;
   }
 
+  const activeWallet = selectActiveWallet(wallets, selectedWalletId);
+  const activeBalance = selectActiveWalletBalance(wallets, selectedWalletId);
+  const recentEntries = selectRecentLedgerEntries(entries, 5);
+
   async function handleSignOut() {
     if (isDevBypass) {
       clearAuth();
@@ -66,55 +79,97 @@ export default function Index() {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <View style={styles.card}>
-          <Text style={styles.title}>Dominio base listo</Text>
+          <Text style={styles.title}>Ledger base listo</Text>
           <Text style={styles.subtitle}>
-            Wallets y settings ya se cargan como capa de dominio compartida.
+            Balance cacheado en wallets y feed de movimientos ya conectados.
           </Text>
 
-          <View style={styles.userBlock}>
-            <Text style={styles.userLabel}>Usuario autenticado</Text>
-            <Text style={styles.userValue}>{user?.email ?? "Sin email"}</Text>
-            {isDevBypass ? (
-              <Text style={styles.devHint}>
-                Sesion simulada solo para desarrollo
-              </Text>
-            ) : null}
-          </View>
-
-          <View style={styles.infoPanel}>
-            <Text style={styles.infoTitle}>Estado de app</Text>
-            <Text style={styles.infoValue}>
-              {isAppLoading
-                ? "Cargando datos..."
-                : isAppReady
-                  ? "Datos cargados"
-                  : "Pendiente"}
+          <View style={styles.heroCard}>
+            <Text style={styles.heroLabel}>Wallet activa</Text>
+            <Text style={styles.heroTitle}>
+              {activeWallet?.name ?? "Sin wallet seleccionada"}
             </Text>
-            <Text style={styles.infoMeta}>
+            <Text style={styles.heroAmount}>
+              {activeWallet
+                ? `${activeWallet.currency} ${activeBalance.toFixed(2)}`
+                : "--"}
+            </Text>
+            <Text style={styles.heroMeta}>
               Onboarding completo: {hasCompletedOnboarding ? "si" : "no"}
             </Text>
-            <Text style={styles.infoMeta}>Wallets: {wallets.length}</Text>
-            <Text style={styles.infoMeta}>
-              Wallet activa: {selectedWalletId ?? "ninguna"}
-            </Text>
-            <Text style={styles.infoMeta}>
-              Meta de ahorro: {settings?.savingsGoalPercent ?? "--"}%
-            </Text>
-            <Text style={styles.infoMeta}>
-              Moneda principal: {settings?.primaryCurrency ?? "--"}
-            </Text>
           </View>
 
-          {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-          {!wallets.length ? (
-            <View style={styles.emptyBlock}>
-              <Text style={styles.emptyTitle}>Sin wallets todavia</Text>
-              <Text style={styles.emptyText}>
-                La siguiente fase montara onboarding y creacion del primer wallet.
+          <View style={styles.infoGrid}>
+            <View style={styles.infoPanel}>
+              <Text style={styles.infoTitle}>App</Text>
+              <Text style={styles.infoValue}>
+                {isAppLoading ? "Cargando" : isAppReady ? "Lista" : "Pendiente"}
+              </Text>
+              <Text style={styles.infoMeta}>Wallets: {wallets.length}</Text>
+              <Text style={styles.infoMeta}>
+                Meta de ahorro: {settings?.savingsGoalPercent ?? "--"}%
               </Text>
             </View>
+
+            <View style={styles.infoPanel}>
+              <Text style={styles.infoTitle}>Ledger</Text>
+              <Text style={styles.infoValue}>
+                {isLedgerLoading ? "Cargando" : `${entries.length} items`}
+              </Text>
+              <Text style={styles.infoMeta}>
+                Wallet activa: {selectedWalletId ?? "ninguna"}
+              </Text>
+              <Text style={styles.infoMeta}>
+                Usuario: {user?.email ?? "Sin email"}
+              </Text>
+            </View>
+          </View>
+
+          {isDevBypass ? (
+            <Text style={styles.devHint}>
+              Sesion simulada solo para desarrollo
+            </Text>
           ) : null}
+
+          {appError ? <Text style={styles.errorText}>{appError}</Text> : null}
+          {ledgerError ? <Text style={styles.errorText}>{ledgerError}</Text> : null}
+
+          <View style={styles.feedCard}>
+            <Text style={styles.feedTitle}>Movimientos recientes</Text>
+            {recentEntries.length ? (
+              recentEntries.map((entry) => (
+                <View key={entry.id} style={styles.feedRow}>
+                  <View style={styles.feedTextBlock}>
+                    <Text style={styles.feedPrimary}>
+                      {entry.description ?? entry.type}
+                    </Text>
+                    <Text style={styles.feedSecondary}>
+                      {entry.date} | {entry.type}
+                    </Text>
+                  </View>
+                  <Text
+                    style={[
+                      styles.feedAmount,
+                      entry.amount > 0
+                        ? styles.feedAmountPositive
+                        : styles.feedAmountNegative,
+                    ]}
+                  >
+                    {entry.amount > 0 ? "+" : ""}
+                    {entry.amount.toFixed(2)}
+                  </Text>
+                </View>
+              ))
+            ) : (
+              <View style={styles.emptyBlock}>
+                <Text style={styles.emptyTitle}>Sin movimientos todavia</Text>
+                <Text style={styles.emptyText}>
+                  La siguiente UI anadira registro de ingresos y gastos sobre este
+                  ledger.
+                </Text>
+              </View>
+            )}
+          </View>
 
           <Pressable
             onPress={() => {
@@ -146,8 +201,8 @@ const styles = StyleSheet.create({
   },
   card: {
     width: "100%",
-    maxWidth: 460,
-    borderRadius: 24,
+    maxWidth: 520,
+    borderRadius: 28,
     borderWidth: 1,
     borderColor: "rgba(99, 102, 241, 0.2)",
     backgroundColor: "#11182D",
@@ -164,28 +219,38 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 22,
   },
-  userBlock: {
-    borderRadius: 16,
-    backgroundColor: "#0B1222",
-    padding: 16,
+  heroCard: {
+    borderRadius: 22,
+    backgroundColor: "#16203A",
+    padding: 18,
     gap: 6,
   },
-  userLabel: {
+  heroLabel: {
     color: "#94A3B8",
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  userValue: {
-    color: "#E2E8F0",
-    fontSize: 16,
-    fontWeight: "700",
-  },
-  devHint: {
-    color: "#C7D2FE",
     fontSize: 12,
-    fontWeight: "600",
+    fontWeight: "700",
+    textTransform: "uppercase",
+  },
+  heroTitle: {
+    color: "#F8FAFC",
+    fontSize: 22,
+    fontWeight: "800",
+  },
+  heroAmount: {
+    color: "#7C8CFF",
+    fontSize: 30,
+    fontWeight: "900",
+  },
+  heroMeta: {
+    color: "#CBD5E1",
+    fontSize: 13,
+  },
+  infoGrid: {
+    flexDirection: "row",
+    gap: 12,
   },
   infoPanel: {
+    flex: 1,
     borderRadius: 16,
     backgroundColor: "#0B1222",
     padding: 16,
@@ -205,6 +270,55 @@ const styles = StyleSheet.create({
     color: "#94A3B8",
     fontSize: 13,
     lineHeight: 20,
+  },
+  devHint: {
+    color: "#C7D2FE",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  feedCard: {
+    borderRadius: 18,
+    backgroundColor: "#0B1222",
+    padding: 16,
+    gap: 12,
+  },
+  feedTitle: {
+    color: "#E2E8F0",
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  feedRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    borderRadius: 14,
+    backgroundColor: "#10192E",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  feedTextBlock: {
+    flex: 1,
+    gap: 4,
+  },
+  feedPrimary: {
+    color: "#F8FAFC",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  feedSecondary: {
+    color: "#94A3B8",
+    fontSize: 12,
+  },
+  feedAmount: {
+    fontSize: 15,
+    fontWeight: "800",
+  },
+  feedAmountPositive: {
+    color: "#34D399",
+  },
+  feedAmountNegative: {
+    color: "#F87171",
   },
   emptyBlock: {
     borderRadius: 16,

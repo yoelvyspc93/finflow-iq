@@ -68,6 +68,67 @@ export type Database = {
         }
         Relationships: []
       }
+      ledger_entries: {
+        Row: {
+          amount: number
+          category_id: string | null
+          created_at: string
+          date: string
+          description: string | null
+          id: string
+          income_source_id: string | null
+          type: string
+          user_id: string
+          wallet_id: string
+        }
+        Insert: {
+          amount: number
+          category_id?: string | null
+          created_at?: string
+          date: string
+          description?: string | null
+          id?: string
+          income_source_id?: string | null
+          type: string
+          user_id: string
+          wallet_id: string
+        }
+        Update: {
+          amount?: number
+          category_id?: string | null
+          created_at?: string
+          date?: string
+          description?: string | null
+          id?: string
+          income_source_id?: string | null
+          type?: string
+          user_id?: string
+          wallet_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ledger_entries_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ledger_entries_income_source_id_fkey"
+            columns: ["income_source_id"]
+            isOneToOne: false
+            referencedRelation: "income_sources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ledger_entries_wallet_id_fkey"
+            columns: ["wallet_id"]
+            isOneToOne: false
+            referencedRelation: "wallets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       settings: {
         Row: {
           ai_analysis_frequency: string
@@ -175,6 +236,95 @@ export type Database = {
       bootstrap_user_defaults: {
         Args: { target_user_id: string }
         Returns: undefined
+      }
+      create_adjustment: {
+        Args: {
+          entry_date: string
+          entry_description?: string
+          signed_amount: number
+          target_wallet_id: string
+        }
+        Returns: {
+          amount: number
+          category_id: string | null
+          created_at: string
+          date: string
+          description: string | null
+          id: string
+          income_source_id: string | null
+          type: string
+          user_id: string
+          wallet_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "ledger_entries"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_expense: {
+        Args: {
+          entry_date: string
+          entry_description?: string
+          gross_amount: number
+          target_category_id?: string
+          target_wallet_id: string
+        }
+        Returns: {
+          amount: number
+          category_id: string | null
+          created_at: string
+          date: string
+          description: string | null
+          id: string
+          income_source_id: string | null
+          type: string
+          user_id: string
+          wallet_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "ledger_entries"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_manual_income: {
+        Args: {
+          entry_date: string
+          entry_description?: string
+          gross_amount: number
+          target_income_source_id?: string
+          target_wallet_id: string
+        }
+        Returns: {
+          amount: number
+          category_id: string | null
+          created_at: string
+          date: string
+          description: string | null
+          id: string
+          income_source_id: string | null
+          type: string
+          user_id: string
+          wallet_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "ledger_entries"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      reconcile_wallet_balance: {
+        Args: { target_wallet_id: string }
+        Returns: {
+          corrected: boolean
+          previous_balance: number
+          recalculated_balance: number
+          wallet_id: string
+        }[]
       }
     }
     Enums: {
