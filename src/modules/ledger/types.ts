@@ -41,6 +41,17 @@ export type WalletBalanceReconciliation = {
   walletId: string;
 };
 
+export type CreateLocalLedgerEntryInput = {
+  amount: number;
+  categoryId?: string | null;
+  date: string;
+  description?: string | null;
+  incomeSourceId?: string | null;
+  type: LedgerEntryType;
+  userId: string;
+  walletId: string;
+};
+
 export function mapLedgerEntry(row: LedgerEntryRow): LedgerEntry {
   return {
     amount: row.amount,
@@ -54,4 +65,34 @@ export function mapLedgerEntry(row: LedgerEntryRow): LedgerEntry {
     userId: row.user_id,
     walletId: row.wallet_id,
   };
+}
+
+export function createLocalLedgerEntry(
+  input: CreateLocalLedgerEntryInput,
+): LedgerEntry {
+  return {
+    amount: input.amount,
+    categoryId: input.categoryId ?? null,
+    createdAt: new Date().toISOString(),
+    date: input.date,
+    description: input.description ?? null,
+    id: `local-ledger-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    incomeSourceId: input.incomeSourceId ?? null,
+    type: input.type,
+    userId: input.userId,
+    walletId: input.walletId,
+  };
+}
+
+export function sortLedgerEntries(entries: LedgerEntry[]) {
+  return [...entries].sort((left, right) => {
+    const leftStamp = `${left.date}T${left.createdAt}`;
+    const rightStamp = `${right.date}T${right.createdAt}`;
+
+    if (leftStamp === rightStamp) {
+      return right.createdAt.localeCompare(left.createdAt);
+    }
+
+    return rightStamp.localeCompare(leftStamp);
+  });
 }

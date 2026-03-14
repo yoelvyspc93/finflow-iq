@@ -12,6 +12,10 @@ type LocalAppDataInput = {
 
 type AppStore = {
   applyLocalAppData: (input: LocalAppDataInput) => void;
+  applyWalletBalanceDelta: (args: {
+    amount: number;
+    walletId: string;
+  }) => void;
   error: string | null;
   hasCompletedOnboarding: boolean;
   isLoading: boolean;
@@ -65,6 +69,18 @@ export const useAppStore = create<AppStore>((set, get) => ({
   ...initialState,
   applyLocalAppData: (input) =>
     set((state) => buildStateFromData(input, state.selectedWalletId)),
+  applyWalletBalanceDelta: ({ amount, walletId }) =>
+    set((state) => ({
+      wallets: state.wallets.map((wallet) =>
+        wallet.id === walletId
+          ? {
+              ...wallet,
+              balance: wallet.balance + amount,
+              updatedAt: new Date().toISOString(),
+            }
+          : wallet,
+      ),
+    })),
   refreshAppData: async ({ isDevBypass, userId }) => {
     set({ error: null, isLoading: true });
 

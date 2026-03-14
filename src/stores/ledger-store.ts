@@ -1,7 +1,10 @@
 import { create } from "zustand";
 
 import { listLedgerEntries } from "@/modules/ledger/service";
-import type { LedgerEntry } from "@/modules/ledger/types";
+import {
+  sortLedgerEntries,
+  type LedgerEntry,
+} from "@/modules/ledger/types";
 
 type RefreshLedgerArgs = {
   isDevBypass: boolean;
@@ -10,6 +13,8 @@ type RefreshLedgerArgs = {
 };
 
 type LedgerStore = {
+  addLocalEntry: (entry: LedgerEntry) => void;
+  devEntries: LedgerEntry[];
   entries: LedgerEntry[];
   error: string | null;
   isLoading: boolean;
@@ -19,6 +24,7 @@ type LedgerStore = {
 };
 
 const initialState = {
+  devEntries: [] as LedgerEntry[],
   entries: [] as LedgerEntry[],
   error: null,
   isLoading: false,
@@ -27,11 +33,37 @@ const initialState = {
 
 export const useLedgerStore = create<LedgerStore>((set) => ({
   ...initialState,
+  addLocalEntry: (entry) =>
+    set((state) => {
+      const devEntries = sortLedgerEntries([entry, ...state.devEntries]);
+      return {
+        devEntries,
+        entries: entry.walletId
+          ? devEntries.filter((item) => item.walletId === entry.walletId)
+          : devEntries,
+      };
+    }),
   refreshLedger: async ({ isDevBypass, userId, walletId }) => {
     set({ error: null, isLoading: true });
 
     try {
-      if (isDevBypass || !walletId) {
+      if (isDevBypass) {
+        set({
+          entries: walletId
+            ? sortLedgerEntries(
+                useLedgerStore
+                  .getState()
+                  .devEntries.filter((entry) => entry.walletId === walletId),
+              )
+            : sortLedgerEntries(useLedgerStore.getState().devEntries),
+          error: null,
+          isLoading: false,
+          isReady: true,
+        });
+        return;
+      }
+
+      if (!walletId) {
         set({
           entries: [],
           error: null,
@@ -48,7 +80,7 @@ export const useLedgerStore = create<LedgerStore>((set) => ({
       });
 
       set({
-        entries,
+        entries: sortLedgerEntries(entries),
         error: null,
         isLoading: false,
         isReady: true,

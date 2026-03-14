@@ -1,16 +1,23 @@
-import { FeaturePlaceholderScreen } from "@/components/tabs/feature-placeholder-screen";
+import { SafeAreaView, StyleSheet } from "react-native";
+
+import { LedgerWorkspace } from "@/components/ledger/ledger-workspace";
 
 export default function FinancesScreen() {
   return (
-    <FeaturePlaceholderScreen
-      description="Esta vista ya vive dentro del shell final, pero todavia no mezcla formularios ni reglas nuevas. Solo prepara el terreno para la captura de movimientos."
-      eyebrow="Finanzas"
-      points={[
-        "Formulario rapido de ingresos y gastos sobre el ledger",
-        "Historial filtrable por wallet y tipo de movimiento",
-        "Acciones principales para salario, transferencias y compromisos",
-      ]}
-      title="Espacio listo para la operacion diaria"
-    />
+    <SafeAreaView style={styles.safeArea}>
+      <LedgerWorkspace
+        accentColor="#D9F99D"
+        description="Finanzas concentra la captura de movimientos base del producto. Desde aqui puedes registrar flujo de caja manual mientras las demas capas del dominio siguen entrando por fases."
+        eyebrow="Finanzas"
+        title="Captura manual sobre el ledger"
+      />
+    </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#090D1A",
+  },
+});
