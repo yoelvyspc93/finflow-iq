@@ -1,9 +1,23 @@
-name: Deploy Expo Web to Pages
+name: Web And OTA
 
 on:
+  pull_request:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      publish_update:
+        description: "Publicar OTA update"
+        required: false
+        default: "false"
+      channel:
+        description: "Canal de EAS Update"
+        required: false
+        default: "staging"
+      message:
+        description: "Mensaje del update"
+        required: false
+        default: "Manual OTA release"
 
 permissions:
   contents: read
@@ -15,7 +29,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  quality:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,7 +37,22 @@ jobs:
         with:
           node-version: 22
           cache: yarn
-      - run: yarn install
+      - run: yarn install --frozen-lockfile
+      - run: yarn typecheck
+      - run: yarn lint
+      - run: yarn web:export
+
+  deploy-web:
+    if: github.event_name == 'push'
+    needs: quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+      - run: yarn install --frozen-lockfile
       - run: yarn web:export
       - run: touch dist/.nojekyll
       - uses: actions/configure-pages@v5
@@ -31,8 +60,30 @@ jobs:
         with:
           path: dist
 
-  deploy:
-    needs: build
+  publish-ota:
+    if: github.event_name == 'workflow_dispatch' && inputs.publish_update == 'true'
+    needs: quality
+    runs-on: ubuntu-latest
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: yarn
+      - run: yarn install --frozen-lockfile
+      - name: Validate Expo token
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "Missing EXPO_TOKEN secret"
+            exit 1
+          fi
+      - run: npx eas update --non-interactive --channel "${{ inputs.channel }}" --message "${{ inputs.message }}"
+
+  deploy-pages:
+    if: github.event_name == 'push'
+    needs: deploy-web
     runs-on: ubuntu-latest
     environment:
       name: github-pages
