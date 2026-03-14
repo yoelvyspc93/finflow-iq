@@ -44,6 +44,80 @@ export type Database = {
         }
         Relationships: []
       }
+      currency_exchanges: {
+        Row: {
+          created_at: string
+          description: string | null
+          exchange_in_entry_id: string
+          exchange_out_entry_id: string
+          exchange_rate: number
+          from_amount: number
+          from_wallet_id: string
+          id: string
+          to_amount: number
+          to_wallet_id: string
+          transfer_date: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          exchange_in_entry_id: string
+          exchange_out_entry_id: string
+          exchange_rate: number
+          from_amount: number
+          from_wallet_id: string
+          id?: string
+          to_amount: number
+          to_wallet_id: string
+          transfer_date: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          exchange_in_entry_id?: string
+          exchange_out_entry_id?: string
+          exchange_rate?: number
+          from_amount?: number
+          from_wallet_id?: string
+          id?: string
+          to_amount?: number
+          to_wallet_id?: string
+          transfer_date?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "currency_exchanges_exchange_in_entry_id_fkey"
+            columns: ["exchange_in_entry_id"]
+            isOneToOne: true
+            referencedRelation: "ledger_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "currency_exchanges_exchange_out_entry_id_fkey"
+            columns: ["exchange_out_entry_id"]
+            isOneToOne: true
+            referencedRelation: "ledger_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "currency_exchanges_from_wallet_id_fkey"
+            columns: ["from_wallet_id"]
+            isOneToOne: false
+            referencedRelation: "wallets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "currency_exchanges_to_wallet_id_fkey"
+            columns: ["to_wallet_id"]
+            isOneToOne: false
+            referencedRelation: "wallets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       income_sources: {
         Row: {
           created_at: string
@@ -528,6 +602,37 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "salary_payments"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      transfer_between_wallets: {
+        Args: {
+          destination_amount: number
+          destination_wallet_id: string
+          quoted_exchange_rate: number
+          source_amount: number
+          source_wallet_id: string
+          target_transfer_date: string
+          transfer_description?: string
+        }
+        Returns: {
+          created_at: string
+          description: string | null
+          exchange_in_entry_id: string
+          exchange_out_entry_id: string
+          exchange_rate: number
+          from_amount: number
+          from_wallet_id: string
+          id: string
+          to_amount: number
+          to_wallet_id: string
+          transfer_date: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "currency_exchanges"
           isOneToOne: true
           isSetofReturn: false
         }
