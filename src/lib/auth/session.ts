@@ -47,12 +47,35 @@ function getWebBasePath(pathname: string) {
   return segments.length > 0 ? `/${segments.join("/")}` : "";
 }
 
+function buildWebCallbackUrl(source: URL) {
+  const callbackPath = `${getWebBasePath(source.pathname)}/callback`.replace(
+    /\/{2,}/g,
+    "/",
+  );
+
+  return new URL(callbackPath, source.origin).toString();
+}
+
+function getConfiguredWebRedirectUrl() {
+  const configuredUrl = process.env.EXPO_PUBLIC_WEB_URL?.trim();
+
+  if (!configuredUrl) {
+    return null;
+  }
+
+  try {
+    return buildWebCallbackUrl(new URL(configuredUrl));
+  } catch {
+    return null;
+  }
+}
+
 export function getAuthRedirectUrl() {
   if (Platform.OS === "web" && typeof window !== "undefined") {
-    const callbackPath = `${getWebBasePath(window.location.pathname)}/callback`
-      .replace(/\/{2,}/g, "/");
-
-    return new URL(callbackPath, window.location.origin).toString();
+    return (
+      getConfiguredWebRedirectUrl() ??
+      buildWebCallbackUrl(new URL(window.location.href))
+    );
   }
 
   return Linking.createURL("callback");
