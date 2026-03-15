@@ -21,7 +21,7 @@ export function LedgerBootstrap() {
       return;
     }
 
-    if (pinStatus !== "unlocked" || !isAppReady || !user?.id) {
+    if (pinStatus === "locked" || !isAppReady || !user?.id) {
       return;
     }
 

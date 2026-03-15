@@ -18,7 +18,7 @@ export function AppDataBootstrap() {
       return;
     }
 
-    if (pinStatus !== "unlocked" || !user?.id) {
+    if (pinStatus === "locked" || !user?.id) {
       return;
     }
 

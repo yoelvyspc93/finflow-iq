@@ -1,5 +1,6 @@
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Redirect, Tabs } from "expo-router";
 
 import { AppLoadingScreen } from "@/components/app/app-loading-screen";
@@ -10,13 +11,36 @@ function TabGlyph({
   icon,
 }: {
   focused: boolean;
-  icon: string;
+  icon: "dashboard" | "finances" | "planning" | "settings";
 }) {
+  const color = focused ? "#4664FF" : "#98A3BF";
+
   return (
     <View style={styles.tabGlyphWrap}>
-      <Text style={[styles.tabGlyph, focused && styles.tabGlyphActive]}>
-        {icon}
-      </Text>
+      {icon === "dashboard" ? (
+        <Ionicons color={color} name={focused ? "home" : "home-outline"} size={20} />
+      ) : null}
+      {icon === "finances" ? (
+        <MaterialCommunityIcons
+          color={color}
+          name={focused ? "plus-circle" : "plus-circle-outline"}
+          size={20}
+        />
+      ) : null}
+      {icon === "planning" ? (
+        <Ionicons
+          color={color}
+          name={focused ? "calendar" : "calendar-outline"}
+          size={20}
+        />
+      ) : null}
+      {icon === "settings" ? (
+        <Ionicons
+          color={color}
+          name={focused ? "settings" : "settings-outline"}
+          size={20}
+        />
+      ) : null}
     </View>
   );
 }
@@ -41,8 +65,8 @@ export default function TabsLayout() {
       initialRouteName="dashboard"
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: "#4562FF",
-        tabBarInactiveTintColor: "#8B97B2",
+        tabBarActiveTintColor: "#4664FF",
+        tabBarInactiveTintColor: "#98A3BF",
         tabBarStyle: styles.tabBar,
         tabBarLabelStyle: styles.tabBarLabel,
         tabBarItemStyle: styles.tabItem,
@@ -53,28 +77,34 @@ export default function TabsLayout() {
         name="dashboard"
         options={{
           tabBarLabel: "Inicio",
-          tabBarIcon: ({ focused }) => <TabGlyph focused={focused} icon="⌂" />,
+          tabBarIcon: ({ focused }) => <TabGlyph focused={focused} icon="dashboard" />,
         }}
       />
       <Tabs.Screen
         name="finances"
         options={{
           tabBarLabel: "Finanzas",
-          tabBarIcon: ({ focused }) => <TabGlyph focused={focused} icon="⊕" />,
+          tabBarIcon: ({ focused }) => <TabGlyph focused={focused} icon="finances" />,
         }}
       />
       <Tabs.Screen
         name="planning"
         options={{
-          tabBarLabel: "Planificación",
-          tabBarIcon: ({ focused }) => <TabGlyph focused={focused} icon="◫" />,
+          tabBarLabel: "Planificacion",
+          tabBarIcon: ({ focused }) => <TabGlyph focused={focused} icon="planning" />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           tabBarLabel: "Ajustes",
-          tabBarIcon: ({ focused }) => <TabGlyph focused={focused} icon="⚙" />,
+          tabBarIcon: ({ focused }) => <TabGlyph focused={focused} icon="settings" />,
+        }}
+      />
+      <Tabs.Screen
+        name="notifications"
+        options={{
+          href: null,
         }}
       />
     </Tabs>
@@ -83,15 +113,15 @@ export default function TabsLayout() {
 
 const styles = StyleSheet.create({
   scene: {
-    backgroundColor: "#0A1020",
+    backgroundColor: "transparent",
   },
   tabBar: {
-    height: 84,
-    paddingTop: 8,
-    paddingBottom: 10,
-    backgroundColor: "#0D1324",
+    height: 74,
+    paddingTop: 4,
+    paddingBottom: 8,
+    backgroundColor: "#0B1020",
     borderTopWidth: 1,
-    borderTopColor: "rgba(148, 163, 184, 0.10)",
+    borderTopColor: "rgba(132, 147, 188, 0.12)",
   },
   tabBarLabel: {
     fontSize: 11,
@@ -104,13 +134,5 @@ const styles = StyleSheet.create({
     minWidth: 26,
     alignItems: "center",
     justifyContent: "center",
-  },
-  tabGlyph: {
-    color: "#8B97B2",
-    fontSize: 18,
-    fontWeight: "700",
-  },
-  tabGlyphActive: {
-    color: "#4562FF",
   },
 });

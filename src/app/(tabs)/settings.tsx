@@ -9,13 +9,25 @@ import {
 } from "react-native";
 
 import {
+  Feather,
+  Ionicons,
+} from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+
+import {
   SettingsSheetStack,
   type SettingsDraft,
   type SettingsSheetKind,
   type WalletDraft,
 } from "@/components/settings/settings-sheet-stack";
+import { AppSwitch } from "@/components/ui/app-switch";
 import { DecorativeBackground } from "@/components/ui/decorative-background";
 import { ScreenHeader } from "@/components/ui/screen-header";
+import { clearPin, updateLockTimeout } from "@/lib/security/app-lock";
+import {
+  formatLockTimeout,
+  type LockTimeoutMs,
+} from "@/lib/security/security-preferences";
 import { supabase } from "@/lib/supabase/client";
 import { listCategories } from "@/modules/categories/service";
 import type { Category } from "@/modules/categories/types";
@@ -32,14 +44,36 @@ import { useAuthStore } from "@/stores/auth-store";
 import { useAppStore } from "@/stores/app-store";
 import { useSecurityStore } from "@/stores/security-store";
 
-function SectionRow({
+function Section({
+  action,
+  children,
+  title,
+}: {
+  action?: React.ReactNode;
+  children: React.ReactNode;
+  title: string;
+}) {
+  return (
+    <View style={styles.section}>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>{title}</Text>
+        {action}
+      </View>
+      <View style={styles.sectionBody}>{children}</View>
+    </View>
+  );
+}
+
+function Row({
   hint,
   onPress,
+  showChevron = Boolean(onPress),
   title,
   value,
 }: {
   hint?: string;
   onPress?: () => void;
+  showChevron?: boolean;
   title: string;
   value?: string;
 }) {
@@ -47,21 +81,22 @@ function SectionRow({
     <Pressable
       disabled={!onPress}
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.sectionRow,
-        pressed && onPress && styles.pressed,
-      ]}
+      style={({ pressed }) => [styles.row, pressed && onPress && styles.pressed]}
     >
-      <View style={styles.sectionRowText}>
-        <Text style={styles.sectionRowTitle}>{title}</Text>
-        {hint ? <Text style={styles.sectionRowHint}>{hint}</Text> : null}
+      <View style={styles.rowText}>
+        <Text style={styles.rowTitle}>{title}</Text>
+        {hint ? <Text style={styles.rowHint}>{hint}</Text> : null}
       </View>
-      <Text style={styles.sectionRowValue}>{value ?? ">"}</Text>
+      <View style={styles.rowValueWrap}>
+        {value ? <Text style={styles.rowValue}>{value}</Text> : null}
+        {showChevron ? <Feather color="#7D89A8" name="chevron-right" size={16} /> : null}
+      </View>
     </Pressable>
   );
 }
 
 export default function SettingsScreen() {
+  const router = useRouter();
   const [sheet, setSheet] = useState<SettingsSheetKind>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sheetError, setSheetError] = useState<string | null>(null);
@@ -89,11 +124,13 @@ export default function SettingsScreen() {
   const wallets = useAppStore((state) => state.wallets);
   const replaceLocalSettings = useAppStore((state) => state.replaceLocalSettings);
   const upsertLocalWallet = useAppStore((state) => state.upsertLocalWallet);
+  const lockTimeoutMs = useSecurityStore((state) => state.lockTimeoutMs);
   const pinStatus = useSecurityStore((state) => state.pinStatus);
 
   const email = user?.email ?? "usuario@finflow.app";
   const displayName = email.split("@")[0] || "Usuario";
   const activeWallets = wallets.filter((wallet) => wallet.isActive);
+  const isPinEnabled = pinStatus !== "not_setup";
 
   useEffect(() => {
     if (!settings) {
@@ -243,13 +280,8 @@ export default function SettingsScreen() {
     const normalizedName = walletDraft.name.trim();
     const normalizedCurrency = walletDraft.currency.trim().toUpperCase();
 
-    if (!normalizedName) {
-      setSheetError("Escribe un nombre para la wallet.");
-      return;
-    }
-
-    if (!normalizedCurrency) {
-      setSheetError("Escribe la moneda de la wallet.");
+    if (!normalizedName || !normalizedCurrency) {
+      setSheetError("Escribe nombre y moneda para la wallet.");
       return;
     }
 
@@ -351,58 +383,102 @@ export default function SettingsScreen() {
       return;
     }
 
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: "local" });
+  }
+
+  async function handleTogglePin(nextValue: boolean) {
+    if (nextValue) {
+      router.push("/pin");
+      return;
+    }
+
+    try {
+      await clearPin();
+    } catch (error) {
+      setSheetError(
+        error instanceof Error ? error.message : "No se pudo desactivar el PIN.",
+      );
+    }
+  }
+
+  async function handleStartPinReset() {
+    setIsSubmitting(true);
+    setSheetError(null);
+
+    try {
+      await clearPin();
+      closeSheet();
+      router.push("/pin");
+    } catch (error) {
+      setSheetError(
+        error instanceof Error ? error.message : "No se pudo reiniciar el PIN.",
+      );
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleSelectLockTimeout(nextLockTimeoutMs: LockTimeoutMs) {
+    setIsSubmitting(true);
+    setSheetError(null);
+
+    try {
+      await updateLockTimeout(nextLockTimeoutMs);
+      closeSheet();
+    } catch (error) {
+      setSheetError(
+        error instanceof Error
+          ? error.message
+          : "No se pudo actualizar el tiempo de bloqueo.",
+      );
+      setIsSubmitting(false);
+    }
   }
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <DecorativeBackground />
-      <View style={styles.border} />
-      <ScreenHeader title="Ajustes" />
+      <ScreenHeader
+        secondaryAction={{
+          icon: "bell",
+          onPress: () => router.push("/notifications"),
+          showBadge: true,
+        }}
+        title="Ajustes"
+      />
 
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.profileCard}>
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>
-              {displayName.slice(0, 1).toUpperCase()}
-            </Text>
+            <Text style={styles.avatarText}>{displayName.slice(0, 1).toUpperCase()}</Text>
             <View style={styles.avatarBadge} />
           </View>
           <Text style={styles.profileName}>{displayName}</Text>
           <Text style={styles.profileEmail}>{email}</Text>
         </View>
 
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Carteras</Text>
-            <Pressable
-              onPress={() => openWalletSheet()}
-              style={({ pressed }) => pressed && styles.pressed}
-            >
-              <Text style={styles.sectionAction}>+ Anadir</Text>
+        <Section
+          action={
+            <Pressable onPress={() => openWalletSheet()} style={({ pressed }) => pressed && styles.pressed}>
+              <Text style={styles.sectionAction}>+ Adicionar</Text>
             </Pressable>
-          </View>
+          }
+          title="Carteras"
+        >
           {wallets.map((wallet) => (
             <View key={wallet.id} style={styles.walletRow}>
-              <View style={styles.walletGlyph}>
-                <Text style={styles.walletGlyphText}>□</Text>
+              <View style={[styles.walletGlyph, { borderColor: wallet.color ?? "#4F6BFF" }]}>
+                <Ionicons color={wallet.color ?? "#4F6BFF"} name="wallet-outline" size={15} />
               </View>
               <View style={styles.walletText}>
                 <Text style={styles.walletName}>{wallet.name}</Text>
                 <Text style={styles.walletMeta}>
-                  {wallet.currency} • {wallet.balance.toFixed(2)} •{" "}
+                  {wallet.currency} • ${wallet.balance.toFixed(2)} •{" "}
                   {wallet.isActive ? "activa" : "archivada"}
                 </Text>
               </View>
-              <View style={styles.walletActionsRow}>
-                <Pressable
-                  onPress={() => openWalletSheet(wallet.id)}
-                  style={({ pressed }) => pressed && styles.pressed}
-                >
-                  <Text style={styles.walletActionText}>Editar</Text>
+              <View style={styles.walletActions}>
+                <Pressable onPress={() => openWalletSheet(wallet.id)} style={({ pressed }) => pressed && styles.pressed}>
+                  <Feather color="#C5D0EA" name="edit-2" size={14} />
                 </Pressable>
                 {activeWallets.length > 1 && wallet.isActive ? (
                   <Pressable
@@ -411,95 +487,103 @@ export default function SettingsScreen() {
                     }}
                     style={({ pressed }) => pressed && styles.pressed}
                   >
-                    <Text style={styles.walletActionDanger}>Archivar</Text>
+                    <Ionicons color="#D4DBF1" name="trash-outline" size={16} />
                   </Pressable>
                 ) : null}
               </View>
             </View>
           ))}
-        </View>
+        </Section>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Finanzas personales</Text>
-          <SectionRow
+        <Section title="Finanzas personales">
+          <Row
             hint="Porcentaje del ingreso total"
             onPress={openPreferencesSheet}
             title="Meta de ahorro mensual"
             value={`${settings?.savingsGoalPercent ?? "--"}%`}
           />
-          <SectionRow
+          <Row
             hint="Dia del mes para el reinicio del ciclo"
             onPress={openPreferencesSheet}
             title="Inicio del mes financiero"
-            value={String(settings?.financialMonthStartDay ?? 1)}
+            value={`${settings?.financialMonthStartDay ?? 1}st`}
           />
-          <SectionRow
-            hint="Promedio de meses con retrasos salariales"
-            onPress={openPreferencesSheet}
-            title="Meses sin cobrar"
-            value={String(settings?.avgMonthsWithoutPayment ?? 0)}
-          />
-        </View>
+        </Section>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Apariencia</Text>
-          <SectionRow
+        <Section title="Apariencia">
+          <Row
             onPress={openPreferencesSheet}
-            title="Moneda principal"
-            value={settings?.primaryCurrency ?? "USD"}
+            title="Selector de moneda"
+            value={`${settings?.primaryCurrency ?? "USD"} ($)`}
           />
-          <SectionRow
+          <Row
             onPress={openPreferencesSheet}
             title="Formato de fecha"
             value={settings?.dateFormat ?? "DD/MM/YYYY"}
           />
-        </View>
+        </Section>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Configuracion de IA</Text>
-          <SectionRow
+        <Section title="Configuracion de IA">
+          <Row
             onPress={openPreferencesSheet}
             title="Analysis Frequency"
-            value={settings?.aiAnalysisFrequency ?? "manual"}
+            value={
+              settings?.aiAnalysisFrequency === "daily"
+                ? "Daily"
+                : settings?.aiAnalysisFrequency === "each_transaction"
+                  ? "Each Tx"
+                  : "Manual"
+            }
           />
-        </View>
+        </Section>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Seguridad</Text>
-          <SectionRow
-            title="PIN local"
-            value={pinStatus === "not_setup" ? "Off" : "On"}
+        <Section title="Seguridad">
+          <View style={styles.securityRow}>
+            <View style={styles.rowText}>
+              <Text style={styles.rowTitle}>PIN</Text>
+              <Text style={styles.rowHint}>
+                Protege la app al volver desde segundo plano.
+              </Text>
+            </View>
+            <AppSwitch onValueChange={(value) => void handleTogglePin(value)} value={isPinEnabled} />
+          </View>
+          <Row
+            hint="Restablece el PIN actual y vuelve a configurarlo"
+            onPress={isPinEnabled ? () => setSheet("pin") : undefined}
+            showChevron={isPinEnabled}
+            title="Cambiar PIN"
+            value={isPinEnabled ? "Activo" : "No configurado"}
           />
-          <SectionRow title="Cambio de PIN" value="Desde pantalla PIN" />
-          <SectionRow title="Bloqueo" value="Inmediato" />
-        </View>
+          <Row
+            hint="Tiempo antes de volver a pedir el PIN"
+            onPress={() => setSheet("lock_time")}
+            title="Lock Time"
+            value={formatLockTimeout(lockTimeoutMs)}
+          />
+        </Section>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Gestion de datos</Text>
-          <SectionRow
-            hint="Categorias visibles en toda la app"
+        <Section title="Gestion de datos">
+          <Row
+            hint="Editar categorias de gastos"
             onPress={() => setSheet("libraries")}
-            title="Categorias"
+            title="Gestion de categorias"
             value={String(categories.length)}
           />
-          <SectionRow
-            hint="Fuentes usadas en ingresos y salario"
+          <Row
+            hint="Gestion tu salario y trabajos secundarios"
             onPress={() => setSheet("libraries")}
             title="Fuentes de ingresos"
             value={String(incomeSources.length)}
           />
-        </View>
+        </Section>
 
         <Pressable
           onPress={() => {
             void handleSignOut();
           }}
-          style={({ pressed }) => [
-            styles.signOutButton,
-            pressed && styles.signOutButtonPressed,
-          ]}
+          style={({ pressed }) => [styles.signOutButton, pressed && styles.pressed]}
         >
-          <Text style={styles.signOutButtonText}>Cerrar sesion</Text>
+          <Text style={styles.signOutText}>Cerrar sesion</Text>
         </Pressable>
       </ScrollView>
 
@@ -507,13 +591,13 @@ export default function SettingsScreen() {
         categories={categories}
         incomeSources={incomeSources}
         isSubmitting={isSubmitting}
+        lockTimeoutMs={lockTimeoutMs}
         onClose={closeSheet}
-        onSubmitPreferences={() => {
-          void handleSavePreferences();
-        }}
-        onSubmitWallet={() => {
-          void handleSaveWallet();
-        }}
+        onSelectLockTimeout={(value) => void handleSelectLockTimeout(value)}
+        onStartPinReset={() => void handleStartPinReset()}
+        onSubmitPreferences={() => void handleSavePreferences()}
+        onSubmitWallet={() => void handleSaveWallet()}
+        pinEnabled={isPinEnabled}
         setSettingsDraft={setSettingsDraft}
         setWalletDraft={setWalletDraft}
         settings={settings}
@@ -528,43 +612,20 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#0A1020",
-  },
-  border: {
-    position: "absolute",
-    top: 61,
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: "rgba(148, 163, 184, 0.09)",
-  },
-  content: {
-    paddingHorizontal: 16,
-    paddingBottom: 120,
-    gap: 18,
-  },
-  profileCard: {
-    alignItems: "center",
-    gap: 6,
-    paddingTop: 12,
-  },
+  safeArea: { flex: 1, backgroundColor: "#0B1020" },
+  content: { paddingHorizontal: 14, paddingTop: 8, paddingBottom: 104, gap: 16 },
+  profileCard: { alignItems: "center", gap: 6, paddingTop: 4 },
   avatar: {
-    width: 76,
-    height: 76,
-    borderRadius: 38,
+    width: 74,
+    height: 74,
+    borderRadius: 37,
     borderWidth: 2,
-    borderColor: "#4562FF",
+    borderColor: "#4B69FF",
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#18213A",
   },
-  avatarText: {
-    color: "#F8FAFC",
-    fontSize: 30,
-    fontWeight: "900",
-  },
+  avatarText: { color: "#F8FAFC", fontSize: 28, fontWeight: "900" },
   avatarBadge: {
     position: "absolute",
     right: 2,
@@ -573,130 +634,79 @@ const styles = StyleSheet.create({
     height: 14,
     borderRadius: 7,
     borderWidth: 2,
-    borderColor: "#0A1020",
-    backgroundColor: "#4562FF",
+    borderColor: "#0B1020",
+    backgroundColor: "#4B69FF",
   },
-  profileName: {
-    color: "#FFFFFF",
-    fontSize: 28,
-    fontWeight: "900",
-  },
-  profileEmail: {
-    color: "#8D98B2",
-    fontSize: 14,
-  },
-  section: {
-    gap: 10,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  sectionTitle: {
-    color: "#F8FAFC",
-    fontSize: 16,
-    fontWeight: "800",
-  },
-  sectionAction: {
-    color: "#4562FF",
-    fontSize: 13,
-    fontWeight: "700",
+  profileName: { color: "#FFFFFF", fontSize: 28, fontWeight: "900" },
+  profileEmail: { color: "#8A96B3", fontSize: 13 },
+  section: { gap: 8 },
+  sectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  sectionTitle: { color: "#F8FAFC", fontSize: 14, fontWeight: "800" },
+  sectionAction: { color: "#4B69FF", fontSize: 12, fontWeight: "800" },
+  sectionBody: {
+    borderRadius: 14,
+    backgroundColor: "rgba(21, 28, 47, 0.96)",
+    borderWidth: 1,
+    borderColor: "rgba(88, 104, 149, 0.14)",
+    overflow: "hidden",
   },
   walletRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    borderRadius: 14,
-    backgroundColor: "#141D32",
-    padding: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(88, 104, 149, 0.12)",
   },
   walletGlyph: {
-    width: 30,
-    height: 30,
+    width: 28,
+    height: 28,
     borderRadius: 8,
+    borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(69, 98, 255, 0.14)",
+    backgroundColor: "rgba(33, 43, 74, 0.82)",
   },
-  walletGlyphText: {
-    color: "#4562FF",
-    fontSize: 14,
-    fontWeight: "800",
-  },
-  walletText: {
-    flex: 1,
-    gap: 4,
-  },
-  walletName: {
-    color: "#F8FAFC",
-    fontSize: 15,
-    fontWeight: "800",
-  },
-  walletMeta: {
-    color: "#8D98B2",
-    fontSize: 12,
-  },
-  walletActionsRow: {
-    alignItems: "flex-end",
-    gap: 6,
-  },
-  walletActionText: {
-    color: "#D7E3FA",
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  walletActionDanger: {
-    color: "#FCA5A5",
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  sectionRow: {
+  walletText: { flex: 1, gap: 2 },
+  walletName: { color: "#F8FAFC", fontSize: 14, fontWeight: "800" },
+  walletMeta: { color: "#8A96B3", fontSize: 11, lineHeight: 16 },
+  walletActions: { flexDirection: "row", alignItems: "center", gap: 12 },
+  row: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 12,
-    borderRadius: 14,
-    backgroundColor: "#141D32",
     paddingHorizontal: 14,
-    paddingVertical: 15,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(88, 104, 149, 0.12)",
   },
-  sectionRowText: {
-    flex: 1,
-    gap: 3,
+  rowText: { flex: 1, gap: 2 },
+  rowTitle: { color: "#F8FAFC", fontSize: 14, fontWeight: "700" },
+  rowHint: { color: "#8A96B3", fontSize: 11, lineHeight: 16 },
+  rowValueWrap: { flexDirection: "row", alignItems: "center", gap: 6 },
+  rowValue: { color: "#4B69FF", fontSize: 12, fontWeight: "800" },
+  securityRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(88, 104, 149, 0.12)",
   },
-  sectionRowTitle: {
-    color: "#F8FAFC",
-    fontSize: 14,
-    fontWeight: "700",
-  },
-  sectionRowHint: {
-    color: "#8D98B2",
-    fontSize: 11,
-    lineHeight: 16,
-  },
-  sectionRowValue: {
-    color: "#4562FF",
-    fontSize: 13,
-    fontWeight: "800",
-  },
+  rowMuted: { color: "#8A96B3", fontSize: 12, fontWeight: "700" },
   signOutButton: {
-    minHeight: 52,
-    borderRadius: 16,
+    minHeight: 50,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#1A2236",
-    marginTop: 4,
+    backgroundColor: "rgba(21, 28, 47, 0.96)",
+    borderWidth: 1,
+    borderColor: "rgba(88, 104, 149, 0.14)",
   },
-  signOutButtonPressed: {
-    opacity: 0.88,
-  },
-  signOutButtonText: {
-    color: "#F8FAFC",
-    fontSize: 15,
-    fontWeight: "800",
-  },
-  pressed: {
-    opacity: 0.88,
-  },
+  signOutText: { color: "#F8FAFC", fontSize: 14, fontWeight: "800" },
+  pressed: { opacity: 0.88 },
 });

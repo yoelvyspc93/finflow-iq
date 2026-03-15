@@ -9,8 +9,9 @@ import {
   View,
 } from "react-native";
 
-import { Redirect } from "expo-router";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
+import { Redirect } from "expo-router";
 
 import { DecorativeBackground } from "@/components/ui/decorative-background";
 import { sendMagicLink } from "@/lib/auth/session";
@@ -31,6 +32,7 @@ export default function LoginScreen() {
   const authError = useAuthStore((state) => state.error);
   const enableDevBypass = useAuthStore((state) => state.enableDevBypass);
   const isReady = useAuthStore((state) => state.isReady);
+  const isSecurityLoaded = useSecurityStore((state) => state.isLoaded);
   const lastMagicLinkEmail = useAuthStore((state) => state.lastMagicLinkEmail);
   const magicLinkCooldownUntil = useAuthStore(
     (state) => state.magicLinkCooldownUntil,
@@ -44,8 +46,6 @@ export default function LoginScreen() {
   );
   const status = useAuthStore((state) => state.status);
   const pinStatus = useSecurityStore((state) => state.pinStatus);
-
-  const isDevBypassEnabled = __DEV__;
 
   const canSubmit = useMemo(
     () =>
@@ -83,15 +83,26 @@ export default function LoginScreen() {
     return () => clearInterval(timer);
   }, [magicLinkCooldownUntil, setMagicLinkCooldownUntil]);
 
-  if (isReady && status === "authenticated") {
-    return <Redirect href={pinStatus === "unlocked" ? "/" : "/pin"} />;
+  if (isReady && status === "authenticated" && !isSecurityLoaded) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <DecorativeBackground />
+        <View style={styles.loadingState}>
+          <ActivityIndicator color="#F8FAFC" />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (isReady && status === "authenticated" && isSecurityLoaded) {
+    return <Redirect href={pinStatus === "locked" ? "/pin" : "/"} />;
   }
 
   async function handleSubmit() {
     const normalizedEmail = email.trim().toLowerCase();
 
     if (!isValidEmail(normalizedEmail)) {
-      setFeedback("Escribe un correo válido.");
+      setFeedback("Escribe un correo valido.");
       return;
     }
 
@@ -113,7 +124,7 @@ export default function LoginScreen() {
       if (authErrorStatus === 429) {
         setMagicLinkCooldownUntil(Date.now() + 60_000);
         setFeedback(
-          "Supabase bloqueó temporalmente más envíos. Espera 60 segundos antes de reintentar.",
+          "Supabase bloqueo temporalmente mas envios. Espera 60 segundos antes de reintentar.",
         );
       } else {
         setFeedback(error.message);
@@ -144,34 +155,39 @@ export default function LoginScreen() {
       <View style={styles.container}>
         <View style={styles.card}>
           <View style={styles.badge}>
-            <Image
-              contentFit="contain"
-              source={require("../../assets/logo.png")}
-              style={styles.badgeImage}
-            />
+              <Image
+                contentFit="contain"
+                source={require("../../../assets/logo.png")}
+                style={styles.badgeImage}
+              />
           </View>
 
-          <Text style={styles.title}>FinFlow IQ</Text>
-          <Text style={styles.subtitle}>Bienvenido de nuevo</Text>
+          <View style={styles.header}>
+            <Text style={styles.title}>
+              FinFlow <Text style={styles.titleAccent}>IQ</Text>
+            </Text>
+            <Text style={styles.subtitle}>Bienvenido de nuevo</Text>
+          </View>
 
           <View style={styles.infoBox}>
+            <Ionicons color="#5270FF" name="sparkles-outline" size={15} />
             <Text style={styles.infoText}>
-              Sin contraseña, recibirás un enlace mágico en tu email para
-              acceder de forma segura.
+              Sin contrasena, recibiras un enlace magico en tu email para acceder
+              de forma segura.
             </Text>
           </View>
 
           <View style={styles.fieldGroup}>
-            <Text style={styles.label}>Correo electrónico</Text>
+            <Text style={styles.label}>Correo electronico</Text>
             <View style={styles.inputShell}>
-              <Text style={styles.inputIcon}>✉</Text>
+              <Feather color="#95A1BD" name="mail" size={17} />
               <TextInput
                 autoCapitalize="none"
                 autoComplete="email"
                 keyboardType="email-address"
                 onChangeText={setEmail}
                 placeholder="tu@email.com"
-                placeholderTextColor="#64748B"
+                placeholderTextColor="#65728E"
                 style={styles.input}
                 value={email}
               />
@@ -181,20 +197,20 @@ export default function LoginScreen() {
           {!isSupabaseConfigured ? (
             <Text style={styles.errorText}>
               Falta configurar `EXPO_PUBLIC_SUPABASE_URL` y
-              `EXPO_PUBLIC_SUPABASE_ANON_KEY` en tu entorno.
+              `EXPO_PUBLIC_SUPABASE_ANON_KEY`.
             </Text>
           ) : null}
 
           {feedback ? <Text style={styles.helperText}>{feedback}</Text> : null}
           {authError ? <Text style={styles.errorText}>{authError}</Text> : null}
           {lastMagicLinkEmail ? (
-            <Text style={styles.lastEmailText}>
-              Último enlace enviado a {lastMagicLinkEmail}
+            <Text style={styles.metaText}>
+              Ultimo enlace enviado a {lastMagicLinkEmail}
             </Text>
           ) : null}
           {remainingSeconds > 0 ? (
-            <Text style={styles.cooldownText}>
-              Reenvío disponible en {remainingSeconds}s
+            <Text style={styles.metaText}>
+              Reenvio disponible en {remainingSeconds}s
             </Text>
           ) : null}
 
@@ -215,12 +231,15 @@ export default function LoginScreen() {
               <Text style={styles.buttonText}>
                 {remainingSeconds > 0
                   ? `Espera ${remainingSeconds}s`
-                  : "Enviar enlace de acceso →"}
+                  : "Enviar enlace de acceso"}
               </Text>
             )}
+            {!isSubmitting && remainingSeconds <= 0 ? (
+              <Feather color="#F8FAFC" name="arrow-right" size={16} />
+            ) : null}
           </Pressable>
 
-          {isDevBypassEnabled ? (
+          {__DEV__ ? (
             <Pressable
               onPress={handleDevBypass}
               style={({ pressed }) => [
@@ -228,9 +247,7 @@ export default function LoginScreen() {
                 pressed && styles.buttonPressed,
               ]}
             >
-              <Text style={styles.secondaryButtonText}>
-                Entrar en modo desarrollo
-              </Text>
+              <Text style={styles.secondaryButtonText}>Entrar en modo desarrollo</Text>
             </Pressable>
           ) : null}
         </View>
@@ -242,141 +259,164 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#0A1020",
+    backgroundColor: "#0B1020",
   },
   container: {
     flex: 1,
     justifyContent: "center",
-    padding: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 24,
+  },
+  loadingState: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
   card: {
-    borderWidth: 1,
-    borderColor: "rgba(69, 98, 255, 0.14)",
-    backgroundColor: "#151D31",
-    borderRadius: 20,
-    padding: 24,
+    width: "100%",
+    maxWidth: 344,
+    alignSelf: "center",
     gap: 18,
-    shadowColor: "#000000",
-    shadowOpacity: 0.24,
-    shadowRadius: 28,
-    shadowOffset: { width: 0, height: 16 },
-    elevation: 8,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(72, 97, 173, 0.16)",
+    backgroundColor: "rgba(21, 28, 47, 0.90)",
+    paddingHorizontal: 14,
+    paddingVertical: 16,
+    shadowColor: "#020617",
+    shadowOpacity: 0.34,
+    shadowRadius: 26,
+    shadowOffset: { width: 0, height: 18 },
+    elevation: 14,
   },
   badge: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#1E2A4D",
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: "rgba(43, 61, 136, 0.96)",
     alignItems: "center",
     justifyContent: "center",
     alignSelf: "center",
   },
   badgeImage: {
-    width: 24,
-    height: 24,
+    width: 21,
+    height: 21,
+  },
+  header: {
+    alignItems: "center",
+    gap: 6,
   },
   title: {
     color: "#F8FAFC",
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: "900",
     textAlign: "center",
   },
+  titleAccent: {
+    color: "#4B69FF",
+  },
   subtitle: {
-    color: "#94A3B8",
-    fontSize: 15,
+    color: "#7F8AA6",
+    fontSize: 14,
+    fontWeight: "600",
     textAlign: "center",
   },
   infoBox: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
     borderWidth: 1,
-    borderColor: "rgba(69, 98, 255, 0.22)",
-    backgroundColor: "rgba(48, 68, 142, 0.18)",
-    borderRadius: 16,
-    padding: 16,
+    borderColor: "rgba(65, 88, 172, 0.48)",
+    backgroundColor: "rgba(40, 53, 108, 0.20)",
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
   },
   infoText: {
-    color: "#CBD5E1",
+    flex: 1,
+    color: "#B9C4DD",
     fontSize: 14,
+    fontWeight: "600",
     lineHeight: 22,
   },
   fieldGroup: {
-    gap: 8,
+    gap: 10,
   },
   label: {
-    color: "#E2E8F0",
+    color: "#D7E0F3",
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: "700",
   },
   inputShell: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    borderRadius: 14,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(148, 163, 184, 0.12)",
-    backgroundColor: "#11192B",
+    borderColor: "rgba(115, 128, 167, 0.18)",
+    backgroundColor: "rgba(17, 22, 39, 0.92)",
     paddingHorizontal: 14,
-  },
-  inputIcon: {
-    color: "#93A0B9",
-    fontSize: 16,
   },
   input: {
     flex: 1,
     color: "#F8FAFC",
     fontSize: 16,
-    paddingVertical: 14,
+    paddingVertical: 13,
   },
   helperText: {
-    color: "#BFDBFE",
+    color: "#BFD4FF",
     fontSize: 13,
     lineHeight: 20,
   },
   errorText: {
-    color: "#FCA5A5",
+    color: "#F6A6A8",
     fontSize: 13,
     lineHeight: 20,
   },
-  lastEmailText: {
-    color: "#94A3B8",
+  metaText: {
+    color: "#8694B2",
     fontSize: 12,
-  },
-  cooldownText: {
-    color: "#F8FAFC",
-    fontSize: 12,
-    fontWeight: "700",
+    lineHeight: 18,
   },
   button: {
-    minHeight: 54,
-    borderRadius: 16,
-    backgroundColor: "#4562FF",
+    minHeight: 44,
+    borderRadius: 10,
+    backgroundColor: "#4A66FF",
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 20,
+    flexDirection: "row",
+    gap: 8,
+    paddingHorizontal: 18,
+    shadowColor: "#4A66FF",
+    shadowOpacity: 0.34,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 6,
   },
   buttonDisabled: {
-    opacity: 0.45,
+    opacity: 0.58,
   },
   buttonPressed: {
     opacity: 0.88,
   },
   buttonText: {
     color: "#F8FAFC",
-    fontSize: 15,
-    fontWeight: "700",
+    fontSize: 14,
+    fontWeight: "800",
   },
   secondaryButton: {
-    minHeight: 50,
-    borderRadius: 16,
+    minHeight: 42,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: "rgba(69, 98, 255, 0.22)",
-    backgroundColor: "#16203A",
+    borderColor: "rgba(74, 102, 255, 0.26)",
+    backgroundColor: "rgba(18, 24, 42, 0.90)",
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 20,
+    paddingHorizontal: 18,
   },
   secondaryButtonText: {
-    color: "#C7D2FE",
-    fontSize: 14,
+    color: "#CBD6F7",
+    fontSize: 13,
     fontWeight: "700",
   },
 });

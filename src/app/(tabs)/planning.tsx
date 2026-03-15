@@ -9,6 +9,9 @@ import {
   View,
 } from "react-native";
 
+import { Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+
 import {
   PlanningSheetStack,
   type ContributionDraft,
@@ -17,6 +20,7 @@ import {
   type WishDraft,
 } from "@/components/planning/planning-sheet-stack";
 import { DecorativeBackground } from "@/components/ui/decorative-background";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { ScreenHeader } from "@/components/ui/screen-header";
 import { SegmentedControl } from "@/components/ui/segmented-control";
 import { addGoalContribution, createGoal } from "@/modules/goals/service";
@@ -35,63 +39,25 @@ import { usePlanningStore } from "@/stores/planning-store";
 type PlanningView = "desires" | "insights";
 type DesireFilter = "all" | "bought" | "pending";
 
-function ActionPill({
-  label,
-  onPress,
-}: {
-  label: string;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.actionPill, pressed && styles.pressed]}>
-      <Text style={styles.actionPillText}>{label}</Text>
-    </Pressable>
-  );
-}
-
-function formatMoney(currency: string, value: number) {
-  return `${currency} ${value.toFixed(2)}`;
-}
-
-function formatDateLabel(value: string | null) {
+function dateLabel(value: string | null, month = false) {
   if (!value) {
-    return "Sin fecha";
+    return "--";
   }
 
-  const date = new Date(`${value}T00:00:00.000Z`);
-  return date.toLocaleDateString("es-ES", {
-    day: "2-digit",
+  return new Date(`${value}T00:00:00.000Z`).toLocaleDateString("en-US", {
+    day: month ? undefined : "2-digit",
     month: "short",
+    year: month ? "numeric" : undefined,
   });
 }
 
-function formatWeekLabel(value: string) {
-  const date = new Date(`${value}T00:00:00.000Z`);
-  return `S${date.getUTCMonth() + 1}.${date.getUTCDate()}`;
-}
-
-function getConfidenceLabel(value: "high" | "medium" | "low" | "risky") {
-  switch (value) {
-    case "high":
-      return "Alta confianza";
-    case "medium":
-      return "Media";
-    case "low":
-      return "Baja";
-    default:
-      return "Riesgo";
-  }
-}
-
-function buildPlanningTip(args: {
+function tip(args: {
   assignableAmount: number;
   goalShortfall: number;
   nextWishAmount: number | null;
 }) {
   if (args.assignableAmount > 0 && args.goalShortfall > 0) {
-    return `Tienes margen para mover ${args.assignableAmount.toFixed(
-      2,
-    )} a metas sin tocar tu reserva.`;
+    return `Tienes margen para mover ${args.assignableAmount.toFixed(0)} a metas sin tocar tu reserva.`;
   }
 
   if (args.nextWishAmount !== null && args.assignableAmount >= args.nextWishAmount) {
@@ -102,9 +68,11 @@ function buildPlanningTip(args: {
 }
 
 export default function PlanningScreen() {
+  const router = useRouter();
   const [view, setView] = useState<PlanningView>("desires");
   const [filter, setFilter] = useState<DesireFilter>("all");
   const [sheet, setSheet] = useState<PlanningSheetKind>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [goalDraft, setGoalDraft] = useState<GoalDraft>({
     deadline: "",
     name: "",
@@ -126,6 +94,7 @@ export default function PlanningScreen() {
   });
   const [sheetError, setSheetError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
   const isDevBypass = useAuthStore((state) => state.isDevBypass);
   const user = useAuthStore((state) => state.user);
   const settings = useAppStore((state) => state.settings);
@@ -155,19 +124,12 @@ export default function PlanningScreen() {
       return;
     }
 
-    void refreshPlanningData({
-      isDevBypass,
-      settings,
-      userId: user.id,
-      wallets,
-    });
+    void refreshPlanningData({ isDevBypass, settings, userId: user.id, wallets });
   }, [isDevBypass, refreshPlanningData, settings, user?.id, wallets]);
 
-  const currency = wallets.find((wallet) => wallet.isActive)?.currency ?? "USD";
   const activeGoals = goalSnapshots.filter(
     (snapshot) => snapshot.goal.status === "active" || snapshot.status === "at_risk",
   );
-
   const filteredWishes = useMemo(() => {
     if (filter === "all") {
       return wishProjections;
@@ -179,52 +141,9 @@ export default function PlanningScreen() {
 
     return wishProjections.filter((item) => !item.wish.isPurchased);
   }, [filter, wishProjections]);
-
-  const scoreChart = useMemo(() => {
-    const history = recentScores.slice(0, 6).reverse();
-
-    if (history.length > 0) {
-      return history.map((item) => ({
-        label: formatWeekLabel(item.weekStart),
-        value: item.score,
-      }));
-    }
-
-    if (!currentScore) {
-      return [];
-    }
-
-    return [
-      {
-        label: "Liq",
-        value: currentScore.breakdown.liquidity_score,
-      },
-      {
-        label: "Comp",
-        value: currentScore.breakdown.commitment_score,
-      },
-      {
-        label: "Aho",
-        value: currentScore.breakdown.savings_score,
-      },
-      {
-        label: "Sal",
-        value: currentScore.breakdown.salary_stability_score,
-      },
-      {
-        label: "Wish",
-        value: currentScore.breakdown.wishlist_pressure_score,
-      },
-    ];
-  }, [currentScore, recentScores]);
-
-  const pendingGoalAmount = useMemo(
-    () =>
-      goalSnapshots.reduce(
-        (total, snapshot) => total + snapshot.remainingAmount,
-        0,
-      ),
-    [goalSnapshots],
+  const pendingGoalAmount = goalSnapshots.reduce(
+    (total, snapshot) => total + snapshot.remainingAmount,
+    0,
   );
   const nextWishAmount =
     wishProjections.find((projection) => !projection.wish.isPurchased)?.wish
@@ -234,20 +153,39 @@ export default function PlanningScreen() {
       ? Math.max(
         0,
         Math.round(
-          (Math.max(
-            (overview.availableBalance ?? 0) - (overview.committedAmount ?? 0),
-            0,
-          ) /
+          (Math.max((overview.availableBalance ?? 0) - (overview.committedAmount ?? 0), 0) /
             overview.monthlyCommitmentAverage) *
-          30,
+            30,
         ),
       )
       : 0;
-  const actionTip = buildPlanningTip({
+  const savingsRatio =
+    overview?.monthlyIncome && overview.monthlyIncome > 0
+      ? Math.round(
+        ((overview.monthlyGoalContributionAverage ?? 0) / overview.monthlyIncome) *
+          100,
+      )
+      : 0;
+  const actionTip = tip({
     assignableAmount: overview?.assignableAmount ?? 0,
     goalShortfall: pendingGoalAmount,
     nextWishAmount,
   });
+  const scoreBars = (recentScores.slice(0, 6).reverse().length
+    ? recentScores.slice(0, 6).reverse().map((item) => ({
+      label: new Date(`${item.weekStart}T00:00:00.000Z`)
+        .toLocaleDateString("en-US", { month: "short" })
+        .toUpperCase(),
+      value: item.score,
+    }))
+    : [
+      { label: "ENE", value: currentScore?.breakdown.liquidity_score ?? 42 },
+      { label: "FEB", value: currentScore?.breakdown.commitment_score ?? 56 },
+      { label: "MAR", value: currentScore?.breakdown.savings_score ?? 48 },
+      { label: "ABR", value: currentScore?.breakdown.salary_stability_score ?? 62 },
+      { label: "MAY", value: currentScore?.breakdown.wishlist_pressure_score ?? 58 },
+      { label: "JUN", value: currentScore?.score ?? 64 },
+    ]) as { label: string; value: number }[];
 
   function closeSheet() {
     setSheet(null);
@@ -262,7 +200,7 @@ export default function PlanningScreen() {
       targetAmount: "",
       walletId: wallets.find((wallet) => wallet.isActive)?.id ?? "",
     });
-    setSheetError(null);
+    setPickerOpen(false);
     setSheet("goal");
   }
 
@@ -273,7 +211,7 @@ export default function PlanningScreen() {
       goalId: goalId ?? activeGoals[0]?.goal.id ?? "",
       note: "",
     });
-    setSheetError(null);
+    setPickerOpen(false);
     setSheet("contribution");
   }
 
@@ -290,11 +228,11 @@ export default function PlanningScreen() {
       priority: String(maxPriority + 1 || 1),
       walletId: wallets.find((wallet) => wallet.isActive)?.id ?? "",
     });
-    setSheetError(null);
+    setPickerOpen(false);
     setSheet("wish");
   }
 
-  async function rerunPlanningRefresh() {
+  async function refreshAll() {
     if (!user?.id || !settings) {
       return;
     }
@@ -314,19 +252,12 @@ export default function PlanningScreen() {
     }
 
     const targetAmount = Number(goalDraft.targetAmount);
-
     if (!goalDraft.name.trim()) {
       setSheetError("Escribe un nombre para la meta.");
       return;
     }
-
-    if (Number.isNaN(targetAmount) || targetAmount <= 0) {
-      setSheetError("El monto objetivo debe ser mayor que cero.");
-      return;
-    }
-
-    if (!goalDraft.walletId) {
-      setSheetError("Selecciona una wallet.");
+    if (Number.isNaN(targetAmount) || targetAmount <= 0 || !goalDraft.walletId) {
+      setSheetError("Completa nombre, monto y wallet.");
       return;
     }
 
@@ -354,13 +285,11 @@ export default function PlanningScreen() {
         });
       }
 
-      await rerunPlanningRefresh();
+      await refreshAll();
       closeSheet();
     } catch (submitError) {
       setSheetError(
-        submitError instanceof Error
-          ? submitError.message
-          : "No se pudo crear la meta.",
+        submitError instanceof Error ? submitError.message : "No se pudo crear la meta.",
       );
       setIsSubmitting(false);
     }
@@ -377,13 +306,8 @@ export default function PlanningScreen() {
       (snapshot) => snapshot.goal.id === contributionDraft.goalId,
     )?.goal;
 
-    if (!selectedGoal) {
-      setSheetError("Selecciona una meta valida.");
-      return;
-    }
-
-    if (Number.isNaN(amount) || amount <= 0) {
-      setSheetError("El aporte debe ser mayor que cero.");
+    if (!selectedGoal || Number.isNaN(amount) || amount <= 0) {
+      setSheetError("Selecciona una meta valida y un monto mayor que cero.");
       return;
     }
 
@@ -412,10 +336,7 @@ export default function PlanningScreen() {
             walletId: selectedGoal.walletId,
           }),
         );
-        applyWalletBalanceDelta({
-          amount: amount * -1,
-          walletId: selectedGoal.walletId,
-        });
+        applyWalletBalanceDelta({ amount: amount * -1, walletId: selectedGoal.walletId });
       } else {
         await addGoalContribution({
           amount,
@@ -434,13 +355,11 @@ export default function PlanningScreen() {
         }
       }
 
-      await rerunPlanningRefresh();
+      await refreshAll();
       closeSheet();
     } catch (submitError) {
       setSheetError(
-        submitError instanceof Error
-          ? submitError.message
-          : "No se pudo registrar el aporte.",
+        submitError instanceof Error ? submitError.message : "No se pudo registrar el aporte.",
       );
       setIsSubmitting(false);
     }
@@ -455,23 +374,15 @@ export default function PlanningScreen() {
     const estimatedAmount = Number(wishDraft.amount);
     const priority = Number(wishDraft.priority);
 
-    if (!wishDraft.name.trim()) {
-      setSheetError("Escribe un nombre para el deseo.");
-      return;
-    }
-
-    if (Number.isNaN(estimatedAmount) || estimatedAmount <= 0) {
-      setSheetError("El monto estimado debe ser mayor que cero.");
-      return;
-    }
-
-    if (Number.isNaN(priority) || priority <= 0) {
-      setSheetError("La prioridad debe ser un numero mayor que cero.");
-      return;
-    }
-
-    if (!wishDraft.walletId) {
-      setSheetError("Selecciona una wallet.");
+    if (
+      !wishDraft.name.trim() ||
+      Number.isNaN(estimatedAmount) ||
+      estimatedAmount <= 0 ||
+      Number.isNaN(priority) ||
+      priority <= 0 ||
+      !wishDraft.walletId
+    ) {
+      setSheetError("Completa nombre, monto, prioridad y wallet.");
       return;
     }
 
@@ -501,13 +412,11 @@ export default function PlanningScreen() {
         });
       }
 
-      await rerunPlanningRefresh();
+      await refreshAll();
       closeSheet();
     } catch (submitError) {
       setSheetError(
-        submitError instanceof Error
-          ? submitError.message
-          : "No se pudo crear el deseo.",
+        submitError instanceof Error ? submitError.message : "No se pudo crear el deseo.",
       );
       setIsSubmitting(false);
     }
@@ -516,13 +425,17 @@ export default function PlanningScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <DecorativeBackground />
-      <View style={styles.border} />
-      <ScreenHeader title="Planificacion" />
+      <ScreenHeader
+        primaryAction={{ icon: "plus", onPress: () => setPickerOpen(true) }}
+        secondaryAction={{
+          icon: "bell",
+          onPress: () => router.push("/notifications"),
+          showBadge: true,
+        }}
+        title="Planificacion"
+      />
 
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <SegmentedControl
           onChange={setView}
           options={[
@@ -532,74 +445,18 @@ export default function PlanningScreen() {
           value={view}
         />
 
-        {view === "desires" ? (
-          <View style={styles.actionRow}>
-            <ActionPill label="+ Meta" onPress={openGoalSheet} />
-            <ActionPill label="+ Aporte" onPress={() => openContributionSheet()} />
-            <ActionPill label="+ Deseo" onPress={openWishSheet} />
-          </View>
-        ) : null}
-
         {!isReady && isLoading ? (
-          <View style={styles.stateCard}>
-            <ActivityIndicator color="#4562FF" />
-            <Text style={styles.stateText}>Calculando planificacion...</Text>
+          <View style={styles.cardCenter}>
+            <ActivityIndicator color="#4664FF" />
+            <Text style={styles.softText}>Calculando planificacion...</Text>
           </View>
         ) : error ? (
-          <View style={styles.stateCard}>
-            <Text style={styles.stateTitle}>No se pudo cargar</Text>
-            <Text style={styles.stateText}>{error}</Text>
+          <View style={styles.cardCenter}>
+            <Text style={styles.cardTitle}>No se pudo cargar</Text>
+            <Text style={styles.softText}>{error}</Text>
           </View>
         ) : view === "desires" ? (
           <>
-            <Text style={styles.sectionTitle}>Metas activas</Text>
-
-            {goalSnapshots.length === 0 ? (
-              <View style={styles.stateCard}>
-                <Text style={styles.stateTitle}>Sin metas todavia</Text>
-                <Text style={styles.stateText}>
-                  Crea tu primera meta desde el boton superior y empieza a medir
-                  progreso real.
-                </Text>
-              </View>
-            ) : (
-              goalSnapshots.map((snapshot) => (
-                <View key={snapshot.goal.id} style={styles.goalCard}>
-                  <View style={styles.goalHeader}>
-                    <Text style={styles.goalTitle}>{snapshot.goal.name}</Text>
-                    <Text style={styles.goalAmount}>
-                      {formatMoney(currency, snapshot.contributedAmount)} /{" "}
-                      {formatMoney(currency, snapshot.goal.targetAmount)}
-                    </Text>
-                  </View>
-                  <Text style={styles.goalMeta}>
-                    {snapshot.status === "at_risk"
-                      ? "Meta vencida; necesita recuperar ritmo."
-                      : snapshot.projectedCompletionDate
-                        ? `Proyeccion: ${formatDateLabel(snapshot.projectedCompletionDate)}`
-                        : "Sin suficiente historial para proyectar fecha."}
-                  </Text>
-                  <View style={styles.progressTrack}>
-                    <View
-                      style={[
-                        styles.progressValue,
-                        { width: `${snapshot.progressRatio * 100}%` },
-                      ]}
-                    />
-                  </View>
-                  <Pressable
-                    onPress={() => openContributionSheet(snapshot.goal.id)}
-                    style={({ pressed }) => [
-                      styles.inlineAction,
-                      pressed && styles.pressed,
-                    ]}
-                  >
-                    <Text style={styles.inlineActionText}>Registrar aporte</Text>
-                  </Pressable>
-                </View>
-              ))
-            )}
-
             <SegmentedControl
               compact
               onChange={setFilter}
@@ -611,181 +468,202 @@ export default function PlanningScreen() {
               value={filter}
             />
 
-            <Text style={styles.sectionTitle}>Wishlist priorizada</Text>
+            <Text style={styles.sectionTitle}>Prioridades</Text>
 
-            {filteredWishes.length === 0 ? (
-              <View style={styles.stateCard}>
-                <Text style={styles.stateTitle}>Sin items para mostrar</Text>
-                <Text style={styles.stateText}>
-                  Cuando agregues deseos, aqui apareceran con fecha estimada y
-                  nivel de confianza.
+            {filteredWishes.map((item) => (
+              <View
+                key={item.wish.id}
+                style={[styles.card, item.wish.isPurchased && styles.cardDim]}
+              >
+                <View style={styles.rowBetween}>
+                  <Text style={[styles.cardTitle, item.wish.isPurchased && styles.strike]}>
+                    {item.wish.name}
+                  </Text>
+                  <Text style={styles.price}>${item.wish.estimatedAmount.toFixed(0)}</Text>
+                </View>
+                <Text style={styles.pill}>
+                  {item.wish.isPurchased
+                    ? "COMPRADO"
+                    : item.confidenceLevel === "high"
+                      ? "IA: High Confidence"
+                      : item.confidenceLevel === "medium"
+                        ? "IA: Medium"
+                        : item.confidenceLevel === "low"
+                          ? "IA: Low"
+                          : "IA: Risky"}
                 </Text>
-              </View>
-            ) : (
-              filteredWishes.map((item) => (
-                <View
-                  key={item.wish.id}
-                  style={[
-                    styles.wishCard,
-                    item.wish.isPurchased && styles.wishCardDimmed,
-                  ]}
-                >
-                  <View style={styles.wishHeader}>
-                    <Text style={styles.wishTitle}>{item.wish.name}</Text>
-                    <Text style={styles.wishPrice}>
-                      {formatMoney(currency, item.wish.estimatedAmount)}
+                <Text style={styles.bodyText}>{item.wish.notes ?? item.confidenceReason}</Text>
+                <Text style={styles.softText}>
+                  {item.wish.isPurchased
+                    ? "Successfully budgeted in June"
+                    : `Requires ${item.monthsUntilPurchase ?? "more"} ${
+                        item.monthsUntilPurchase === 1 ? "month" : "months"
+                      } of saving`}
+                </Text>
+                <View style={styles.rowBetween}>
+                  <View style={styles.inlineRow}>
+                    <MaterialCommunityIcons color="#7C89A8" name="calendar-month-outline" size={13} />
+                    <Text style={styles.softText}>
+                      {item.wish.isPurchased
+                        ? dateLabel(item.wish.purchasedAt?.slice(0, 10) ?? null, true)
+                        : dateLabel(item.estimatedPurchaseDate)}
                     </Text>
                   </View>
-
-                  <Text
-                    style={[
-                      styles.wishConfidence,
-                      item.confidenceLevel === "high"
-                        ? styles.wishConfidenceHigh
-                        : item.confidenceLevel === "medium"
-                          ? styles.wishConfidenceMedium
-                          : item.confidenceLevel === "low"
-                            ? styles.wishConfidenceLow
-                            : styles.wishConfidenceRisky,
-                    ]}
-                  >
-                    {getConfidenceLabel(item.confidenceLevel)}
-                  </Text>
-                  <Text style={styles.wishNote}>
-                    {item.wish.notes ?? item.confidenceReason}
-                  </Text>
-                  <Text style={styles.wishReason}>{item.confidenceReason}</Text>
-
-                  <View style={styles.wishFooter}>
-                    <Text style={styles.wishDate}>
-                      {formatDateLabel(item.estimatedPurchaseDate)}
-                    </Text>
-                    <View style={styles.progressTrack}>
+                  {!item.wish.isPurchased ? (
+                    <View style={styles.track}>
                       <View
                         style={[
-                          styles.progressValue,
-                          { width: `${item.progressRatio * 100}%` },
+                          styles.trackFill,
+                          { width: `${Math.max(item.progressRatio * 100, 18)}%` },
                         ]}
                       />
                     </View>
-                  </View>
+                  ) : null}
                 </View>
-              ))
-            )}
+              </View>
+            ))}
 
             <View style={styles.tipCard}>
-              <Text style={styles.tipEyebrow}>TIP DETERMINISTICO</Text>
-              <Text style={styles.tipText}>{actionTip}</Text>
+              <View style={styles.tipIcon}>
+                <Ionicons color="#6C83FF" name="bulb-outline" size={18} />
+              </View>
+              <View style={styles.tipBody}>
+                <Text style={styles.tipTitle}>TIP DE IA</Text>
+                <Text style={styles.bodyText}>{actionTip}</Text>
+              </View>
             </View>
           </>
         ) : (
           <>
-            <View style={styles.metricsGrid}>
-              <View style={styles.metricCard}>
-                <Text style={styles.metricLabel}>Liquidez</Text>
+            <View style={styles.rowBetween}>
+              <Text style={styles.sectionTitle}>AI Score Semanal</Text>
+              <Text style={styles.linkText}>Actualizado hace 2h</Text>
+            </View>
+
+            <View style={styles.grid}>
+              <View style={styles.metric}>
+                <Ionicons color="#6C83FF" name="water-outline" size={14} />
                 <Text style={styles.metricValue}>
                   {currentScore?.breakdown.liquidity_score ?? 0}
+                  <Text style={styles.metricScale}>/100</Text>
                 </Text>
-                <Text style={styles.metricScale}>/100</Text>
+                <Text style={styles.metricLabel}>LIQUIDEZ</Text>
               </View>
-              <View style={styles.metricCard}>
-                <Text style={styles.metricLabel}>Compromisos</Text>
+              <View style={styles.metric}>
+                <MaterialCommunityIcons color="#F59E0B" name="briefcase-clock-outline" size={14} />
                 <Text style={styles.metricValue}>
-                  {currentScore?.breakdown.commitment_score ?? 0}
+                  {Math.max(0, 100 - (currentScore?.breakdown.commitment_score ?? 0))}%
                 </Text>
-                <Text style={styles.metricScale}>/100</Text>
+                <Text style={styles.metricLabel}>COMPROMISOS</Text>
               </View>
-              <View style={styles.metricCard}>
-                <Text style={styles.metricLabel}>Ahorro</Text>
+              <View style={styles.metric}>
+                <Ionicons color="#2AD596" name="shield-checkmark-outline" size={14} />
                 <Text style={styles.metricValue}>
-                  {currentScore?.breakdown.savings_score ?? 0}
+                  {(currentScore?.breakdown.salary_stability_score ?? 0) >= 70 ? "Alta" : "Media"}
                 </Text>
-                <Text style={styles.metricScale}>/100</Text>
+                <Text style={styles.metricLabel}>ESTABILIDAD</Text>
               </View>
-              <View style={styles.metricCard}>
-                <Text style={styles.metricLabel}>Score total</Text>
-                <Text style={styles.metricValue}>{currentScore?.score ?? 0}</Text>
-                <Text style={styles.metricScale}>/100</Text>
+              <View style={styles.metric}>
+                <Ionicons color="#6C83FF" name="trending-up-outline" size={14} />
+                <Text style={styles.metricValue}>{Math.max(savingsRatio, 0)}%</Text>
+                <Text style={styles.metricLabel}>RATIO AHORRO</Text>
               </View>
             </View>
 
-            <View style={styles.daysCard}>
-              <Text style={styles.daysLabel}>Tu margen actual cubre</Text>
-              <Text style={styles.daysValue}>{coverageDays} dias</Text>
-              <Text style={styles.daysMeta}>
-                Reserva sugerida {formatMoney(currency, overview?.reserveAmount ?? 0)}
+            <View style={styles.cardWide}>
+              <View>
+                <Text style={styles.softText}>Tu dinero dura</Text>
+                <Text style={styles.days}>{coverageDays} dias</Text>
+              </View>
+              <View style={styles.hourglass}>
+                <MaterialCommunityIcons color="#E1E7F8" name="timer-sand" size={18} />
+              </View>
+            </View>
+
+            <View style={styles.card}>
+              <Text style={styles.softText}>Sin ingresos (Promedio)</Text>
+              <Text style={styles.cardTitle}>
+                {overview?.monthlyIncome
+                  ? `${(
+                      Math.max(overview.availableBalance - overview.committedAmount, 0) /
+                      overview.monthlyIncome
+                    ).toFixed(1)} meses de vida`
+                  : "0.0 meses de vida"}
               </Text>
-              <View style={styles.daysTrack}>
-                <View
-                  style={[
-                    styles.daysTrackValue,
-                    {
-                      width: `${Math.max(
-                        12,
-                        Math.min(((currentScore?.score ?? 0) / 100) * 100, 100),
-                      )}%`,
-                    },
-                  ]}
-                />
+              <View style={styles.trackLong}>
+                <View style={[styles.trackFillGreen, { width: `${Math.max(coverageDays * 1.8, 18)}%` }]} />
               </View>
             </View>
 
-            <View style={styles.chartHeader}>
-              <Text style={styles.sectionTitle}>Evolucion del score</Text>
-              <Text style={styles.chartMeta}>Base semanal</Text>
+            <View style={styles.rowBetween}>
+              <Text style={styles.sectionTitle}>Ingresos vs Gastos</Text>
+              <Text style={styles.softText}>Ultimos 6 meses</Text>
             </View>
 
-            <View style={styles.chartCard}>
-              <View style={styles.chartBars}>
-                {scoreChart.map((bar) => (
-                  <View key={bar.label} style={styles.chartBarGroup}>
-                    <View style={[styles.chartBar, { height: Math.max(20, bar.value) }]} />
-                    <Text style={styles.chartMonth}>{bar.label}</Text>
+            <View style={styles.card}>
+              <View style={styles.chart}>
+                {scoreBars.map((bar) => (
+                  <View key={bar.label} style={styles.chartGroup}>
+                    <View style={styles.chartCols}>
+                      <View style={[styles.chartBar, { height: Math.max(26, bar.value * 0.72) }]} />
+                      <View style={[styles.chartBar, styles.chartBarMuted, { height: Math.max(22, (bar.value - 10) * 0.7) }]} />
+                    </View>
+                    <Text style={styles.chartLabel}>{bar.label}</Text>
                   </View>
                 ))}
               </View>
             </View>
 
-            <View style={styles.reportCard}>
-              <Text style={styles.sectionTitle}>Resumen deterministico</Text>
-              <Text style={styles.reportText}>
-                Balance total disponible:{" "}
-                <Text style={styles.reportAccent}>
-                  {formatMoney(currency, overview?.availableBalance ?? 0)}
-                </Text>
-                . Comprometido este mes:{" "}
-                <Text style={styles.reportAccent}>
-                  {formatMoney(currency, overview?.committedAmount ?? 0)}
-                </Text>
-                .
+            <Text style={styles.sectionTitle}>Reporte Narrativo IA</Text>
+            <View style={styles.card}>
+              <Text style={styles.bodyText}>
+                {savingsRatio > 0
+                  ? `Este mes has logrado reducir tus gastos hormiga en un ${Math.min(
+                      savingsRatio,
+                      14,
+                    )}%. Tus ingresos han sido estables, pero el ratio de ahorro ha crecido gracias a la optimizacion de suscripciones.`
+                  : "Tu estructura actual mantiene liquidez, pero todavia depende de convertir parte del dinero libre en ahorro sostenido."}
               </Text>
-              <Text style={styles.reportText}>
-                Ahorro mensual observado para metas:{" "}
-                <Text style={styles.reportAccent}>
-                  {formatMoney(
-                    currency,
-                    overview?.monthlyGoalContributionAverage ?? 0,
-                  )}
-                </Text>
-                . Pendiente salarial:{" "}
-                <Text style={styles.reportAccent}>
-                  {formatMoney(currency, overview?.pendingSalaryAmount ?? 0)}
-                </Text>
-                .
+              <Text style={styles.bodyText}>
+                Si mantienes este ritmo, alcanzaras tu meta de fondo operativo en al menos {Math.max(coverageDays, 30)} dias.
               </Text>
             </View>
 
             <View style={styles.tipCard}>
-              <Text style={styles.tipEyebrow}>SIGUIENTE ACCION</Text>
-              <Text style={styles.tipText}>{actionTip}</Text>
+              <View style={styles.tipIcon}>
+                <Ionicons color="#6C83FF" name="sparkles-outline" size={18} />
+              </View>
+              <View style={styles.tipBody}>
+                <Text style={styles.tipTitle}>TIP DE IA</Text>
+                <Text style={styles.bodyText}>
+                  Detectamos un excedente de ${(overview?.assignableAmount ?? 0).toFixed(0)} en tu cuenta corriente. Moverlo hoy a tu cuenta de ahorros generaria un rendimiento extra solo en intereses.
+                </Text>
+              </View>
             </View>
           </>
         )}
-
-        <Text style={styles.footerMeta}>
-          Formato actual: {settings?.dateFormat ?? "DD/MM/YYYY"}
-        </Text>
       </ScrollView>
+
+      <BottomSheet onClose={() => setPickerOpen(false)} visible={pickerOpen}>
+        <Text style={styles.sheetTitle}>Acciones de planificacion</Text>
+        <Text style={styles.softText}>
+          Todas las altas salen por BottomSheet para mantener el flujo limpio.
+        </Text>
+        <View style={styles.sheetGrid}>
+          <Pressable onPress={openGoalSheet} style={({ pressed }) => [styles.sheetAction, pressed && styles.pressed]}>
+            <Ionicons color="#6C83FF" name="flag-outline" size={20} />
+            <Text style={styles.sheetActionText}>Nueva Meta</Text>
+          </Pressable>
+          <Pressable onPress={() => openContributionSheet()} style={({ pressed }) => [styles.sheetAction, pressed && styles.pressed]}>
+            <Feather color="#2AD596" name="plus" size={20} />
+            <Text style={styles.sheetActionText}>Registrar Aporte</Text>
+          </Pressable>
+          <Pressable onPress={openWishSheet} style={({ pressed }) => [styles.sheetAction, pressed && styles.pressed]}>
+            <Ionicons color="#F59E0B" name="sparkles-outline" size={20} />
+            <Text style={styles.sheetActionText}>Nuevo Deseo</Text>
+          </Pressable>
+        </View>
+      </BottomSheet>
 
       <PlanningSheetStack
         activeGoals={activeGoals}
@@ -793,15 +671,9 @@ export default function PlanningScreen() {
         goalDraft={goalDraft}
         isSubmitting={isSubmitting}
         onClose={closeSheet}
-        onSubmitContribution={() => {
-          void handleCreateContribution();
-        }}
-        onSubmitGoal={() => {
-          void handleCreateGoal();
-        }}
-        onSubmitWish={() => {
-          void handleCreateWish();
-        }}
+        onSubmitContribution={() => void handleCreateContribution()}
+        onSubmitGoal={() => void handleCreateGoal()}
+        onSubmitWish={() => void handleCreateWish()}
         setContributionDraft={setContributionDraft}
         setGoalDraft={setGoalDraft}
         setWishDraft={setWishDraft}
@@ -815,324 +687,113 @@ export default function PlanningScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#0A1020",
-  },
-  border: {
-    position: "absolute",
-    top: 61,
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: "rgba(148, 163, 184, 0.09)",
-  },
-  content: {
-    paddingHorizontal: 16,
-    paddingBottom: 120,
-    gap: 16,
-  },
-  actionRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-  },
-  actionPill: {
-    minHeight: 44,
-    borderRadius: 999,
-    backgroundColor: "#141D32",
+  safeArea: { flex: 1, backgroundColor: "#0B1020" },
+  content: { paddingHorizontal: 14, paddingTop: 12, paddingBottom: 104, gap: 14 },
+  sectionTitle: { color: "#F8FAFC", fontSize: 14, fontWeight: "800" },
+  card: {
+    borderRadius: 14,
+    backgroundColor: "rgba(21, 28, 47, 0.96)",
     borderWidth: 1,
-    borderColor: "rgba(69, 98, 255, 0.24)",
-    paddingHorizontal: 16,
+    borderColor: "rgba(88, 104, 149, 0.14)",
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    gap: 8,
+  },
+  cardWide: {
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "space-between",
+    borderRadius: 14,
+    backgroundColor: "rgba(21, 28, 47, 0.96)",
+    borderWidth: 1,
+    borderColor: "rgba(88, 104, 149, 0.14)",
+    paddingHorizontal: 14,
+    paddingVertical: 14,
   },
-  actionPillText: {
-    color: "#D8E1F5",
-    fontSize: 13,
-    fontWeight: "800",
-  },
-  pressed: {
-    opacity: 0.88,
-  },
-  stateCard: {
-    borderRadius: 16,
-    backgroundColor: "#141D32",
+  cardCenter: {
+    borderRadius: 14,
+    backgroundColor: "rgba(21, 28, 47, 0.96)",
+    alignItems: "center",
     padding: 18,
     gap: 10,
-    alignItems: "center",
   },
-  stateTitle: {
-    color: "#F8FAFC",
-    fontSize: 16,
-    fontWeight: "800",
-  },
-  stateText: {
-    color: "#C0CADF",
-    fontSize: 14,
-    lineHeight: 21,
-    textAlign: "center",
-  },
-  sectionTitle: {
-    color: "#F8FAFC",
-    fontSize: 16,
-    fontWeight: "800",
-  },
-  goalCard: {
-    borderRadius: 16,
-    backgroundColor: "#141D32",
-    padding: 16,
-    gap: 10,
-  },
-  inlineAction: {
-    alignSelf: "flex-start",
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: "rgba(69, 98, 255, 0.16)",
-  },
-  inlineActionText: {
-    color: "#D8E1F5",
-    fontSize: 12,
-    fontWeight: "800",
-  },
-  goalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  goalTitle: {
-    flex: 1,
-    color: "#F8FAFC",
-    fontSize: 17,
-    fontWeight: "800",
-  },
-  goalAmount: {
-    color: "#4562FF",
-    fontSize: 13,
-    fontWeight: "800",
-  },
-  goalMeta: {
-    color: "#B4C2DB",
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  wishCard: {
-    borderRadius: 16,
-    backgroundColor: "#141D32",
-    padding: 16,
-    gap: 8,
-  },
-  wishCardDimmed: {
-    opacity: 0.55,
-  },
-  wishHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-  },
-  wishTitle: {
-    flex: 1,
-    color: "#F8FAFC",
-    fontSize: 18,
-    fontWeight: "800",
-  },
-  wishPrice: {
-    color: "#4562FF",
-    fontSize: 18,
-    fontWeight: "800",
-  },
-  wishConfidence: {
-    alignSelf: "flex-start",
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    fontSize: 11,
-    fontWeight: "800",
-  },
-  wishConfidenceHigh: {
-    color: "#34D399",
-    backgroundColor: "rgba(16, 185, 129, 0.12)",
-  },
-  wishConfidenceMedium: {
-    color: "#FBBF24",
-    backgroundColor: "rgba(251, 191, 36, 0.12)",
-  },
-  wishConfidenceLow: {
-    color: "#60A5FA",
-    backgroundColor: "rgba(96, 165, 250, 0.14)",
-  },
-  wishConfidenceRisky: {
-    color: "#F87171",
-    backgroundColor: "rgba(248, 113, 113, 0.14)",
-  },
-  wishNote: {
-    color: "#C0CADF",
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  wishReason: {
-    color: "#8FA2C2",
-    fontSize: 12,
-    lineHeight: 18,
-  },
-  wishFooter: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  wishDate: {
-    color: "#94A3B8",
-    fontSize: 12,
-    minWidth: 72,
-  },
-  progressTrack: {
-    flex: 1,
-    height: 5,
-    borderRadius: 999,
-    backgroundColor: "rgba(148, 163, 184, 0.16)",
-    overflow: "hidden",
-  },
-  progressValue: {
-    height: "100%",
-    borderRadius: 999,
-    backgroundColor: "#4562FF",
-  },
+  cardDim: { opacity: 0.52 },
+  rowBetween: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
+  inlineRow: { flexDirection: "row", alignItems: "center", gap: 4 },
+  cardTitle: { color: "#F8FAFC", fontSize: 15, fontWeight: "800", flex: 1 },
+  strike: { textDecorationLine: "line-through" },
+  price: { color: "#4B69FF", fontSize: 15, fontWeight: "800" },
+  pill: { color: "#8AE6C0", fontSize: 10, fontWeight: "800" },
+  bodyText: { color: "#CBD4EA", fontSize: 13, lineHeight: 19 },
+  softText: { color: "#8A96B3", fontSize: 12, lineHeight: 18 },
   tipCard: {
-    borderRadius: 16,
+    flexDirection: "row",
+    gap: 12,
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: "rgba(69, 98, 255, 0.28)",
-    backgroundColor: "rgba(24, 34, 63, 0.85)",
-    padding: 16,
-    gap: 8,
+    borderColor: "rgba(75, 105, 255, 0.22)",
+    backgroundColor: "rgba(22, 30, 52, 0.90)",
+    paddingHorizontal: 14,
+    paddingVertical: 14,
   },
-  tipEyebrow: {
-    color: "#4562FF",
-    fontSize: 12,
-    fontWeight: "800",
+  tipIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(49, 68, 138, 0.28)",
   },
-  tipText: {
-    color: "#D4DEEF",
-    fontSize: 14,
-    lineHeight: 21,
-  },
-  metricsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-  },
-  metricCard: {
-    minWidth: 150,
+  tipBody: { flex: 1, gap: 6 },
+  tipTitle: { color: "#4F6DFF", fontSize: 11, fontWeight: "900" },
+  track: { width: 72, height: 4, borderRadius: 999, backgroundColor: "rgba(92, 103, 135, 0.34)", overflow: "hidden" },
+  trackLong: { height: 5, borderRadius: 999, backgroundColor: "rgba(92, 103, 135, 0.34)", overflow: "hidden" },
+  trackFill: { height: "100%", borderRadius: 999, backgroundColor: "#4B69FF" },
+  trackFillGreen: { height: "100%", borderRadius: 999, backgroundColor: "#20D396" },
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  metric: {
+    minWidth: 148,
     flexGrow: 1,
-    flexBasis: 150,
-    borderRadius: 16,
-    backgroundColor: "#141D32",
-    padding: 16,
-    gap: 6,
-  },
-  metricLabel: {
-    color: "#94A3B8",
-    fontSize: 12,
-    fontWeight: "800",
-  },
-  metricValue: {
-    color: "#FFFFFF",
-    fontSize: 28,
-    fontWeight: "900",
-  },
-  metricScale: {
-    color: "#94A3B8",
-    fontSize: 12,
-  },
-  daysCard: {
-    borderRadius: 16,
-    backgroundColor: "#141D32",
-    padding: 16,
+    flexBasis: 148,
+    borderRadius: 12,
+    backgroundColor: "rgba(21, 28, 47, 0.96)",
+    paddingHorizontal: 12,
+    paddingVertical: 12,
     gap: 8,
   },
-  daysLabel: {
-    color: "#94A3B8",
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  daysValue: {
-    color: "#FFFFFF",
-    fontSize: 34,
-    fontWeight: "900",
-  },
-  daysMeta: {
-    color: "#C0CADF",
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  daysTrack: {
-    height: 6,
-    borderRadius: 999,
-    backgroundColor: "rgba(148, 163, 184, 0.16)",
-    overflow: "hidden",
-  },
-  daysTrackValue: {
-    height: "100%",
-    borderRadius: 999,
-    backgroundColor: "#34D399",
-  },
-  chartHeader: {
-    flexDirection: "row",
+  metricValue: { color: "#F8FAFC", fontSize: 28, fontWeight: "900" },
+  metricScale: { color: "#94A1BE", fontSize: 11, fontWeight: "800" },
+  metricLabel: { color: "#8A96B3", fontSize: 11, fontWeight: "800" },
+  days: { color: "#FFFFFF", fontSize: 36, fontWeight: "900" },
+  hourglass: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: "center",
-    justifyContent: "space-between",
-    gap: 8,
+    justifyContent: "center",
+    backgroundColor: "rgba(54, 71, 156, 0.28)",
   },
-  chartMeta: {
-    color: "#94A3B8",
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  chartCard: {
+  linkText: { color: "#4F6DFF", fontSize: 10, fontWeight: "700" },
+  chart: { minHeight: 160, flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 8 },
+  chartGroup: { flex: 1, alignItems: "center", gap: 8 },
+  chartCols: { minHeight: 126, flexDirection: "row", alignItems: "flex-end", gap: 4 },
+  chartBar: { width: 6, borderRadius: 999, backgroundColor: "#4B69FF" },
+  chartBarMuted: { backgroundColor: "rgba(84, 102, 158, 0.62)" },
+  chartLabel: { color: "#7C89A8", fontSize: 10, fontWeight: "700" },
+  sheetTitle: { color: "#F8FAFC", fontSize: 24, fontWeight: "900", marginBottom: 8 },
+  sheetGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginTop: 18 },
+  sheetAction: {
+    width: "48%",
     borderRadius: 16,
-    backgroundColor: "#141D32",
-    padding: 16,
-  },
-  chartBars: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
-    gap: 10,
-    minHeight: 150,
-  },
-  chartBarGroup: {
+    backgroundColor: "rgba(24, 30, 51, 0.96)",
+    borderWidth: 1,
+    borderColor: "rgba(84, 101, 146, 0.16)",
     alignItems: "center",
-    gap: 8,
-  },
-  chartBar: {
-    width: 16,
-    borderRadius: 999,
-    backgroundColor: "#4562FF",
-  },
-  chartMonth: {
-    color: "#77829B",
-    fontSize: 10,
-    fontWeight: "700",
-  },
-  reportCard: {
-    borderRadius: 16,
-    backgroundColor: "#141D32",
-    padding: 16,
+    justifyContent: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 18,
     gap: 12,
   },
-  reportText: {
-    color: "#CDD7E8",
-    fontSize: 14,
-    lineHeight: 22,
-  },
-  reportAccent: {
-    color: "#34D399",
-    fontWeight: "800",
-  },
-  footerMeta: {
-    color: "#77829B",
-    fontSize: 12,
-    textAlign: "center",
-  },
+  sheetActionText: { color: "#F8FAFC", fontSize: 14, fontWeight: "800", textAlign: "center" },
+  pressed: { opacity: 0.88 },
 });

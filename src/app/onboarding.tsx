@@ -8,6 +8,7 @@ import {
   type OnboardingFormValues,
 } from "@/components/onboarding/onboarding-form";
 import { AppLoadingScreen } from "@/components/app/app-loading-screen";
+import { DecorativeBackground } from "@/components/ui/decorative-background";
 import { useOnboardingGuard } from "@/hooks/use-onboarding-guard";
 import {
   createMockSettings,
@@ -115,6 +116,7 @@ export default function OnboardingScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <DecorativeBackground />
       <OnboardingForm
         initialDateFormat={settings?.dateFormat ?? "DD/MM/YYYY"}
         initialSavingsGoalPercent={settings?.savingsGoalPercent ?? 20}
@@ -131,6 +133,6 @@ export default function OnboardingScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#090D1A",
+    backgroundColor: "#0F1223",
   },
 });
