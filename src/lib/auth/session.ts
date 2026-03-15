@@ -2,6 +2,7 @@ import * as Linking from "expo-linking";
 import { Platform } from "react-native";
 
 import { supabase } from "@/lib/supabase/client";
+import { publishWebAuthSession } from "@/lib/auth/web-session-bridge";
 
 type SupportedOtpType =
   | "email"
@@ -168,6 +169,14 @@ export async function applyAuthRedirectUrl(url: string) {
       refresh_token: refreshToken,
     });
 
+    if (!error) {
+      publishWebAuthSession({
+        accessToken,
+        refreshToken,
+        issuedAt: Date.now(),
+      });
+    }
+
     return { error: error ?? null };
   }
 
@@ -176,6 +185,20 @@ export async function applyAuthRedirectUrl(url: string) {
       token_hash: tokenHash,
       type: type ?? "email",
     });
+
+    if (!error) {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (session?.access_token && session.refresh_token) {
+        publishWebAuthSession({
+          accessToken: session.access_token,
+          refreshToken: session.refresh_token,
+          issuedAt: Date.now(),
+        });
+      }
+    }
 
     return { error: error ?? null };
   }
