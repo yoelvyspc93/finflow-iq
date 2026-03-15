@@ -1,10 +1,16 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { AppState } from "react-native";
 
 import * as Linking from "expo-linking";
 import * as SplashScreen from "expo-splash-screen";
 
 import { applyAuthRedirectUrl } from "@/lib/auth/session";
+import {
+  clearStoredWebAuthSession,
+  readStoredWebAuthSession,
+  subscribeToWebAuthSession,
+  type WebAuthSessionPayload,
+} from "@/lib/auth/web-session-bridge";
 import { supabase } from "@/lib/supabase/client";
 import { useAuthStore } from "@/stores/auth-store";
 
@@ -21,6 +27,7 @@ async function hideSplashScreen() {
 }
 
 export function AuthBootstrap() {
+  const lastBridgeIssuedAt = useRef(0);
   const setError = useAuthStore((state) => state.setError);
   const setReady = useAuthStore((state) => state.setReady);
   const setSession = useAuthStore((state) => state.setSession);
@@ -34,6 +41,35 @@ export function AuthBootstrap() {
 
       if (error && isMounted) {
         setError(error.message);
+      }
+    }
+
+    async function handleSharedSession(payload: WebAuthSessionPayload) {
+      if (payload.issuedAt <= lastBridgeIssuedAt.current) {
+        return;
+      }
+
+      lastBridgeIssuedAt.current = payload.issuedAt;
+
+      const { error } = await supabase.auth.setSession({
+        access_token: payload.accessToken,
+        refresh_token: payload.refreshToken,
+      });
+
+      if (error) {
+        if (isMounted) {
+          setError(error.message);
+        }
+
+        return;
+      }
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (isMounted) {
+        setSession(session);
       }
     }
 
@@ -79,10 +115,23 @@ export function AuthBootstrap() {
       void handleUrl(url);
     });
 
+    const removeWebBridgeListener = subscribeToWebAuthSession((payload) => {
+      void handleSharedSession(payload);
+    });
+
+    const storedWebSession = readStoredWebAuthSession();
+    if (storedWebSession) {
+      void handleSharedSession(storedWebSession);
+    }
+
     const authSubscription = supabase.auth.onAuthStateChange(
       (_event, session) => {
         if (isMounted) {
           setSession(session);
+        }
+
+        if (!session) {
+          clearStoredWebAuthSession();
         }
       },
     );
@@ -100,6 +149,7 @@ export function AuthBootstrap() {
     return () => {
       isMounted = false;
       linkSubscription.remove();
+      removeWebBridgeListener();
       authSubscription.data.subscription.unsubscribe();
       appStateSubscription.remove();
     };

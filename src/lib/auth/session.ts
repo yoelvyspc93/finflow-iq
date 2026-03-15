@@ -2,6 +2,7 @@ import * as Linking from "expo-linking";
 import { Platform } from "react-native";
 
 import { supabase } from "@/lib/supabase/client";
+import { publishWebAuthSession } from "@/lib/auth/web-session-bridge";
 
 type SupportedOtpType =
   | "email"
@@ -56,6 +57,15 @@ function buildWebCallbackUrl(source: URL) {
   return new URL(callbackPath, source.origin).toString();
 }
 
+function isLocalHostName(hostname: string) {
+  return (
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname === "::1" ||
+    hostname === "[::1]"
+  );
+}
+
 function getConfiguredWebRedirectUrl() {
   const configuredUrl = process.env.EXPO_PUBLIC_WEB_URL?.trim();
 
@@ -64,7 +74,19 @@ function getConfiguredWebRedirectUrl() {
   }
 
   try {
-    return buildWebCallbackUrl(new URL(configuredUrl));
+    const parsedConfiguredUrl = new URL(configuredUrl);
+
+    if (typeof window !== "undefined") {
+      const currentUrl = new URL(window.location.href);
+      const currentIsLocal = isLocalHostName(currentUrl.hostname);
+      const configuredIsLocal = isLocalHostName(parsedConfiguredUrl.hostname);
+
+      if (currentIsLocal !== configuredIsLocal) {
+        return null;
+      }
+    }
+
+    return buildWebCallbackUrl(parsedConfiguredUrl);
   } catch {
     return null;
   }
@@ -147,6 +169,14 @@ export async function applyAuthRedirectUrl(url: string) {
       refresh_token: refreshToken,
     });
 
+    if (!error) {
+      publishWebAuthSession({
+        accessToken,
+        refreshToken,
+        issuedAt: Date.now(),
+      });
+    }
+
     return { error: error ?? null };
   }
 
@@ -155,6 +185,20 @@ export async function applyAuthRedirectUrl(url: string) {
       token_hash: tokenHash,
       type: type ?? "email",
     });
+
+    if (!error) {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (session?.access_token && session.refresh_token) {
+        publishWebAuthSession({
+          accessToken: session.access_token,
+          refreshToken: session.refresh_token,
+          issuedAt: Date.now(),
+        });
+      }
+    }
 
     return { error: error ?? null };
   }
