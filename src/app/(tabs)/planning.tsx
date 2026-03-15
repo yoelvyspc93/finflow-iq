@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -10,65 +11,183 @@ import {
 import { DecorativeBackground } from "@/components/ui/decorative-background";
 import { ScreenHeader } from "@/components/ui/screen-header";
 import { SegmentedControl } from "@/components/ui/segmented-control";
+import { useAuthStore } from "@/stores/auth-store";
 import { useAppStore } from "@/stores/app-store";
+import { usePlanningStore } from "@/stores/planning-store";
 
 type PlanningView = "desires" | "insights";
 type DesireFilter = "all" | "bought" | "pending";
 
-const wishItems = [
-  {
-    confidence: "IA: High Confidence",
-    dateLabel: "15 Aug",
-    note: '"Price drop expected soon"',
-    price: 350,
-    progress: 0.74,
-    status: "pending" as const,
-    title: "Sony u H-1000XM5",
-  },
-  {
-    confidence: "IA: Medium",
-    dateLabel: "Dec 2024",
-    note: "Requires 4 months of saving",
-    price: 1600,
-    progress: 0.38,
-    status: "pending" as const,
-    title: "Herman Miller Embody",
-  },
-  {
-    confidence: "SUCCESS",
-    dateLabel: "Budgeted in June",
-    note: "Successfully budgeted in June",
-    price: 1000,
-    progress: 1,
-    status: "bought" as const,
-    title: "Kindle Paperwhite",
-  },
-];
+function formatMoney(currency: string, value: number) {
+  return `${currency} ${value.toFixed(2)}`;
+}
 
-const chartBars = [68, 84, 72, 58, 86, 92, 63, 69, 88];
+function formatDateLabel(value: string | null) {
+  if (!value) {
+    return "Sin fecha";
+  }
+
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return date.toLocaleDateString("es-ES", {
+    day: "2-digit",
+    month: "short",
+  });
+}
+
+function formatWeekLabel(value: string) {
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return `S${date.getUTCMonth() + 1}.${date.getUTCDate()}`;
+}
+
+function getConfidenceLabel(value: "high" | "medium" | "low" | "risky") {
+  switch (value) {
+    case "high":
+      return "Alta confianza";
+    case "medium":
+      return "Media";
+    case "low":
+      return "Baja";
+    default:
+      return "Riesgo";
+  }
+}
+
+function buildPlanningTip(args: {
+  assignableAmount: number;
+  goalShortfall: number;
+  nextWishAmount: number | null;
+}) {
+  if (args.assignableAmount > 0 && args.goalShortfall > 0) {
+    return `Tienes margen para mover ${args.assignableAmount.toFixed(
+      2,
+    )} a metas sin tocar tu reserva.`;
+  }
+
+  if (args.nextWishAmount !== null && args.assignableAmount >= args.nextWishAmount) {
+    return "Tu primera prioridad ya cabe en el dinero asignable actual.";
+  }
+
+  return "Conviene mantener el foco en ahorro estable antes de subir nuevas prioridades.";
+}
 
 export default function PlanningScreen() {
   const [view, setView] = useState<PlanningView>("desires");
   const [filter, setFilter] = useState<DesireFilter>("all");
+  const isDevBypass = useAuthStore((state) => state.isDevBypass);
+  const user = useAuthStore((state) => state.user);
   const settings = useAppStore((state) => state.settings);
+  const wallets = useAppStore((state) => state.wallets);
+  const goalSnapshots = usePlanningStore((state) => state.goalSnapshots);
+  const wishProjections = usePlanningStore((state) => state.wishProjections);
+  const currentScore = usePlanningStore((state) => state.currentScore);
+  const recentScores = usePlanningStore((state) => state.recentScores);
+  const overview = usePlanningStore((state) => state.overview);
+  const error = usePlanningStore((state) => state.error);
+  const isLoading = usePlanningStore((state) => state.isLoading);
+  const isReady = usePlanningStore((state) => state.isReady);
+  const refreshPlanningData = usePlanningStore((state) => state.refreshPlanningData);
+
+  useEffect(() => {
+    if (!user?.id || !settings) {
+      return;
+    }
+
+    void refreshPlanningData({
+      isDevBypass,
+      settings,
+      userId: user.id,
+      wallets,
+    });
+  }, [isDevBypass, refreshPlanningData, settings, user?.id, wallets]);
+
+  const currency = wallets.find((wallet) => wallet.isActive)?.currency ?? "USD";
 
   const filteredWishes = useMemo(() => {
     if (filter === "all") {
-      return wishItems;
+      return wishProjections;
     }
 
     if (filter === "bought") {
-      return wishItems.filter((item) => item.status === "bought");
+      return wishProjections.filter((item) => item.wish.isPurchased);
     }
 
-    return wishItems.filter((item) => item.status !== "bought");
-  }, [filter]);
+    return wishProjections.filter((item) => !item.wish.isPurchased);
+  }, [filter, wishProjections]);
+
+  const scoreChart = useMemo(() => {
+    const history = recentScores.slice(0, 6).reverse();
+
+    if (history.length > 0) {
+      return history.map((item) => ({
+        label: formatWeekLabel(item.weekStart),
+        value: item.score,
+      }));
+    }
+
+    if (!currentScore) {
+      return [];
+    }
+
+    return [
+      {
+        label: "Liq",
+        value: currentScore.breakdown.liquidity_score,
+      },
+      {
+        label: "Comp",
+        value: currentScore.breakdown.commitment_score,
+      },
+      {
+        label: "Aho",
+        value: currentScore.breakdown.savings_score,
+      },
+      {
+        label: "Sal",
+        value: currentScore.breakdown.salary_stability_score,
+      },
+      {
+        label: "Wish",
+        value: currentScore.breakdown.wishlist_pressure_score,
+      },
+    ];
+  }, [currentScore, recentScores]);
+
+  const pendingGoalAmount = useMemo(
+    () =>
+      goalSnapshots.reduce(
+        (total, snapshot) => total + snapshot.remainingAmount,
+        0,
+      ),
+    [goalSnapshots],
+  );
+  const nextWishAmount =
+    wishProjections.find((projection) => !projection.wish.isPurchased)?.wish
+      .estimatedAmount ?? null;
+  const coverageDays =
+    overview?.monthlyCommitmentAverage && overview.monthlyCommitmentAverage > 0
+      ? Math.max(
+          0,
+          Math.round(
+            (Math.max(
+              (overview.availableBalance ?? 0) - (overview.committedAmount ?? 0),
+              0,
+            ) /
+              overview.monthlyCommitmentAverage) *
+              30,
+          ),
+        )
+      : 0;
+  const actionTip = buildPlanningTip({
+    assignableAmount: overview?.assignableAmount ?? 0,
+    goalShortfall: pendingGoalAmount,
+    nextWishAmount,
+  });
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <DecorativeBackground />
       <View style={styles.border} />
-      <ScreenHeader title="Planificación" />
+      <ScreenHeader title="Planificacion" />
 
       <ScrollView
         contentContainerStyle={styles.content}
@@ -83,8 +202,57 @@ export default function PlanningScreen() {
           value={view}
         />
 
-        {view === "desires" ? (
+        {!isReady && isLoading ? (
+          <View style={styles.stateCard}>
+            <ActivityIndicator color="#4562FF" />
+            <Text style={styles.stateText}>Calculando planificacion...</Text>
+          </View>
+        ) : error ? (
+          <View style={styles.stateCard}>
+            <Text style={styles.stateTitle}>No se pudo cargar</Text>
+            <Text style={styles.stateText}>{error}</Text>
+          </View>
+        ) : view === "desires" ? (
           <>
+            <Text style={styles.sectionTitle}>Metas activas</Text>
+
+            {goalSnapshots.length === 0 ? (
+              <View style={styles.stateCard}>
+                <Text style={styles.stateTitle}>Sin metas todavia</Text>
+                <Text style={styles.stateText}>
+                  La logica de metas ya esta lista. Solo falta la UI de alta de la
+                  siguiente fase.
+                </Text>
+              </View>
+            ) : (
+              goalSnapshots.map((snapshot) => (
+                <View key={snapshot.goal.id} style={styles.goalCard}>
+                  <View style={styles.goalHeader}>
+                    <Text style={styles.goalTitle}>{snapshot.goal.name}</Text>
+                    <Text style={styles.goalAmount}>
+                      {formatMoney(currency, snapshot.contributedAmount)} /{" "}
+                      {formatMoney(currency, snapshot.goal.targetAmount)}
+                    </Text>
+                  </View>
+                  <Text style={styles.goalMeta}>
+                    {snapshot.status === "at_risk"
+                      ? "Meta vencida; necesita recuperar ritmo."
+                      : snapshot.projectedCompletionDate
+                        ? `Proyeccion: ${formatDateLabel(snapshot.projectedCompletionDate)}`
+                        : "Sin suficiente historial para proyectar fecha."}
+                  </Text>
+                  <View style={styles.progressTrack}>
+                    <View
+                      style={[
+                        styles.progressValue,
+                        { width: `${snapshot.progressRatio * 100}%` },
+                      ]}
+                    />
+                  </View>
+                </View>
+              ))
+            )}
+
             <SegmentedControl
               compact
               onChange={setFilter}
@@ -96,52 +264,71 @@ export default function PlanningScreen() {
               value={filter}
             />
 
-            <Text style={styles.sectionTitle}>Prioridades</Text>
+            <Text style={styles.sectionTitle}>Wishlist priorizada</Text>
 
-            {filteredWishes.map((item) => (
-              <View
-                key={item.title}
-                style={[
-                  styles.wishCard,
-                  item.status === "bought" && styles.wishCardDimmed,
-                ]}
-              >
-                <View style={styles.wishHeader}>
-                  <Text style={styles.wishTitle}>{item.title}</Text>
-                  <Text style={styles.wishPrice}>${item.price.toLocaleString()}</Text>
-                </View>
-
-                <Text
+            {filteredWishes.length === 0 ? (
+              <View style={styles.stateCard}>
+                <Text style={styles.stateTitle}>Sin items para mostrar</Text>
+                <Text style={styles.stateText}>
+                  Cuando agregues deseos, aqui apareceran con fecha estimada y
+                  nivel de confianza.
+                </Text>
+              </View>
+            ) : (
+              filteredWishes.map((item) => (
+                <View
+                  key={item.wish.id}
                   style={[
-                    styles.wishConfidence,
-                    item.status === "bought"
-                      ? styles.wishConfidenceBought
-                      : item.confidence.includes("High")
-                        ? styles.wishConfidenceHigh
-                        : styles.wishConfidenceMedium,
+                    styles.wishCard,
+                    item.wish.isPurchased && styles.wishCardDimmed,
                   ]}
                 >
-                  {item.confidence}
-                </Text>
-                <Text style={styles.wishNote}>{item.note}</Text>
+                  <View style={styles.wishHeader}>
+                    <Text style={styles.wishTitle}>{item.wish.name}</Text>
+                    <Text style={styles.wishPrice}>
+                      {formatMoney(currency, item.wish.estimatedAmount)}
+                    </Text>
+                  </View>
 
-                <View style={styles.wishFooter}>
-                  <Text style={styles.wishDate}>{item.dateLabel}</Text>
-                  <View style={styles.progressTrack}>
-                    <View
-                      style={[styles.progressValue, { width: `${item.progress * 100}%` }]}
-                    />
+                  <Text
+                    style={[
+                      styles.wishConfidence,
+                      item.confidenceLevel === "high"
+                        ? styles.wishConfidenceHigh
+                        : item.confidenceLevel === "medium"
+                          ? styles.wishConfidenceMedium
+                          : item.confidenceLevel === "low"
+                            ? styles.wishConfidenceLow
+                            : styles.wishConfidenceRisky,
+                    ]}
+                  >
+                    {getConfidenceLabel(item.confidenceLevel)}
+                  </Text>
+                  <Text style={styles.wishNote}>
+                    {item.wish.notes ?? item.confidenceReason}
+                  </Text>
+                  <Text style={styles.wishReason}>{item.confidenceReason}</Text>
+
+                  <View style={styles.wishFooter}>
+                    <Text style={styles.wishDate}>
+                      {formatDateLabel(item.estimatedPurchaseDate)}
+                    </Text>
+                    <View style={styles.progressTrack}>
+                      <View
+                        style={[
+                          styles.progressValue,
+                          { width: `${item.progressRatio * 100}%` },
+                        ]}
+                      />
+                    </View>
                   </View>
                 </View>
-              </View>
-            ))}
+              ))
+            )}
 
             <View style={styles.tipCard}>
-              <Text style={styles.tipEyebrow}>TIP DE IA</Text>
-              <Text style={styles.tipText}>
-                Si pospones el Sony WH-1000XM5 por 2 semanas, podrías alcanzar
-                la meta del Herman Miller un mes antes.
-              </Text>
+              <Text style={styles.tipEyebrow}>TIP DETERMINISTICO</Text>
+              <Text style={styles.tipText}>{actionTip}</Text>
             </View>
           </>
         ) : (
@@ -149,74 +336,101 @@ export default function PlanningScreen() {
             <View style={styles.metricsGrid}>
               <View style={styles.metricCard}>
                 <Text style={styles.metricLabel}>Liquidez</Text>
-                <Text style={styles.metricValue}>88</Text>
+                <Text style={styles.metricValue}>
+                  {currentScore?.breakdown.liquidity_score ?? 0}
+                </Text>
                 <Text style={styles.metricScale}>/100</Text>
               </View>
               <View style={styles.metricCard}>
                 <Text style={styles.metricLabel}>Compromisos</Text>
-                <Text style={styles.metricValue}>12%</Text>
+                <Text style={styles.metricValue}>
+                  {currentScore?.breakdown.commitment_score ?? 0}
+                </Text>
+                <Text style={styles.metricScale}>/100</Text>
               </View>
               <View style={styles.metricCard}>
-                <Text style={styles.metricLabel}>Estabilidad</Text>
-                <Text style={styles.metricValue}>Alta</Text>
+                <Text style={styles.metricLabel}>Ahorro</Text>
+                <Text style={styles.metricValue}>
+                  {currentScore?.breakdown.savings_score ?? 0}
+                </Text>
+                <Text style={styles.metricScale}>/100</Text>
               </View>
               <View style={styles.metricCard}>
-                <Text style={styles.metricLabel}>Ratio ahorro</Text>
-                <Text style={styles.metricValue}>32%</Text>
+                <Text style={styles.metricLabel}>Score total</Text>
+                <Text style={styles.metricValue}>{currentScore?.score ?? 0}</Text>
+                <Text style={styles.metricScale}>/100</Text>
               </View>
             </View>
 
             <View style={styles.daysCard}>
-              <Text style={styles.daysLabel}>Tu dinero dura</Text>
-              <Text style={styles.daysValue}>42 días</Text>
+              <Text style={styles.daysLabel}>Tu margen actual cubre</Text>
+              <Text style={styles.daysValue}>{coverageDays} dias</Text>
               <Text style={styles.daysMeta}>
-                Sin ingresos (Promedio) 3.2 meses de vida
+                Reserva sugerida {formatMoney(currency, overview?.reserveAmount ?? 0)}
               </Text>
               <View style={styles.daysTrack}>
-                <View style={styles.daysTrackValue} />
+                <View
+                  style={[
+                    styles.daysTrackValue,
+                    {
+                      width: `${Math.max(
+                        12,
+                        Math.min(((currentScore?.score ?? 0) / 100) * 100, 100),
+                      )}%`,
+                    },
+                  ]}
+                />
               </View>
             </View>
 
             <View style={styles.chartHeader}>
-              <Text style={styles.sectionTitle}>Ingresos vs Gastos</Text>
-              <Text style={styles.chartMeta}>Últimos 6 meses</Text>
+              <Text style={styles.sectionTitle}>Evolucion del score</Text>
+              <Text style={styles.chartMeta}>Base semanal</Text>
             </View>
 
             <View style={styles.chartCard}>
               <View style={styles.chartBars}>
-                {chartBars.map((height, index) => (
-                  <View key={`bar-${index}`} style={styles.chartBarGroup}>
-                    <View style={[styles.chartBar, { height }]} />
-                    <Text style={styles.chartMonth}>
-                      {["ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP"][index]}
-                    </Text>
+                {scoreChart.map((bar) => (
+                  <View key={bar.label} style={styles.chartBarGroup}>
+                    <View style={[styles.chartBar, { height: Math.max(20, bar.value) }]} />
+                    <Text style={styles.chartMonth}>{bar.label}</Text>
                   </View>
                 ))}
               </View>
             </View>
 
             <View style={styles.reportCard}>
-              <Text style={styles.sectionTitle}>Reporte Narrativo IA</Text>
+              <Text style={styles.sectionTitle}>Resumen deterministico</Text>
               <Text style={styles.reportText}>
-                Este mes has logrado reducir tus gastos hormiga en un{" "}
-                <Text style={styles.reportAccent}>14%</Text>. Tus ingresos han
-                sido estables, pero el ratio de ahorro ha crecido gracias a la
-                optimización de suscripciones.
+                Balance total disponible:{" "}
+                <Text style={styles.reportAccent}>
+                  {formatMoney(currency, overview?.availableBalance ?? 0)}
+                </Text>
+                . Comprometido este mes:{" "}
+                <Text style={styles.reportAccent}>
+                  {formatMoney(currency, overview?.committedAmount ?? 0)}
+                </Text>
+                .
               </Text>
               <Text style={styles.reportText}>
-                Si mantienes este ritmo, alcanzarás tu meta de Fondo de
-                Emergencia en solo <Text style={styles.reportAccent}>4 meses</Text>,
-                adelantándote 60 días a la proyección inicial.
+                Ahorro mensual observado para metas:{" "}
+                <Text style={styles.reportAccent}>
+                  {formatMoney(
+                    currency,
+                    overview?.monthlyGoalContributionAverage ?? 0,
+                  )}
+                </Text>
+                . Pendiente salarial:{" "}
+                <Text style={styles.reportAccent}>
+                  {formatMoney(currency, overview?.pendingSalaryAmount ?? 0)}
+                </Text>
+                .
               </Text>
             </View>
 
             <View style={styles.tipCard}>
-              <Text style={styles.tipEyebrow}>TIP DE IA</Text>
-              <Text style={styles.tipText}>
-                Detectamos un excedente de $120 en tu cuenta corriente. Moverlo
-                hoy a tu cuenta de ahorros de alto rendimiento podría generar un
-                café extra al mes solo en intereses.
-              </Text>
+              <Text style={styles.tipEyebrow}>SIGUIENTE ACCION</Text>
+              <Text style={styles.tipText}>{actionTip}</Text>
             </View>
           </>
         )}
@@ -247,10 +461,56 @@ const styles = StyleSheet.create({
     paddingBottom: 120,
     gap: 16,
   },
+  stateCard: {
+    borderRadius: 16,
+    backgroundColor: "#141D32",
+    padding: 18,
+    gap: 10,
+    alignItems: "center",
+  },
+  stateTitle: {
+    color: "#F8FAFC",
+    fontSize: 16,
+    fontWeight: "800",
+  },
+  stateText: {
+    color: "#C0CADF",
+    fontSize: 14,
+    lineHeight: 21,
+    textAlign: "center",
+  },
   sectionTitle: {
     color: "#F8FAFC",
     fontSize: 16,
     fontWeight: "800",
+  },
+  goalCard: {
+    borderRadius: 16,
+    backgroundColor: "#141D32",
+    padding: 16,
+    gap: 10,
+  },
+  goalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  goalTitle: {
+    flex: 1,
+    color: "#F8FAFC",
+    fontSize: 17,
+    fontWeight: "800",
+  },
+  goalAmount: {
+    color: "#4562FF",
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  goalMeta: {
+    color: "#B4C2DB",
+    fontSize: 13,
+    lineHeight: 18,
   },
   wishCard: {
     borderRadius: 16,
@@ -294,14 +554,23 @@ const styles = StyleSheet.create({
     color: "#FBBF24",
     backgroundColor: "rgba(251, 191, 36, 0.12)",
   },
-  wishConfidenceBought: {
-    color: "#D1D5DB",
-    backgroundColor: "rgba(148, 163, 184, 0.16)",
+  wishConfidenceLow: {
+    color: "#60A5FA",
+    backgroundColor: "rgba(96, 165, 250, 0.14)",
+  },
+  wishConfidenceRisky: {
+    color: "#F87171",
+    backgroundColor: "rgba(248, 113, 113, 0.14)",
   },
   wishNote: {
     color: "#C0CADF",
     fontSize: 14,
     lineHeight: 20,
+  },
+  wishReason: {
+    color: "#8FA2C2",
+    fontSize: 12,
+    lineHeight: 18,
   },
   wishFooter: {
     flexDirection: "row",
@@ -311,7 +580,7 @@ const styles = StyleSheet.create({
   wishDate: {
     color: "#94A3B8",
     fontSize: 12,
-    minWidth: 64,
+    minWidth: 72,
   },
   progressTrack: {
     flex: 1,
@@ -399,7 +668,6 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   daysTrackValue: {
-    width: "78%",
     height: "100%",
     borderRadius: 999,
     backgroundColor: "#34D399",
@@ -432,7 +700,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   chartBar: {
-    width: 12,
+    width: 16,
     borderRadius: 999,
     backgroundColor: "#4562FF",
   },
