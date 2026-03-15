@@ -56,6 +56,15 @@ function buildWebCallbackUrl(source: URL) {
   return new URL(callbackPath, source.origin).toString();
 }
 
+function isLocalHostName(hostname: string) {
+  return (
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname === "::1" ||
+    hostname === "[::1]"
+  );
+}
+
 function getConfiguredWebRedirectUrl() {
   const configuredUrl = process.env.EXPO_PUBLIC_WEB_URL?.trim();
 
@@ -64,7 +73,19 @@ function getConfiguredWebRedirectUrl() {
   }
 
   try {
-    return buildWebCallbackUrl(new URL(configuredUrl));
+    const parsedConfiguredUrl = new URL(configuredUrl);
+
+    if (typeof window !== "undefined") {
+      const currentUrl = new URL(window.location.href);
+      const currentIsLocal = isLocalHostName(currentUrl.hostname);
+      const configuredIsLocal = isLocalHostName(parsedConfiguredUrl.hostname);
+
+      if (currentIsLocal !== configuredIsLocal) {
+        return null;
+      }
+    }
+
+    return buildWebCallbackUrl(parsedConfiguredUrl);
   } catch {
     return null;
   }
