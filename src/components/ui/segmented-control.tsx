@@ -7,16 +7,16 @@ export type SegmentedOption<T extends string> = {
 
 type SegmentedControlProps<T extends string> = {
   compact?: boolean;
+  onChange: (value: T) => void;
   options: SegmentedOption<T>[];
   value: T;
-  onChange: (value: T) => void;
 };
 
 export function SegmentedControl<T extends string>({
   compact = false,
+  onChange,
   options,
   value,
-  onChange,
 }: SegmentedControlProps<T>) {
   return (
     <View style={[styles.container, compact && styles.containerCompact]}>
@@ -53,9 +53,9 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     gap: 8,
-    borderRadius: 16,
-    backgroundColor: "#151D31",
-    padding: 6,
+    borderRadius: 14,
+    backgroundColor: "#151B2E",
+    padding: 4,
   },
   containerCompact: {
     backgroundColor: "transparent",
@@ -63,26 +63,31 @@ const styles = StyleSheet.create({
   },
   segment: {
     flex: 1,
-    minHeight: 42,
-    borderRadius: 12,
+    minHeight: 38,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 12,
   },
   segmentCompact: {
-    minHeight: 40,
+    minHeight: 38,
     flex: 0,
-    minWidth: 80,
+    minWidth: 78,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.06)",
-    backgroundColor: "#1A2236",
+    borderColor: "rgba(92, 108, 149, 0.24)",
+    backgroundColor: "#192035",
   },
   segmentActive: {
-    backgroundColor: "#4562FF",
+    backgroundColor: "#4664FF",
+    shadowColor: "#4664FF",
+    shadowOpacity: 0.24,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
   },
   segmentText: {
-    color: "#8390AD",
-    fontSize: 14,
+    color: "#8D98B5",
+    fontSize: 13,
     fontWeight: "700",
   },
   segmentTextCompact: {

@@ -1,5 +1,7 @@
 import { SafeAreaView, StyleSheet, Text, View } from "react-native";
 
+import { DecorativeBackground } from "@/components/ui/decorative-background";
+
 type FeaturePlaceholderScreenProps = {
   eyebrow: string;
   title: string;
@@ -15,6 +17,7 @@ export function FeaturePlaceholderScreen({
 }: FeaturePlaceholderScreenProps) {
   return (
     <SafeAreaView style={styles.safeArea}>
+      <DecorativeBackground />
       <View style={styles.container}>
         <View style={styles.heroCard}>
           <Text style={styles.eyebrow}>{eyebrow}</Text>
@@ -39,7 +42,7 @@ export function FeaturePlaceholderScreen({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#090D1A",
+    backgroundColor: "#0F1223",
   },
   container: {
     flex: 1,

@@ -46,7 +46,7 @@ export function useOnboardingGuard(): OnboardingGuardResult {
     };
   }
 
-  if (pinStatus !== "unlocked") {
+  if (pinStatus === "locked") {
     return {
       isLoading: false,
       loadingMessage: "",

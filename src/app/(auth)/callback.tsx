@@ -2,6 +2,7 @@ import { SafeAreaView, StyleSheet, Text, View } from "react-native";
 
 import { Link, Redirect } from "expo-router";
 
+import { DecorativeBackground } from "@/components/ui/decorative-background";
 import { useAuthStore } from "@/stores/auth-store";
 
 export default function CallbackScreen() {
@@ -15,6 +16,7 @@ export default function CallbackScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <DecorativeBackground />
       <View style={styles.container}>
         <Text style={styles.title}>Procesando acceso</Text>
         <Text style={styles.subtitle}>
@@ -36,7 +38,7 @@ export default function CallbackScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#090D1A",
+    backgroundColor: "#0F1223",
   },
   container: {
     flex: 1,
