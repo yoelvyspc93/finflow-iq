@@ -1,14 +1,10 @@
 import { useMemo, useState } from "react";
-import {
-  Pressable,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Pressable, SafeAreaView, StyleSheet, Text, View } from "react-native";
 
 import { Redirect } from "expo-router";
+import { Image } from "expo-image";
 
+import { DecorativeBackground } from "@/components/ui/decorative-background";
 import { clearPin, createPin, unlockWithPin } from "@/lib/security/app-lock";
 import { isPinFormatValid } from "@/lib/security/pin-storage";
 import { supabase } from "@/lib/supabase/client";
@@ -40,7 +36,7 @@ export default function PinScreen() {
       return `Configura un PIN de ${pinLength} dígitos para proteger la app.`;
     }
 
-    return "Por seguridad, confirma tu identidad para entrar.";
+    return "Por seguridad, confirma tu identidad";
   }, [isSetup, pinLength]);
 
   if (authStatus !== "authenticated") {
@@ -126,9 +122,20 @@ export default function PinScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <DecorativeBackground />
       <View style={styles.container}>
-        <View style={styles.header}>
+        <View style={styles.brandRow}>
+          <View style={styles.brandBadge}>
+            <Image
+              contentFit="contain"
+              source={require("../../assets/logo.png")}
+              style={styles.brandImage}
+            />
+          </View>
           <Text style={styles.brand}>FinFlow IQ</Text>
+        </View>
+
+        <View style={styles.header}>
           <Text style={styles.title}>
             {isSetup ? "Configura tu PIN" : "Ingresa tu PIN"}
           </Text>
@@ -184,13 +191,11 @@ export default function PinScreen() {
           </View>
         ) : (
           <Pressable onPress={() => void handleForgotPin()}>
-            <Text style={styles.forgotText}>Olvidé mi PIN</Text>
+            <Text style={styles.forgotText}>¿Olvidé mi PIN?</Text>
           </Pressable>
         )}
 
-        {securityError ? (
-          <Text style={styles.errorText}>{securityError}</Text>
-        ) : null}
+        {securityError ? <Text style={styles.errorText}>{securityError}</Text> : null}
 
         <View style={styles.keypad}>
           {keypad.map((digit) => (
@@ -214,7 +219,7 @@ export default function PinScreen() {
               pressed && styles.keypadButtonPressed,
             ]}
           >
-            <Text style={styles.secondaryButtonText}>Borrar</Text>
+            <Text style={styles.secondaryButtonText}>⌫</Text>
           </Pressable>
 
           <Pressable
@@ -242,28 +247,45 @@ export default function PinScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#090D1A",
+    backgroundColor: "#0A1020",
   },
   container: {
     flex: 1,
-    justifyContent: "center",
     paddingHorizontal: 24,
     paddingVertical: 32,
     gap: 24,
   },
-  header: {
+  brandRow: {
+    flexDirection: "row",
     alignItems: "center",
     gap: 10,
   },
+  brandBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(69, 98, 255, 0.18)",
+  },
+  brandImage: {
+    width: 22,
+    height: 22,
+  },
   brand: {
-    color: "#E2E8F0",
-    fontSize: 16,
-    fontWeight: "700",
+    color: "#F8FAFC",
+    fontSize: 20,
+    fontWeight: "800",
+  },
+  header: {
+    alignItems: "center",
+    gap: 10,
+    marginTop: 48,
   },
   title: {
     color: "#F8FAFC",
-    fontSize: 34,
-    fontWeight: "800",
+    fontSize: 30,
+    fontWeight: "900",
   },
   subtitle: {
     color: "#94A3B8",
@@ -285,8 +307,8 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
   },
   pinDotFilled: {
-    borderColor: "#4F6BFF",
-    backgroundColor: "#4F6BFF",
+    borderColor: "#4562FF",
+    backgroundColor: "#4562FF",
   },
   lengthRow: {
     flexDirection: "row",
@@ -301,8 +323,8 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   lengthButtonActive: {
-    borderColor: "#4F6BFF",
-    backgroundColor: "rgba(79, 107, 255, 0.18)",
+    borderColor: "#4562FF",
+    backgroundColor: "rgba(69, 98, 255, 0.18)",
   },
   lengthButtonText: {
     color: "#94A3B8",
@@ -313,7 +335,7 @@ const styles = StyleSheet.create({
     color: "#E2E8F0",
   },
   forgotText: {
-    color: "#7C8CFF",
+    color: "#4562FF",
     fontSize: 15,
     fontWeight: "700",
     textAlign: "center",
@@ -329,12 +351,13 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     justifyContent: "center",
     gap: 14,
+    marginTop: 8,
   },
   keypadButton: {
-    width: 96,
-    height: 72,
+    width: 90,
+    height: 68,
     borderRadius: 18,
-    backgroundColor: "#131D34",
+    backgroundColor: "rgba(21, 29, 49, 0.94)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -347,15 +370,15 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   secondaryButton: {
-    backgroundColor: "#0F172A",
+    backgroundColor: "#162033",
   },
   secondaryButtonText: {
     color: "#CBD5E1",
-    fontSize: 15,
+    fontSize: 18,
     fontWeight: "700",
   },
   submitButton: {
-    backgroundColor: "#4F6BFF",
+    backgroundColor: "#4562FF",
   },
   submitButtonDisabled: {
     opacity: 0.6,

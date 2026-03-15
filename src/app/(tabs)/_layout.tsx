@@ -7,15 +7,15 @@ import { useOnboardingGuard } from "@/hooks/use-onboarding-guard";
 
 function TabGlyph({
   focused,
-  label,
+  icon,
 }: {
   focused: boolean;
-  label: string;
+  icon: string;
 }) {
   return (
-    <View style={[styles.glyph, focused && styles.glyphActive]}>
-      <Text style={[styles.glyphText, focused && styles.glyphTextActive]}>
-        {label}
+    <View style={styles.tabGlyphWrap}>
+      <Text style={[styles.tabGlyph, focused && styles.tabGlyphActive]}>
+        {icon}
       </Text>
     </View>
   );
@@ -41,8 +41,8 @@ export default function TabsLayout() {
       initialRouteName="dashboard"
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: "#F8FAFC",
-        tabBarInactiveTintColor: "#7184A6",
+        tabBarActiveTintColor: "#4562FF",
+        tabBarInactiveTintColor: "#8B97B2",
         tabBarStyle: styles.tabBar,
         tabBarLabelStyle: styles.tabBarLabel,
         tabBarItemStyle: styles.tabItem,
@@ -52,37 +52,29 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="dashboard"
         options={{
-          tabBarLabel: "Panel",
-          tabBarIcon: ({ focused }) => (
-            <TabGlyph focused={focused} label="PL" />
-          ),
+          tabBarLabel: "Inicio",
+          tabBarIcon: ({ focused }) => <TabGlyph focused={focused} icon="⌂" />,
         }}
       />
       <Tabs.Screen
         name="finances"
         options={{
           tabBarLabel: "Finanzas",
-          tabBarIcon: ({ focused }) => (
-            <TabGlyph focused={focused} label="FX" />
-          ),
+          tabBarIcon: ({ focused }) => <TabGlyph focused={focused} icon="⊕" />,
         }}
       />
       <Tabs.Screen
         name="planning"
         options={{
-          tabBarLabel: "Plan",
-          tabBarIcon: ({ focused }) => (
-            <TabGlyph focused={focused} label="GO" />
-          ),
+          tabBarLabel: "Planificación",
+          tabBarIcon: ({ focused }) => <TabGlyph focused={focused} icon="◫" />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           tabBarLabel: "Ajustes",
-          tabBarIcon: ({ focused }) => (
-            <TabGlyph focused={focused} label="ST" />
-          ),
+          tabBarIcon: ({ focused }) => <TabGlyph focused={focused} icon="⚙" />,
         }}
       />
     </Tabs>
@@ -91,40 +83,34 @@ export default function TabsLayout() {
 
 const styles = StyleSheet.create({
   scene: {
-    backgroundColor: "#090D1A",
+    backgroundColor: "#0A1020",
   },
   tabBar: {
-    height: 86,
-    paddingTop: 10,
-    paddingBottom: 12,
-    backgroundColor: "#0B1222",
+    height: 84,
+    paddingTop: 8,
+    paddingBottom: 10,
+    backgroundColor: "#0D1324",
     borderTopWidth: 1,
-    borderTopColor: "rgba(148, 163, 184, 0.08)",
+    borderTopColor: "rgba(148, 163, 184, 0.10)",
   },
   tabBarLabel: {
     fontSize: 11,
     fontWeight: "700",
   },
   tabItem: {
-    paddingVertical: 4,
+    paddingVertical: 2,
   },
-  glyph: {
-    width: 34,
-    height: 34,
-    borderRadius: 12,
+  tabGlyphWrap: {
+    minWidth: 26,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#11182D",
   },
-  glyphActive: {
-    backgroundColor: "#D9F99D",
+  tabGlyph: {
+    color: "#8B97B2",
+    fontSize: 18,
+    fontWeight: "700",
   },
-  glyphText: {
-    color: "#7184A6",
-    fontSize: 11,
-    fontWeight: "800",
-  },
-  glyphTextActive: {
-    color: "#0B1222",
+  tabGlyphActive: {
+    color: "#4562FF",
   },
 });
