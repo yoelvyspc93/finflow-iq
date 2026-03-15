@@ -1,10 +1,12 @@
 import { supabase } from "@/lib/supabase/client";
 import {
   createMockGoalContributions,
+  createLocalGoal,
   createMockGoals,
   mapGoal,
   mapGoalContribution,
   type AddGoalContributionInput,
+  type CreateGoalInput,
   type Goal,
   type GoalContribution,
 } from "@/modules/goals/types";
@@ -75,3 +77,26 @@ export async function addGoalContribution(
 
   return mapGoalContribution(data);
 }
+
+export async function createGoal(input: CreateGoalInput & { userId: string }) {
+  const { data, error } = await supabase
+    .from("goals")
+    .insert({
+      deadline: input.deadline ?? null,
+      icon: input.icon ?? null,
+      name: input.name.trim(),
+      target_amount: input.targetAmount,
+      user_id: input.userId,
+      wallet_id: input.walletId,
+    })
+    .select("*")
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return mapGoal(data);
+}
+
+export { createLocalGoal };
