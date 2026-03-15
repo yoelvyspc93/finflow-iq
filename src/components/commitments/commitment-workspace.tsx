@@ -30,6 +30,7 @@ type CommitmentWorkspaceProps = {
   accentColor: string;
   description: string;
   eyebrow: string;
+  hideHero?: boolean;
   title: string;
 };
 
@@ -48,6 +49,7 @@ export function CommitmentWorkspace({
   accentColor,
   description,
   eyebrow,
+  hideHero = false,
   title,
 }: CommitmentWorkspaceProps) {
   const [referenceError, setReferenceError] = useState<string | null>(null);
@@ -352,11 +354,13 @@ export function CommitmentWorkspace({
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
-      <View style={[styles.heroCard, { borderColor: accentColor }]}>
-        <Text style={[styles.eyebrow, { color: accentColor }]}>{eyebrow}</Text>
-        <Text style={styles.title}>{title}</Text>
-        <Text style={styles.description}>{description}</Text>
-      </View>
+      {!hideHero ? (
+        <View style={[styles.heroCard, { borderColor: accentColor }]}>
+          <Text style={[styles.eyebrow, { color: accentColor }]}>{eyebrow}</Text>
+          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.description}>{description}</Text>
+        </View>
+      ) : null}
 
       <WalletSwitcher
         onSelect={setSelectedWalletId}

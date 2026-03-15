@@ -36,6 +36,7 @@ type LedgerWorkspaceProps = {
   accentColor: string;
   description: string;
   eyebrow: string;
+  hideHero?: boolean;
   showExchangeTools?: boolean;
   showFinancialCards?: boolean;
   title: string;
@@ -59,6 +60,7 @@ export function LedgerWorkspace({
   accentColor,
   description,
   eyebrow,
+  hideHero = false,
   showExchangeTools = false,
   showFinancialCards = false,
   title,
@@ -396,35 +398,37 @@ export function LedgerWorkspace({
       contentContainerStyle={styles.content}
       showsVerticalScrollIndicator={false}
     >
-      <View style={[styles.heroCard, { borderColor: accentColor }]}>
-        <Text style={[styles.eyebrow, { color: accentColor }]}>{eyebrow}</Text>
-        <Text style={styles.title}>{title}</Text>
-        <Text style={styles.description}>{description}</Text>
+      {!hideHero ? (
+        <View style={[styles.heroCard, { borderColor: accentColor }]}>
+          <Text style={[styles.eyebrow, { color: accentColor }]}>{eyebrow}</Text>
+          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.description}>{description}</Text>
 
-        <View style={styles.balanceRow}>
-          <View style={styles.balancePanel}>
-            <Text style={styles.panelLabel}>Disponible</Text>
-            <Text style={styles.balanceValue}>
-              {activeWallet
-                ? `${activeWallet.currency} ${activeWallet.balance.toFixed(2)}`
-                : "--"}
-            </Text>
-            <Text style={styles.panelMeta}>
-              Wallet: {activeWallet?.name ?? "sin seleccionar"}
-            </Text>
-          </View>
+          <View style={styles.balanceRow}>
+            <View style={styles.balancePanel}>
+              <Text style={styles.panelLabel}>Disponible</Text>
+              <Text style={styles.balanceValue}>
+                {activeWallet
+                  ? `${activeWallet.currency} ${activeWallet.balance.toFixed(2)}`
+                  : "--"}
+              </Text>
+              <Text style={styles.panelMeta}>
+                Wallet: {activeWallet?.name ?? "sin seleccionar"}
+              </Text>
+            </View>
 
-          <View style={styles.balancePanel}>
-            <Text style={styles.panelLabel}>Configuracion</Text>
-            <Text style={styles.smallValue}>
-              Ahorro {settings?.savingsGoalPercent ?? "--"}%
-            </Text>
-            <Text style={styles.panelMeta}>
-              Fecha: {settings?.dateFormat ?? "--"}
-            </Text>
+            <View style={styles.balancePanel}>
+              <Text style={styles.panelLabel}>Configuracion</Text>
+              <Text style={styles.smallValue}>
+                Ahorro {settings?.savingsGoalPercent ?? "--"}%
+              </Text>
+              <Text style={styles.panelMeta}>
+                Fecha: {settings?.dateFormat ?? "--"}
+              </Text>
+            </View>
           </View>
         </View>
-      </View>
+      ) : null}
 
       {showFinancialCards ? (
         <FinancialCards

@@ -10,7 +10,9 @@ import {
 } from "react-native";
 
 import { Redirect } from "expo-router";
+import { Image } from "expo-image";
 
+import { DecorativeBackground } from "@/components/ui/decorative-background";
 import { sendMagicLink } from "@/lib/auth/session";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 import { useAuthStore } from "@/stores/auth-store";
@@ -138,34 +140,42 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <DecorativeBackground />
       <View style={styles.container}>
         <View style={styles.card}>
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>FI</Text>
+            <Image
+              contentFit="contain"
+              source={require("../../assets/logo.png")}
+              style={styles.badgeImage}
+            />
           </View>
 
           <Text style={styles.title}>FinFlow IQ</Text>
-          <Text style={styles.subtitle}>Acceso con enlace mágico</Text>
+          <Text style={styles.subtitle}>Bienvenido de nuevo</Text>
 
           <View style={styles.infoBox}>
             <Text style={styles.infoText}>
-              Sin contraseña. Te enviaremos un enlace a tu correo para iniciar
-              sesión de forma segura.
+              Sin contraseña, recibirás un enlace mágico en tu email para
+              acceder de forma segura.
             </Text>
           </View>
 
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>Correo electrónico</Text>
-            <TextInput
-              autoCapitalize="none"
-              autoComplete="email"
-              keyboardType="email-address"
-              onChangeText={setEmail}
-              placeholder="tu@email.com"
-              placeholderTextColor="#64748B"
-              style={styles.input}
-              value={email}
-            />
+            <View style={styles.inputShell}>
+              <Text style={styles.inputIcon}>✉</Text>
+              <TextInput
+                autoCapitalize="none"
+                autoComplete="email"
+                keyboardType="email-address"
+                onChangeText={setEmail}
+                placeholder="tu@email.com"
+                placeholderTextColor="#64748B"
+                style={styles.input}
+                value={email}
+              />
+            </View>
           </View>
 
           {!isSupabaseConfigured ? (
@@ -205,7 +215,7 @@ export default function LoginScreen() {
               <Text style={styles.buttonText}>
                 {remainingSeconds > 0
                   ? `Espera ${remainingSeconds}s`
-                  : "Enviar enlace de acceso"}
+                  : "Enviar enlace de acceso →"}
               </Text>
             )}
           </Pressable>
@@ -232,7 +242,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#090D1A",
+    backgroundColor: "#0A1020",
   },
   container: {
     flex: 1,
@@ -241,14 +251,14 @@ const styles = StyleSheet.create({
   },
   card: {
     borderWidth: 1,
-    borderColor: "rgba(99, 102, 241, 0.2)",
-    backgroundColor: "#11182D",
-    borderRadius: 24,
+    borderColor: "rgba(69, 98, 255, 0.14)",
+    backgroundColor: "#151D31",
+    borderRadius: 20,
     padding: 24,
     gap: 18,
     shadowColor: "#000000",
-    shadowOpacity: 0.22,
-    shadowRadius: 24,
+    shadowOpacity: 0.24,
+    shadowRadius: 28,
     shadowOffset: { width: 0, height: 16 },
     elevation: 8,
   },
@@ -259,25 +269,27 @@ const styles = StyleSheet.create({
     backgroundColor: "#1E2A4D",
     alignItems: "center",
     justifyContent: "center",
+    alignSelf: "center",
   },
-  badgeText: {
-    color: "#7C8CFF",
-    fontSize: 18,
-    fontWeight: "800",
+  badgeImage: {
+    width: 24,
+    height: 24,
   },
   title: {
     color: "#F8FAFC",
-    fontSize: 32,
-    fontWeight: "800",
+    fontSize: 24,
+    fontWeight: "900",
+    textAlign: "center",
   },
   subtitle: {
     color: "#94A3B8",
     fontSize: 15,
+    textAlign: "center",
   },
   infoBox: {
     borderWidth: 1,
-    borderColor: "rgba(99, 102, 241, 0.2)",
-    backgroundColor: "rgba(37, 99, 235, 0.08)",
+    borderColor: "rgba(69, 98, 255, 0.22)",
+    backgroundColor: "rgba(48, 68, 142, 0.18)",
     borderRadius: 16,
     padding: 16,
   },
@@ -294,14 +306,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
   },
-  input: {
+  inputShell: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#1E293B",
-    backgroundColor: "#0B1222",
+    borderColor: "rgba(148, 163, 184, 0.12)",
+    backgroundColor: "#11192B",
+    paddingHorizontal: 14,
+  },
+  inputIcon: {
+    color: "#93A0B9",
+    fontSize: 16,
+  },
+  input: {
+    flex: 1,
     color: "#F8FAFC",
     fontSize: 16,
-    paddingHorizontal: 16,
     paddingVertical: 14,
   },
   helperText: {
@@ -326,7 +348,7 @@ const styles = StyleSheet.create({
   button: {
     minHeight: 54,
     borderRadius: 16,
-    backgroundColor: "#4F6BFF",
+    backgroundColor: "#4562FF",
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 20,
@@ -346,7 +368,7 @@ const styles = StyleSheet.create({
     minHeight: 50,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: "rgba(99, 102, 241, 0.28)",
+    borderColor: "rgba(69, 98, 255, 0.22)",
     backgroundColor: "#16203A",
     alignItems: "center",
     justifyContent: "center",
