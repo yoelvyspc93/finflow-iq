@@ -20,11 +20,13 @@ type AppStore = {
   hasCompletedOnboarding: boolean;
   isLoading: boolean;
   isReady: boolean;
+  replaceLocalSettings: (settings: AppSettings) => void;
   refreshAppData: (args: { isDevBypass: boolean; userId: string }) => Promise<void>;
   reset: () => void;
   selectedWalletId: string | null;
   setSelectedWalletId: (walletId: string | null) => void;
   settings: AppSettings | null;
+  upsertLocalWallet: (wallet: Wallet) => void;
   wallets: Wallet[];
 };
 
@@ -81,6 +83,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
           : wallet,
       ),
     })),
+  replaceLocalSettings: (settings) => set({ settings }),
   refreshAppData: async ({ isDevBypass, userId }) => {
     set({ error: null, isLoading: true });
 
@@ -125,5 +128,21 @@ export const useAppStore = create<AppStore>((set, get) => ({
   selectedWalletId: null,
   setSelectedWalletId: (selectedWalletId) => set({ selectedWalletId }),
   settings: null,
+  upsertLocalWallet: (wallet) =>
+    set((state) => {
+      const existingIndex = state.wallets.findIndex((item) => item.id === wallet.id);
+      const wallets =
+        existingIndex === -1
+          ? [...state.wallets, wallet].sort((left, right) => left.position - right.position)
+          : state.wallets.map((item) => (item.id === wallet.id ? wallet : item));
+
+      return buildStateFromData(
+        {
+          settings: state.settings ?? createMockSettings(wallet.userId),
+          wallets,
+        },
+        state.selectedWalletId,
+      );
+    }),
   wallets: [],
 }));

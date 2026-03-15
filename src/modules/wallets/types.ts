@@ -23,7 +23,10 @@ export type WalletCreateInput = Pick<
   position?: number;
 };
 
-export type WalletUpdateInput = Pick<TablesUpdate<"wallets">, "name" | "color" | "icon">;
+export type WalletUpdateInput = Pick<
+  TablesUpdate<"wallets">,
+  "name" | "currency" | "color" | "icon"
+>;
 
 export function mapWallet(row: WalletRow): Wallet {
   return {
@@ -44,6 +47,7 @@ export function mapWallet(row: WalletRow): Wallet {
 export function createMockWallet(input: {
   color?: string | null;
   currency: string;
+  id?: string;
   icon?: string | null;
   name: string;
   position?: number;
@@ -57,7 +61,11 @@ export function createMockWallet(input: {
     createdAt: now,
     currency: input.currency,
     icon: input.icon ?? null,
-    id: "dev-wallet-primary",
+    id:
+      input.id ??
+      (input.position === 0
+        ? "dev-wallet-primary"
+        : `dev-wallet-${Date.now()}-${Math.random().toString(16).slice(2)}`),
     isActive: true,
     name: input.name.trim(),
     position: input.position ?? 0,

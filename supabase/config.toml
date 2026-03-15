@@ -45,9 +45,11 @@ file_size_limit = "50MiB"
 
 [auth]
 enabled = true
-site_url = "http://localhost:8081"
+site_url = "https://yoelvyspc93.github.io/finflow-iq"
 additional_redirect_urls = [
   "finflowiq://callback",
+  "https://yoelvyspc93.github.io/finflow-iq",
+  "https://yoelvyspc93.github.io/finflow-iq/callback",
   "http://localhost:8081",
   "http://localhost:8081/callback",
   "http://127.0.0.1:8081",

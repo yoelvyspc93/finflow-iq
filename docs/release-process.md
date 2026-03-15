@@ -8,7 +8,7 @@ Dejar separados tres flujos:
 - OTA updates con `expo-updates` usando EAS Update
 
 ## Requisito previo
-Configura `EAS_PROJECT_ID` en `.env`.
+Configura `EAS_PROJECT_ID` y `EXPO_PUBLIC_WEB_URL` en `.env`.
 
 Si aun no tienes proyecto enlazado en Expo/EAS:
 
@@ -17,6 +17,8 @@ Si aun no tienes proyecto enlazado en Expo/EAS:
 3. `npx eas update:configure`
 
 Con eso obtienes el `projectId` real del proyecto y puedes copiarlo a `.env`.
+
+`EXPO_PUBLIC_WEB_URL` debe ser la URL publica real donde corre la app web. En GitHub Pages de este repo es `https://yoelvyspc93.github.io/finflow-iq`.
 
 ## Contrato actual
 - `runtimeVersion` usa `policy: "appVersion"`

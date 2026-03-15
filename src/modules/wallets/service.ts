@@ -66,6 +66,7 @@ export async function updateWallet({
 }: UpdateWalletArgs): Promise<Wallet> {
   const payload = {
     color: patch.color,
+    currency: patch.currency?.trim(),
     icon: patch.icon,
     name: patch.name?.trim(),
   };

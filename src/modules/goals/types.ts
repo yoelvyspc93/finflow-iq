@@ -37,6 +37,14 @@ export type AddGoalContributionInput = {
   walletId: string;
 };
 
+export type CreateGoalInput = {
+  deadline?: string | null;
+  icon?: string | null;
+  name: string;
+  targetAmount: number;
+  walletId: string;
+};
+
 export function mapGoal(row: GoalRow): Goal {
   return {
     createdAt: row.created_at,
@@ -137,4 +145,38 @@ export function createMockGoalContributions(userId: string): GoalContribution[] 
       walletId: "dev-wallet-primary",
     },
   ];
+}
+
+export function createLocalGoal(input: CreateGoalInput & { userId: string }): Goal {
+  const now = new Date().toISOString();
+
+  return {
+    createdAt: now,
+    deadline: input.deadline ?? null,
+    icon: input.icon ?? null,
+    id: `local-goal-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    name: input.name.trim(),
+    status: "active",
+    targetAmount: input.targetAmount,
+    updatedAt: now,
+    userId: input.userId,
+    walletId: input.walletId,
+  };
+}
+
+export function createLocalGoalContribution(
+  input: AddGoalContributionInput & { userId: string },
+): GoalContribution {
+  return {
+    amount: input.amount,
+    createdAt: new Date().toISOString(),
+    date: input.date,
+    goalId: input.goalId,
+    id: `local-goal-contribution-${Date.now()}-${Math.random()
+      .toString(16)
+      .slice(2)}`,
+    note: input.note ?? null,
+    userId: input.userId,
+    walletId: input.walletId,
+  };
 }

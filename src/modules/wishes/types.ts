@@ -28,6 +28,14 @@ export type Wish = {
   walletId: string;
 };
 
+export type CreateWishInput = {
+  estimatedAmount: number;
+  name: string;
+  notes?: string | null;
+  priority: number;
+  walletId: string;
+};
+
 export function mapWish(row: WishRow): Wish {
   return {
     aiAdvice: row.ai_advice,
@@ -113,4 +121,28 @@ export function createMockWishes(userId: string): Wish[] {
       walletId: "dev-wallet-primary",
     },
   ];
+}
+
+export function createLocalWish(input: CreateWishInput & { userId: string }): Wish {
+  const now = new Date().toISOString();
+
+  return {
+    aiAdvice: null,
+    confidenceLevel: null,
+    confidenceReason: null,
+    createdAt: now,
+    estimatedAmount: input.estimatedAmount,
+    estimatedPurchaseDate: null,
+    id: `local-wish-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    isPurchased: false,
+    lastAiAdviceAt: null,
+    lastCalculatedAt: null,
+    name: input.name.trim(),
+    notes: input.notes ?? null,
+    priority: input.priority,
+    purchasedAt: null,
+    updatedAt: now,
+    userId: input.userId,
+    walletId: input.walletId,
+  };
 }

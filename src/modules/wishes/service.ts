@@ -1,7 +1,9 @@
 import { supabase } from "@/lib/supabase/client";
 import {
+  createLocalWish,
   createMockWishes,
   mapWish,
+  type CreateWishInput,
   type Wish,
   type WishConfidenceLevel,
 } from "@/modules/wishes/types";
@@ -68,3 +70,26 @@ export async function syncWishProjections(
     throw failed.error;
   }
 }
+
+export async function createWish(input: CreateWishInput & { userId: string }) {
+  const { data, error } = await supabase
+    .from("wishes")
+    .insert({
+      estimated_amount: input.estimatedAmount,
+      name: input.name.trim(),
+      notes: input.notes ?? null,
+      priority: input.priority,
+      user_id: input.userId,
+      wallet_id: input.walletId,
+    })
+    .select("*")
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return mapWish(data);
+}
+
+export { createLocalWish };

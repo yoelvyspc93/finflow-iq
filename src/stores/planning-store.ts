@@ -14,7 +14,12 @@ import {
   listGoalContributions,
   listGoals,
 } from "@/modules/goals/service";
-import type { Goal, GoalContribution } from "@/modules/goals/types";
+import {
+  createMockGoalContributions,
+  createMockGoals,
+  type Goal,
+  type GoalContribution,
+} from "@/modules/goals/types";
 import {
   calculateFinancialScore,
   calculateSalaryStabilityScore,
@@ -39,7 +44,7 @@ import {
   listWishes,
   syncWishProjections,
 } from "@/modules/wishes/service";
-import type { Wish } from "@/modules/wishes/types";
+import { createMockWishes, type Wish } from "@/modules/wishes/types";
 
 type PlanningOverview = {
   assignableAmount: number;
@@ -63,6 +68,9 @@ type RefreshPlanningDataArgs = {
 };
 
 type PlanningStore = {
+  addLocalGoal: (goal: Goal) => void;
+  addLocalGoalContribution: (contribution: GoalContribution) => void;
+  addLocalWish: (wish: Wish) => void;
   currentScore: FinancialScore | null;
   error: string | null;
   goalContributions: GoalContribution[];
@@ -186,15 +194,24 @@ function mergeScores(
 
 export const usePlanningStore = create<PlanningStore>((set) => ({
   ...initialState,
+  addLocalGoal: (goal) =>
+    set((state) => ({
+      goals: [...state.goals, goal],
+    })),
+  addLocalGoalContribution: (contribution) =>
+    set((state) => ({
+      goalContributions: [contribution, ...state.goalContributions],
+    })),
+  addLocalWish: (wish) =>
+    set((state) => ({
+      wishes: [...state.wishes, wish].sort((left, right) => left.priority - right.priority),
+    })),
   refreshPlanningData: async ({ isDevBypass, settings, userId, wallets }) => {
     set({ error: null, isLoading: true });
 
     try {
       const currentMonth = `${new Date().toISOString().slice(0, 7)}-01`;
       const [
-        goals,
-        goalContributions,
-        wishes,
         salaryPeriods,
         salaryPayments,
         recurringExpenses,
@@ -202,9 +219,6 @@ export const usePlanningStore = create<PlanningStore>((set) => ({
         paymentEntries,
         recentScores,
       ] = await Promise.all([
-        listGoals({ isDevBypass, userId }),
-        listGoalContributions({ isDevBypass, userId }),
-        listWishes({ isDevBypass, userId }),
         listSalaryPeriods({ isDevBypass, userId }),
         listSalaryPayments({ isDevBypass, userId }),
         listRecurringExpenses({ isDevBypass, userId }),
@@ -213,9 +227,32 @@ export const usePlanningStore = create<PlanningStore>((set) => ({
         listFinancialScores({ isDevBypass, userId }),
       ]);
 
+      const existingState = usePlanningStore.getState();
+      const goals =
+        isDevBypass && existingState.goals.length > 0
+          ? existingState.goals
+          : await listGoals({ isDevBypass, userId });
+      const goalContributions =
+        isDevBypass && existingState.goalContributions.length > 0
+          ? existingState.goalContributions
+          : await listGoalContributions({ isDevBypass, userId });
+      const wishes =
+        isDevBypass && existingState.wishes.length > 0
+          ? existingState.wishes
+          : await listWishes({ isDevBypass, userId });
+
+      const resolvedGoals =
+        isDevBypass && goals.length === 0 ? createMockGoals(userId) : goals;
+      const resolvedContributions =
+        isDevBypass && goalContributions.length === 0
+          ? createMockGoalContributions(userId)
+          : goalContributions;
+      const resolvedWishes =
+        isDevBypass && wishes.length === 0 ? createMockWishes(userId) : wishes;
+
       const goalSnapshots = calculateGoalSnapshots({
-        contributions: goalContributions,
-        goals,
+        contributions: resolvedContributions,
+        goals: resolvedGoals,
       });
       const salaryOverview = calculateSalaryOverview(
         salaryPeriods,
@@ -250,19 +287,19 @@ export const usePlanningStore = create<PlanningStore>((set) => ({
       });
       const monthlySavingCapacity = Math.max(
         monthlyIncome * ((settings?.savingsGoalPercent ?? 0) / 100),
-        calculateAverageGoalContributionPerMonth(goalContributions),
+        calculateAverageGoalContributionPerMonth(resolvedContributions),
       );
       const wishProjections = calculateWishProjections({
         assignableAmount,
         monthlySavingCapacity,
         salaryStabilityScore,
-        wishes,
+        wishes: resolvedWishes,
       });
       const breakdown = calculateFinancialScore({
         assignableAmount,
         availableBalance,
         committedAmount: commitmentOverview.totalRemaining,
-        goalContributions,
+        goalContributions: resolvedContributions,
         monthlyCommitmentAverage,
         monthlyIncome,
         monthsWithoutPayment: salaryOverview.monthsWithoutPayment,
@@ -301,15 +338,15 @@ export const usePlanningStore = create<PlanningStore>((set) => ({
       set({
         currentScore,
         error: null,
-        goalContributions,
+        goalContributions: resolvedContributions,
         goalSnapshots,
-        goals,
+        goals: resolvedGoals,
         isLoading: false,
         isReady: true,
         overview: buildOverview({
           availableBalance,
           committedAmount: commitmentOverview.totalRemaining,
-          goalContributions,
+          goalContributions: resolvedContributions,
           goalSnapshots,
           monthlyCommitmentAverage,
           monthlyIncome,
@@ -319,7 +356,7 @@ export const usePlanningStore = create<PlanningStore>((set) => ({
         }),
         recentScores: mergeScores(currentScore, recentScores),
         wishProjections,
-        wishes,
+        wishes: resolvedWishes,
       });
     } catch (error) {
       set({
