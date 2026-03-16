@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
+import { theme } from "@/utils/theme";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 
@@ -21,10 +22,10 @@ type ScreenHeaderProps = {
 
 function resolveIconColor(icon: HeaderActionIcon, filled: boolean) {
   if (filled) {
-    return "#FFFFFF";
+    return theme.colors.white;
   }
 
-  return icon === "bell" ? "#C8D3F0" : "#F8FAFC";
+  return icon === "bell" ? theme.colors.grayLight : theme.colors.white;
 }
 
 function HeaderIcon({
@@ -93,7 +94,7 @@ export function ScreenHeader({
               <View style={styles.brandBadge}>
                 <Image
                   contentFit="contain"
-                  source={require("../../../assets/logo.png")}
+                  source={require("@/assets/logo.png")}
                   style={styles.brandImage}
                 />
               </View>
@@ -116,53 +117,52 @@ export function ScreenHeader({
 
 const styles = StyleSheet.create({
   container: {
-    paddingTop: 6,
   },
   content: {
+    height: 74,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 12,
-    paddingHorizontal: 16,
-    paddingBottom: 14,
+    paddingHorizontal: theme.spacing.md,
   },
   leading: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: theme.spacing.sm,
     flex: 1,
   },
   brandBadge: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: 40,
+    height: 40,
+    borderRadius: theme.radii.pill,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(58, 96, 255, 0.18)",
+    backgroundColor: theme.colors.blueSoft,
   },
   brandImage: {
-    width: 15,
-    height: 15,
+    width: 40,
+    height: 40,
   },
   brandText: {
-    color: "#F8FAFC",
-    fontSize: 14,
-    fontWeight: "800",
+    color: theme.colors.white,
+    fontSize: 18,
+    fontWeight: "700",
   },
   titleText: {
-    color: "#F8FAFC",
-    fontSize: 16,
-    fontWeight: "800",
+    color: theme.colors.white,
+    fontSize: 18,
+    fontWeight: "700",
   },
   actionsRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: theme.spacing.sm,
   },
   actionButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 36,
+    height: 36,
+    borderRadius: theme.radii.pill,
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "rgba(255, 255, 255, 0.03)",
@@ -170,11 +170,11 @@ const styles = StyleSheet.create({
     borderColor: "rgba(115, 133, 181, 0.14)",
   },
   actionButtonFilled: {
-    backgroundColor: "#4664FF",
+    backgroundColor: theme.colors.primary,
     borderColor: "rgba(112, 135, 255, 0.42)",
-    shadowColor: "#4664FF",
+    shadowColor: theme.colors.primary,
     shadowOpacity: 0.22,
-    shadowRadius: 14,
+    shadowRadius: theme.radii.pill,
     shadowOffset: { width: 0, height: 8 },
     elevation: 4,
   },
@@ -191,14 +191,14 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: "#4E6CFF",
-    shadowColor: "#4E6CFF",
+    backgroundColor: theme.colors.primary,
+    shadowColor: theme.colors.primary,
     shadowOpacity: 0.55,
-    shadowRadius: 8,
+    shadowRadius: theme.radii.pill,
     shadowOffset: { width: 0, height: 0 },
   },
   divider: {
     height: 1,
-    backgroundColor: "rgba(132, 147, 188, 0.12)",
+    backgroundColor: theme.colors.grayDark,
   },
 });

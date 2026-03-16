@@ -11,11 +11,11 @@
     "web:export": "expo export -p web",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
-    "eas:build:preview": "npx eas build --platform all --profile preview",
-    "eas:build:staging": "npx eas build --platform all --profile staging",
-    "eas:build:production": "npx eas build --platform all --profile production",
-    "eas:update:preview": "npx eas update --channel preview",
-    "eas:update:staging": "npx eas update --channel staging",
+    "eas:build:development": "eas build -p android --profile development",
+    "eas:build:preview": "eas build -p android --profile preview",
+    "eas:build:production": "eas build -p android --profile production",
+    "eas:update:development": "eas update --channel development",
+    "eas:update:preview": "eas update --channel preview",
     "eas:update:production": "npx eas update --channel production",
     "supabase:login": "npx supabase login",
     "supabase:link": "node ./scripts/supabase-link.mjs",
@@ -37,6 +37,7 @@
     "expo": "~55.0.6",
     "expo-auth-session": "~55.0.8",
     "expo-constants": "~55.0.7",
+    "expo-dev-client": "~55.0.16",
     "expo-device": "~55.0.9",
     "expo-font": "~55.0.4",
     "expo-glass-effect": "~55.0.8",
@@ -72,5 +73,8 @@
     "supabase": "^2.79.0",
     "typescript": "~5.9.2"
   },
-  "private": true
+  "private": true,
+  "repository": "https://github.com/yoelvyspc93/finflow-iq.git",
+  "author": "yoelvyspc93",
+  "license": "MIT"
 }
