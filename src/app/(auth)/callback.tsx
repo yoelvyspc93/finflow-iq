@@ -6,7 +6,6 @@ import { DecorativeBackground } from "@/components/ui/decorative-background";
 import { useAuthStore } from "@/stores/auth-store";
 
 export default function CallbackScreen() {
-  const error = useAuthStore((state) => state.error);
   const isReady = useAuthStore((state) => state.isReady);
   const status = useAuthStore((state) => state.status);
 
@@ -18,18 +17,14 @@ export default function CallbackScreen() {
     <SafeAreaView style={styles.safeArea}>
       <DecorativeBackground />
       <View style={styles.container}>
-        <Text style={styles.title}>Procesando acceso</Text>
+        <Text style={styles.title}>Redireccion no soportada</Text>
         <Text style={styles.subtitle}>
-          Estamos validando el enlace mágico y restaurando tu sesión.
+          Este proyecto ya no usa enlaces magicos. Entra con email y contrasena.
         </Text>
 
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-        {isReady && status === "unauthenticated" ? (
-          <Link href="/login" style={styles.link}>
-            Volver al login
-          </Link>
-        ) : null}
+        <Link href="/login" style={styles.link}>
+          Volver al login
+        </Link>
       </View>
     </SafeAreaView>
   );
@@ -58,15 +53,10 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 22,
   },
-  errorText: {
-    color: "#FCA5A5",
-    fontSize: 14,
-    textAlign: "center",
-    lineHeight: 20,
-  },
   link: {
     color: "#7C8CFF",
     fontSize: 15,
     fontWeight: "700",
   },
 });
+

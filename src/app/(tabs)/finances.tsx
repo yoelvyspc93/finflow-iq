@@ -31,6 +31,7 @@ import { useSalaryStore } from "@/stores/salary-store";
 type ViewMode = "movements" | "salary" | "commitments";
 type FilterMode = "all" | "income" | "expense" | "transfer";
 type SheetMode = "quick" | "expense" | "income" | "transfer" | "salary" | null;
+type FormSheetMode = Exclude<SheetMode, "quick" | null>;
 type Draft = { amount: string; categoryId: string | null; date: string; description: string; destinationAmount: string; destinationWalletId: string | null; incomeSourceId: string | null; rate: string; wish: boolean };
 
 const today = new Date().toISOString().slice(0, 10);
@@ -119,6 +120,18 @@ export default function FinancesScreen() {
     setIsSubmitting(false);
     setDraft((current) => ({ ...current, amount: "", date: today, description: "", destinationAmount: "", destinationWalletId: next === "transfer" ? wallets.find((wallet) => wallet.id !== selectedWalletId && wallet.isActive)?.id ?? null : current.destinationWalletId, rate: "1", wish: false }));
     setSheet(next);
+  }
+
+  function closeQuickSheet() {
+    setSheet((current) => (current === "quick" ? null : current));
+  }
+
+  function closeFormSheet() {
+    setSheet((current) =>
+      current === "expense" || current === "income" || current === "transfer" || current === "salary"
+        ? null
+        : current,
+    );
   }
 
   async function syncAll() {
@@ -239,7 +252,24 @@ export default function FinancesScreen() {
     { icon: "repeat", label: "Transferir", tone: styles.quickOrange, onPress: () => openSheet("transfer") },
     { icon: "wallet-outline", label: "Cobro de Salario", tone: styles.quickBlue, onPress: () => openSheet("salary") },
   ];
-  const formTitle = sheet === "expense" ? "Registrar Gastos" : sheet === "income" ? "Registrar Ingreso" : sheet === "transfer" ? "Transferir" : "Cobro de Salario";
+  const formTitleBySheet: Record<FormSheetMode, string> = {
+    expense: "Registrar Gastos",
+    income: "Registrar Ingreso",
+    salary: "Cobro de Salario",
+    transfer: "Transferir",
+  };
+  const submitLabelBySheet: Record<FormSheetMode, string> = {
+    expense: "Guardar Gasto",
+    income: "Guardar Ingreso",
+    salary: "Guardar Cobro",
+    transfer: "Guardar Transferencia",
+  };
+  const activeFormSheet: FormSheetMode | null =
+    sheet === "expense" || sheet === "income" || sheet === "transfer" || sheet === "salary"
+      ? sheet
+      : null;
+  const formTitle = activeFormSheet ? formTitleBySheet[activeFormSheet] : "";
+  const submitLabel = activeFormSheet ? submitLabelBySheet[activeFormSheet] : "Guardar";
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -283,13 +313,13 @@ export default function FinancesScreen() {
         )}
       </ScrollView>
 
-      <BottomSheet onClose={() => setSheet(null)} visible={sheet === "quick"}>
-        <View style={styles.sheetHeader}><Text style={styles.sheetTitle}>Acciones Rapidas</Text><Pressable onPress={() => setSheet(null)}><Feather color="#8A96B3" name="x" size={20} /></Pressable></View>
+      <BottomSheet onClose={closeQuickSheet} visible={sheet === "quick"}>
+        <View style={styles.sheetHeader}><Text style={styles.sheetTitle}>Acciones Rapidas</Text><Pressable onPress={closeQuickSheet}><Feather color="#8A96B3" name="x" size={20} /></Pressable></View>
         <View style={styles.quickGrid}>{quickItems.map((item) => <Pressable key={item.label} onPress={item.onPress} style={({ pressed }) => [styles.quickTile, pressed && styles.pressed]}><View style={[styles.quickIcon, item.tone]}>{item.icon === "wallet-outline" ? <Ionicons color="#4B69FF" name="wallet-outline" size={22} /> : <Feather color={item.icon === "arrow-up-right" ? "#FF6B6D" : item.icon === "arrow-down-left" ? "#20D396" : "#F59E0B"} name={item.icon as "arrow-down-left" | "arrow-up-right" | "repeat"} size={22} />}</View><Text style={styles.quickLabel}>{item.label}</Text></Pressable>)}</View>
       </BottomSheet>
 
-      <BottomSheet onClose={() => setSheet(null)} visible={sheet === "expense" || sheet === "income" || sheet === "transfer" || sheet === "salary"}>
-        <View style={styles.sheetHeader}><Text style={styles.sheetTitle}>{formTitle}</Text><Pressable onPress={() => setSheet(null)}><Feather color="#8A96B3" name="x" size={20} /></Pressable></View>
+      <BottomSheet onClose={closeFormSheet} visible={activeFormSheet !== null}>
+        <View style={styles.sheetHeader}><Text style={styles.sheetTitle}>{formTitle}</Text><Pressable onPress={closeFormSheet}><Feather color="#8A96B3" name="x" size={20} /></Pressable></View>
         <Text style={styles.label}>MONTO</Text>
         <View style={styles.amountBox}><Text style={styles.currency}>$</Text><TextInput keyboardType="decimal-pad" onChangeText={(value) => setDraft((current) => ({ ...current, amount: value }))} style={styles.amountInput} value={draft.amount} /></View>
         <View style={styles.cols}><View style={styles.col}><Text style={styles.label}>BILLETERA</Text><View style={styles.field}><Text style={styles.fieldText}>{activeWallet?.name ?? "Efectivo"}</Text></View></View><View style={styles.col}><Text style={styles.label}>FECHA</Text><View style={styles.field}><TextInput onChangeText={(value) => setDraft((current) => ({ ...current, date: value }))} style={styles.fieldInput} value={draft.date} /></View></View></View>
@@ -300,7 +330,7 @@ export default function FinancesScreen() {
         {sheet === "expense" ? <View style={styles.toggle}><View style={styles.toggleText}><Text style={styles.toggleTitle}>¿Es un deseo de tu wishlist?</Text><Text style={styles.soft}>Marcar como gasto no esencial</Text></View><AppSwitch onValueChange={(value) => setDraft((current) => ({ ...current, wish: value }))} value={draft.wish} /></View> : null}
         {sheet === "salary" ? <Text style={styles.soft}>Se asignara automaticamente a los periodos pendientes visibles.</Text> : null}
         {error ? <Text style={styles.error}>{error}</Text> : null}
-        <Pressable onPress={() => void submitSheet()} style={({ pressed }) => [styles.button, pressed && styles.pressed]}><Text style={styles.buttonText}>{isSubmitting ? "Guardando..." : sheet === "expense" ? "Guardar Gasto" : sheet === "income" ? "Guardar Ingreso" : sheet === "transfer" ? "Guardar Transferencia" : "Guardar Cobro"}</Text></Pressable>
+        <Pressable onPress={() => void submitSheet()} style={({ pressed }) => [styles.button, pressed && styles.pressed]}><Text style={styles.buttonText}>{isSubmitting ? "Guardando..." : submitLabel}</Text></Pressable>
       </BottomSheet>
     </SafeAreaView>
   );

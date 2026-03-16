@@ -1,19 +1,17 @@
 import { useAuthStore } from "@/stores/auth-store";
 import { useAppStore } from "@/stores/app-store";
-import { useSecurityStore } from "@/stores/security-store";
 
 type OnboardingGuardResult = {
   isLoading: boolean;
   loadingMessage: string;
-  redirectTo: "/login" | "/pin" | null;
+  redirectTo: "/login" | "/mfa" | null;
   requiresOnboarding: boolean;
 };
 
 export function useOnboardingGuard(): OnboardingGuardResult {
   const isAuthReady = useAuthStore((state) => state.isReady);
   const authStatus = useAuthStore((state) => state.status);
-  const isSecurityLoaded = useSecurityStore((state) => state.isLoaded);
-  const pinStatus = useSecurityStore((state) => state.pinStatus);
+  const pendingMfaFactorId = useAuthStore((state) => state.pendingMfaFactorId);
   const isAppReady = useAppStore((state) => state.isReady);
   const hasCompletedOnboarding = useAppStore(
     (state) => state.hasCompletedOnboarding,
@@ -37,20 +35,11 @@ export function useOnboardingGuard(): OnboardingGuardResult {
     };
   }
 
-  if (!isSecurityLoaded || pinStatus === "unknown") {
-    return {
-      isLoading: true,
-      loadingMessage: "Preparando seguridad local...",
-      redirectTo: null,
-      requiresOnboarding: false,
-    };
-  }
-
-  if (pinStatus === "locked") {
+  if (pendingMfaFactorId) {
     return {
       isLoading: false,
       loadingMessage: "",
-      redirectTo: "/pin",
+      redirectTo: "/mfa",
       requiresOnboarding: false,
     };
   }

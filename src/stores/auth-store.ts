@@ -11,8 +11,7 @@ type AuthStore = {
   error: string | null;
   isDevBypass: boolean;
   isReady: boolean;
-  lastMagicLinkEmail: string | null;
-  magicLinkCooldownUntil: number | null;
+  pendingMfaFactorId: string | null;
   session: Session | null;
   status: AuthStatus;
   user: User | null;
@@ -20,8 +19,7 @@ type AuthStore = {
   enableDevBypass: (email?: string | null) => void;
   reset: () => void;
   setError: (error: string | null) => void;
-  setLastMagicLinkEmail: (email: string | null) => void;
-  setMagicLinkCooldownUntil: (timestamp: number | null) => void;
+  setPendingMfaFactorId: (factorId: string | null) => void;
   setReady: (ready: boolean) => void;
   setSession: (session: Session | null) => void;
 };
@@ -30,8 +28,7 @@ const initialState = {
   error: null,
   isDevBypass: false,
   isReady: false,
-  lastMagicLinkEmail: null,
-  magicLinkCooldownUntil: null,
+  pendingMfaFactorId: null,
   session: null,
   status: "idle" as AuthStatus,
   user: null,
@@ -54,8 +51,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
     set({
       error: null,
       isDevBypass: false,
-      lastMagicLinkEmail: null,
-      magicLinkCooldownUntil: null,
+      pendingMfaFactorId: null,
       session: null,
       status: "unauthenticated",
       user: null,
@@ -64,20 +60,19 @@ export const useAuthStore = create<AuthStore>((set) => ({
     set({
       error: null,
       isDevBypass: true,
-      lastMagicLinkEmail: email ?? null,
+      pendingMfaFactorId: null,
       session: null,
       status: "authenticated",
       user: createDevUser(email),
     }),
   reset: () => set(initialState),
   setError: (error) => set({ error }),
-  setLastMagicLinkEmail: (lastMagicLinkEmail) => set({ lastMagicLinkEmail }),
-  setMagicLinkCooldownUntil: (magicLinkCooldownUntil) =>
-    set({ magicLinkCooldownUntil }),
+  setPendingMfaFactorId: (pendingMfaFactorId) => set({ pendingMfaFactorId }),
   setReady: (isReady) => set({ isReady }),
   setSession: (session) =>
     set({
       isDevBypass: false,
+      pendingMfaFactorId: session ? useAuthStore.getState().pendingMfaFactorId : null,
       session,
       status: session ? "authenticated" : "unauthenticated",
       user: session?.user ?? null,
