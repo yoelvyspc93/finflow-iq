@@ -28,13 +28,10 @@ import { useAppStore } from "@/stores/app-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { useCommitmentStore } from "@/stores/commitment-store";
 import { useSalaryStore } from "@/stores/salary-store";
+import { theme } from "@/utils/theme";
 
-function formatMoney(currency: string | null, value: number) {
-  if (!currency) {
-    return "--";
-  }
-
-  return `${currency} ${value.toFixed(2)}`;
+function formatMoney(value: number) {
+  return `${value.toFixed(2)}`;
 }
 
 function clamp(value: number, min: number, max: number) {
@@ -213,11 +210,11 @@ export default function DashboardScreen() {
                 >
                   <Text style={styles.walletName}>{wallet.name}</Text>
                   <Text style={styles.walletAmount}>
-                    {formatMoney(wallet.currency, wallet.balance)}
+                    {formatMoney(wallet.balance)}
                   </Text>
                   <View style={styles.walletFooter}>
                     <Text style={styles.walletMeta}>
-                      •••• {wallet.id.slice(0, 4).toUpperCase()}
+                      {wallet.currency}
                     </Text>
                     <View
                       style={[
@@ -244,19 +241,19 @@ export default function DashboardScreen() {
 
         <View style={styles.metricStack}>
           <MetricCard
-            amount={formatMoney(activeWallet?.currency ?? null, activeWallet?.balance ?? 0)}
+            amount={`${formatMoney(activeWallet?.balance ?? 0)} ${activeWallet?.currency ?? null}`}
             icon="bank"
             iconTone="green"
             label="Available Balance"
           />
           <MetricCard
-            amount={formatMoney(activeWallet?.currency ?? null, committedAmount)}
+            amount={`${formatMoney(committedAmount)} ${activeWallet?.currency ?? null}`}
             icon="lock"
             iconTone="blue"
             label="Committed Funds"
           />
           <MetricCard
-            amount={formatMoney(activeWallet?.currency ?? null, assignableAmount)}
+            amount={`${formatMoney(assignableAmount)} ${activeWallet?.currency ?? null}`}
             icon="wallet"
             iconTone="orange"
             label="Assignable Amount"
@@ -272,10 +269,7 @@ export default function DashboardScreen() {
           <View style={styles.salaryMain}>
             <Text style={styles.salaryLabel}>Remaining to receive</Text>
             <Text style={styles.salaryValue}>
-              {formatMoney(
-                activeWallet?.currency ?? settings?.primaryCurrency ?? "USD",
-                effectiveSalaryOverview?.pendingTotal ?? 0,
-              )}
+              {formatMoney(effectiveSalaryOverview?.pendingTotal ?? 0)} {activeWallet?.currency ?? settings?.primaryCurrency ?? "USD"}
             </Text>
             <View style={styles.progressTrack}>
               <View
@@ -362,15 +356,14 @@ const styles = StyleSheet.create({
     backgroundColor: "#0B1020",
   },
   content: {
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 104,
-    gap: 14,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.lg,
+    gap: theme.spacing.lg,
   },
   sectionTitle: {
-    color: "#F8FAFC",
+    color: theme.colors.white,
     fontSize: 14,
-    fontWeight: "800",
+    fontWeight: "700",
   },
   sectionRow: {
     flexDirection: "row",
@@ -386,26 +379,26 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     paddingHorizontal: 14,
     paddingVertical: 14,
-    gap: 12,
+    gap: 8,
   },
   walletCardActive: {
-    backgroundColor: "#4A66FF",
+    backgroundColor: theme.colors.primary,
   },
   walletCardMuted: {
-    backgroundColor: "rgba(25, 33, 54, 0.96)",
+    backgroundColor: theme.colors.grayDark,
   },
   walletCardMutedAlt: {
-    backgroundColor: "rgba(29, 35, 54, 0.90)",
+    backgroundColor: theme.colors.grayDark,
   },
   walletName: {
-    color: "#D7E0FF",
-    fontSize: 12,
+    color: theme.colors.white,
+    fontSize: 14,
     fontWeight: "700",
   },
   walletAmount: {
-    color: "#FFFFFF",
-    fontSize: 29,
-    fontWeight: "900",
+    color: theme.colors.white,
+    fontSize: 32,
+    fontWeight: "700",
   },
   walletFooter: {
     flexDirection: "row",
@@ -413,7 +406,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   walletMeta: {
-    color: "#D8E1FF",
+    color: theme.colors.grayLight,
     fontSize: 11,
     fontWeight: "700",
   },
@@ -443,7 +436,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
     borderRadius: 14,
-    backgroundColor: "rgba(20, 27, 46, 0.96)",
+    backgroundColor: theme.colors.backgroundCard,
     paddingHorizontal: 14,
     paddingVertical: 14,
   },
@@ -455,38 +448,38 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   metricIconGreen: {
-    backgroundColor: "rgba(18, 109, 77, 0.24)",
+    backgroundColor: theme.colors.greenSoft,
   },
   metricIconBlue: {
-    backgroundColor: "rgba(54, 71, 156, 0.24)",
+    backgroundColor: theme.colors.blueSoft,
   },
   metricIconOrange: {
-    backgroundColor: "rgba(111, 77, 18, 0.28)",
+    backgroundColor: theme.colors.yellowSoft,
   },
   metricBody: {
     flex: 1,
     gap: 2,
   },
   metricLabel: {
-    color: "#8A96B3",
+    color: theme.colors.grayLight,
     fontSize: 11,
     fontWeight: "700",
   },
   metricValue: {
-    color: "#F8FAFC",
+    color: theme.colors.white,
     fontSize: 17,
-    fontWeight: "800",
+    fontWeight: "700",
   },
   badge: {
-    color: "#4664FF",
+    color: theme.colors.primary,
     fontSize: 10,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   salaryCard: {
     flexDirection: "row",
     gap: 12,
     borderRadius: 14,
-    backgroundColor: "rgba(20, 27, 46, 0.96)",
+    backgroundColor: theme.colors.backgroundCard,
     paddingHorizontal: 14,
     paddingVertical: 14,
   },
@@ -500,19 +493,19 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   salaryLabel: {
-    color: "#8A96B3",
+    color: theme.colors.grayLight,
     fontSize: 11,
     fontWeight: "700",
   },
   salaryValue: {
-    color: "#FFFFFF",
+    color: theme.colors.white,
     fontSize: 18,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   salaryMonths: {
-    color: "#FFFFFF",
+    color: theme.colors.white,
     fontSize: 34,
-    fontWeight: "900",
+    fontWeight: "700",
     lineHeight: 36,
   },
   progressTrack: {
@@ -520,16 +513,16 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: 999,
     overflow: "hidden",
-    backgroundColor: "rgba(118, 130, 165, 0.26)",
+    backgroundColor: theme.colors.grayDark,
   },
   progressValue: {
     height: "100%",
     borderRadius: 999,
-    backgroundColor: "#4C68FF",
+    backgroundColor: theme.colors.primary,
   },
   healthCard: {
     borderRadius: 18,
-    backgroundColor: "rgba(16, 24, 42, 0.96)",
+    backgroundColor: theme.colors.backgroundCard,
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 18,
@@ -539,7 +532,7 @@ const styles = StyleSheet.create({
     height: 160,
     borderRadius: 80,
     borderWidth: 10,
-    borderColor: "rgba(78, 92, 130, 0.32)",
+    borderColor: theme.colors.grayDark,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -549,8 +542,8 @@ const styles = StyleSheet.create({
     height: 160,
     borderRadius: 80,
     borderWidth: 10,
-    borderTopColor: "#4B69FF",
-    borderLeftColor: "#4B69FF",
+    borderTopColor: theme.colors.primary,
+    borderLeftColor: theme.colors.primary,
     borderRightColor: "transparent",
     borderBottomColor: "transparent",
   },
@@ -560,45 +553,45 @@ const styles = StyleSheet.create({
     borderRadius: 58,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#0E1527",
+    backgroundColor: theme.colors.backgroundCard,
   },
   healthValue: {
-    color: "#FFFFFF",
+    color: theme.colors.white,
     fontSize: 34,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   healthMeta: {
-    color: "#8A96B3",
+    color: theme.colors.grayLight,
     fontSize: 10,
-    fontWeight: "800",
+    fontWeight: "700",
   },
   tipCard: {
     flexDirection: "row",
     gap: 12,
     borderRadius: 14,
-    backgroundColor: "rgba(20, 27, 46, 0.96)",
+    backgroundColor: theme.colors.backgroundCard,
     paddingHorizontal: 14,
     paddingVertical: 14,
   },
   tipIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 32,
+    height: 32,
+    borderRadius: theme.radii.pill,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(52, 73, 145, 0.28)",
+    backgroundColor: theme.colors.blueSoft,
   },
   tipBody: {
     flex: 1,
     gap: 5,
   },
   tipEyebrow: {
-    color: "#6C83FF",
-    fontSize: 10,
-    fontWeight: "900",
+    color: theme.colors.primary,
+    fontSize: 12,
+    fontWeight: "700",
   },
   tipText: {
-    color: "#C6D0E8",
+    color: theme.colors.grayLight,
     fontSize: 12,
     lineHeight: 18,
   },
@@ -609,44 +602,44 @@ const styles = StyleSheet.create({
   insightCard: {
     flex: 1,
     borderRadius: 14,
-    backgroundColor: "rgba(20, 27, 46, 0.96)",
+    backgroundColor: theme.colors.backgroundCard,
     paddingHorizontal: 14,
     paddingVertical: 14,
     gap: 7,
   },
   insightIconBlue: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 32,
+    height: 32,
+    borderRadius: theme.radii.pill,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(40, 56, 108, 0.34)",
+    backgroundColor: theme.colors.blueSoft,
   },
   insightIconRed: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 32,
+    height: 32,
+    borderRadius: theme.radii.pill,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(93, 38, 46, 0.34)",
+    backgroundColor: theme.colors.redSoft,
   },
   insightLabel: {
-    color: "#8A96B3",
+    color: theme.colors.grayLight,
     fontSize: 11,
     fontWeight: "700",
   },
   insightValue: {
-    color: "#FFFFFF",
+    color: theme.colors.white,
     fontSize: 28,
-    fontWeight: "900",
+    fontWeight: "700",
   },
   insightMetaPositive: {
-    color: "#2BD991",
+    color: theme.colors.green,
     fontSize: 10,
     fontWeight: "700",
   },
   insightMetaNegative: {
-    color: "#FF6B6D",
+    color: theme.colors.red,
     fontSize: 10,
     fontWeight: "700",
   },

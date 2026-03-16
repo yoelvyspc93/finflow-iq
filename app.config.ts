@@ -14,7 +14,7 @@ const config: ExpoConfig = {
   orientation: "portrait",
   icon: "./assets/logo.png",
   scheme: "finflowiq",
-  userInterfaceStyle: "automatic",
+  userInterfaceStyle: "dark",
   runtimeVersion: {
     policy: "appVersion",
   },

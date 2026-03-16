@@ -5,7 +5,7 @@ import { Redirect, Tabs } from "expo-router";
 
 import { AppLoadingScreen } from "@/components/app/app-loading-screen";
 import { useOnboardingGuard } from "@/hooks/use-onboarding-guard";
-
+import { theme } from "@/utils/theme";
 function TabGlyph({
   focused,
   icon,
@@ -13,7 +13,7 @@ function TabGlyph({
   focused: boolean;
   icon: "dashboard" | "finances" | "planning" | "settings";
 }) {
-  const color = focused ? "#4664FF" : "#98A3BF";
+  const color = focused ? theme.colors.primary : theme.colors.grayLight;
 
   return (
     <View style={styles.tabGlyphWrap}>
@@ -65,8 +65,8 @@ export default function TabsLayout() {
       initialRouteName="dashboard"
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: "#4664FF",
-        tabBarInactiveTintColor: "#98A3BF",
+        tabBarActiveTintColor: theme.colors.primary,
+        tabBarInactiveTintColor: theme.colors.grayLight,
         tabBarStyle: styles.tabBar,
         tabBarLabelStyle: styles.tabBarLabel,
         tabBarItemStyle: styles.tabItem,
@@ -113,15 +113,14 @@ export default function TabsLayout() {
 
 const styles = StyleSheet.create({
   scene: {
-    backgroundColor: "transparent",
+    backgroundColor: theme.colors.background,
   },
   tabBar: {
     height: 74,
-    paddingTop: 4,
-    paddingBottom: 8,
-    backgroundColor: "#0B1020",
-    borderTopWidth: 1,
-    borderTopColor: "rgba(132, 147, 188, 0.12)",
+    paddingTop: theme.spacing.xs,
+    paddingBottom: theme.spacing.xs,
+    backgroundColor: theme.colors.background,
+    borderTopWidth: 0,
   },
   tabBarLabel: {
     fontSize: 11,
