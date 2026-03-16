@@ -1,16 +1,9 @@
 import { useEffect, useRef } from "react";
 import { AppState } from "react-native";
 
-import * as Linking from "expo-linking";
 import * as SplashScreen from "expo-splash-screen";
 
-import { applyAuthRedirectUrl } from "@/lib/auth/session";
-import {
-  clearStoredWebAuthSession,
-  readStoredWebAuthSession,
-  subscribeToWebAuthSession,
-  type WebAuthSessionPayload,
-} from "@/lib/auth/web-session-bridge";
+import { getPendingMfaFactorId } from "@/lib/auth/mfa";
 import { supabase } from "@/lib/supabase/client";
 import { useAuthStore } from "@/stores/auth-store";
 
@@ -27,66 +20,41 @@ async function hideSplashScreen() {
 }
 
 export function AuthBootstrap() {
-  const lastBridgeIssuedAt = useRef(0);
+  const isMountedRef = useRef(true);
   const setError = useAuthStore((state) => state.setError);
+  const setPendingMfaFactorId = useAuthStore((state) => state.setPendingMfaFactorId);
   const setReady = useAuthStore((state) => state.setReady);
   const setSession = useAuthStore((state) => state.setSession);
   const isReady = useAuthStore((state) => state.isReady);
 
   useEffect(() => {
-    let isMounted = true;
+    isMountedRef.current = true;
 
-    async function handleUrl(url: string) {
-      const { error } = await applyAuthRedirectUrl(url);
-
-      if (error && isMounted) {
-        setError(error.message);
-      }
-    }
-
-    async function handleSharedSession(payload: WebAuthSessionPayload) {
-      if (payload.issuedAt <= lastBridgeIssuedAt.current) {
-        return;
-      }
-
-      lastBridgeIssuedAt.current = payload.issuedAt;
-
-      const { error } = await supabase.auth.setSession({
-        access_token: payload.accessToken,
-        refresh_token: payload.refreshToken,
-      });
-
-      if (error) {
-        if (isMounted) {
-          setError(error.message);
+    async function syncPendingMfa() {
+      try {
+        const pendingFactorId = await getPendingMfaFactorId();
+        if (isMountedRef.current) {
+          setPendingMfaFactorId(pendingFactorId);
         }
-
-        return;
-      }
-
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (isMounted) {
-        setSession(session);
+      } catch (error) {
+        if (isMountedRef.current) {
+          setError(
+            error instanceof Error
+              ? error.message
+              : "No se pudo verificar el estado de MFA.",
+          );
+        }
       }
     }
 
     async function bootstrap() {
       try {
-        const initialUrl = await Linking.getInitialURL();
-
-        if (initialUrl) {
-          await handleUrl(initialUrl);
-        }
-
         const {
           data: { session },
           error,
         } = await supabase.auth.getSession();
 
-        if (!isMounted) {
+        if (!isMountedRef.current) {
           return;
         }
 
@@ -95,8 +63,11 @@ export function AuthBootstrap() {
         }
 
         setSession(session);
+        if (session) {
+          await syncPendingMfa();
+        }
       } catch (error) {
-        if (isMounted) {
+        if (isMountedRef.current) {
           setError(
             error instanceof Error
               ? error.message
@@ -105,33 +76,21 @@ export function AuthBootstrap() {
           setSession(null);
         }
       } finally {
-        if (isMounted) {
+        if (isMountedRef.current) {
           setReady(true);
         }
       }
     }
 
-    const linkSubscription = Linking.addEventListener("url", ({ url }) => {
-      void handleUrl(url);
-    });
-
-    const removeWebBridgeListener = subscribeToWebAuthSession((payload) => {
-      void handleSharedSession(payload);
-    });
-
-    const storedWebSession = readStoredWebAuthSession();
-    if (storedWebSession) {
-      void handleSharedSession(storedWebSession);
-    }
-
     const authSubscription = supabase.auth.onAuthStateChange(
       (_event, session) => {
-        if (isMounted) {
+        if (isMountedRef.current) {
           setSession(session);
-        }
-
-        if (!session) {
-          clearStoredWebAuthSession();
+          if (session) {
+            void syncPendingMfa();
+          } else {
+            setPendingMfaFactorId(null);
+          }
         }
       },
     );
@@ -147,13 +106,11 @@ export function AuthBootstrap() {
     void bootstrap();
 
     return () => {
-      isMounted = false;
-      linkSubscription.remove();
-      removeWebBridgeListener();
+      isMountedRef.current = false;
       authSubscription.data.subscription.unsubscribe();
       appStateSubscription.remove();
     };
-  }, [setError, setReady, setSession]);
+  }, [setError, setPendingMfaFactorId, setReady, setSession]);
 
   useEffect(() => {
     if (isReady) {

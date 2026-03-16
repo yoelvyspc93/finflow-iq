@@ -5,15 +5,22 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 
-import {
-  Feather,
-  Ionicons,
-} from "@expo/vector-icons";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
+import {
+  createTotpChallenge,
+  disableTotpFactor,
+  enrollTotpFactor,
+  getPrimaryTotpFactor,
+  toUserFriendlyMfaError,
+  verifyTotpChallenge,
+} from "@/lib/auth/mfa";
+import { supabase } from "@/lib/supabase/client";
 import {
   SettingsSheetStack,
   type SettingsDraft,
@@ -21,28 +28,21 @@ import {
   type WalletDraft,
 } from "@/components/settings/settings-sheet-stack";
 import { AppSwitch } from "@/components/ui/app-switch";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { DecorativeBackground } from "@/components/ui/decorative-background";
 import { ScreenHeader } from "@/components/ui/screen-header";
-import { clearPin, updateLockTimeout } from "@/lib/security/app-lock";
-import {
-  formatLockTimeout,
-  type LockTimeoutMs,
-} from "@/lib/security/security-preferences";
-import { supabase } from "@/lib/supabase/client";
 import { listCategories } from "@/modules/categories/service";
 import type { Category } from "@/modules/categories/types";
 import { listIncomeSources } from "@/modules/income-sources/service";
 import type { IncomeSource } from "@/modules/income-sources/types";
 import { updateSettings } from "@/modules/settings/service";
-import {
-  createWallet,
-  deactivateWallet,
-  updateWallet,
-} from "@/modules/wallets/service";
+import { createWallet, deactivateWallet, updateWallet } from "@/modules/wallets/service";
 import { createMockWallet } from "@/modules/wallets/types";
 import { useAuthStore } from "@/stores/auth-store";
 import { useAppStore } from "@/stores/app-store";
 import { useSecurityStore } from "@/stores/security-store";
+
+type MfaSheetMode = "enable" | "disable" | null;
 
 function Section({
   action,
@@ -102,6 +102,16 @@ export default function SettingsScreen() {
   const [sheetError, setSheetError] = useState<string | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [incomeSources, setIncomeSources] = useState<IncomeSource[]>([]);
+  const [mfaSheet, setMfaSheet] = useState<MfaSheetMode>(null);
+  const [mfaError, setMfaError] = useState<string | null>(null);
+  const [mfaCode, setMfaCode] = useState("");
+  const [mfaFriendlyName, setMfaFriendlyName] = useState("FinFlow Authenticator");
+  const [isMfaSubmitting, setIsMfaSubmitting] = useState(false);
+  const [enrollment, setEnrollment] = useState<{
+    factorId: string;
+    secret: string;
+    uri: string;
+  } | null>(null);
   const [settingsDraft, setSettingsDraft] = useState<SettingsDraft>({
     aiAnalysisFrequency: "manual",
     avgMonthsWithoutPayment: "0",
@@ -124,13 +134,16 @@ export default function SettingsScreen() {
   const wallets = useAppStore((state) => state.wallets);
   const replaceLocalSettings = useAppStore((state) => state.replaceLocalSettings);
   const upsertLocalWallet = useAppStore((state) => state.upsertLocalWallet);
-  const lockTimeoutMs = useSecurityStore((state) => state.lockTimeoutMs);
-  const pinStatus = useSecurityStore((state) => state.pinStatus);
+  const mfaEnabled = useSecurityStore((state) => state.mfaEnabled);
+  const mfaFactorId = useSecurityStore((state) => state.mfaFactorId);
+  const setMfa = useSecurityStore((state) => state.setMfa);
 
   const email = user?.email ?? "usuario@finflow.app";
-  const displayName = email.split("@")[0] || "Usuario";
+  const firstName = `${user?.user_metadata?.first_name ?? ""}`.trim();
+  const lastName = `${user?.user_metadata?.last_name ?? ""}`.trim();
+  const displayName =
+    `${firstName} ${lastName}`.trim() || email.split("@")[0] || "Usuario";
   const activeWallets = wallets.filter((wallet) => wallet.isActive);
-  const isPinEnabled = pinStatus !== "not_setup";
 
   useEffect(() => {
     if (!settings) {
@@ -161,10 +174,38 @@ export default function SettingsScreen() {
     });
   }, [isDevBypass, user?.id]);
 
+  useEffect(() => {
+    if (!user?.id || isDevBypass) {
+      return;
+    }
+
+    void getPrimaryTotpFactor()
+      .then((factor) => {
+        setMfa({
+          factorId: factor?.id ?? null,
+          isEnabled: Boolean(factor),
+        });
+      })
+      .catch(() => {
+        setMfa({
+          factorId: null,
+          isEnabled: false,
+        });
+      });
+  }, [isDevBypass, setMfa, user?.id]);
+
   function closeSheet() {
     setSheet(null);
     setSheetError(null);
     setIsSubmitting(false);
+  }
+
+  function closeMfaSheet() {
+    setMfaSheet(null);
+    setMfaError(null);
+    setMfaCode("");
+    setIsMfaSubmitting(false);
+    setEnrollment(null);
   }
 
   function openPreferencesSheet() {
@@ -386,52 +427,101 @@ export default function SettingsScreen() {
     await supabase.auth.signOut({ scope: "local" });
   }
 
-  async function handleTogglePin(nextValue: boolean) {
-    if (nextValue) {
-      router.push("/pin");
+  async function handleOpenMfaEnable() {
+    if (isDevBypass) {
+      setMfaError("MFA no aplica en modo desarrollo.");
       return;
     }
 
+    setMfaError(null);
+    setIsMfaSubmitting(true);
+
     try {
-      await clearPin();
+      const data = await enrollTotpFactor(mfaFriendlyName);
+      setEnrollment({
+        factorId: data.id,
+        secret: data.totp.secret,
+        uri: data.totp.uri,
+      });
+      setMfaSheet("enable");
     } catch (error) {
-      setSheetError(
-        error instanceof Error ? error.message : "No se pudo desactivar el PIN.",
-      );
+      setMfaError(toUserFriendlyMfaError(error, "No se pudo iniciar el setup MFA."));
+    } finally {
+      setIsMfaSubmitting(false);
     }
   }
 
-  async function handleStartPinReset() {
-    setIsSubmitting(true);
-    setSheetError(null);
+  async function handleVerifyMfaEnable() {
+    if (!enrollment) {
+      setMfaError("No hay un factor MFA pendiente.");
+      return;
+    }
+    if (!/^\d{6}$/.test(mfaCode.trim())) {
+      setMfaError("Escribe un codigo de 6 digitos.");
+      return;
+    }
+
+    setIsMfaSubmitting(true);
+    setMfaError(null);
 
     try {
-      await clearPin();
-      closeSheet();
-      router.push("/pin");
+      const challenge = await createTotpChallenge(enrollment.factorId);
+      await verifyTotpChallenge({
+        challengeId: challenge.id,
+        code: mfaCode,
+        factorId: enrollment.factorId,
+      });
+
+      setMfa({
+        factorId: enrollment.factorId,
+        isEnabled: true,
+      });
+      closeMfaSheet();
     } catch (error) {
-      setSheetError(
-        error instanceof Error ? error.message : "No se pudo reiniciar el PIN.",
-      );
-      setIsSubmitting(false);
+      setMfaError(toUserFriendlyMfaError(error, "Codigo MFA invalido o vencido."));
+      setIsMfaSubmitting(false);
     }
   }
 
-  async function handleSelectLockTimeout(nextLockTimeoutMs: LockTimeoutMs) {
-    setIsSubmitting(true);
-    setSheetError(null);
+  async function handleDisableMfa() {
+    if (!mfaFactorId) {
+      setMfaError("No hay un factor MFA activo.");
+      return;
+    }
+    if (!/^\d{6}$/.test(mfaCode.trim())) {
+      setMfaError("Escribe un codigo de 6 digitos.");
+      return;
+    }
+
+    setIsMfaSubmitting(true);
+    setMfaError(null);
 
     try {
-      await updateLockTimeout(nextLockTimeoutMs);
-      closeSheet();
+      await disableTotpFactor({
+        code: mfaCode,
+        factorId: mfaFactorId,
+      });
+
+      setMfa({
+        factorId: null,
+        isEnabled: false,
+      });
+      closeMfaSheet();
     } catch (error) {
-      setSheetError(
-        error instanceof Error
-          ? error.message
-          : "No se pudo actualizar el tiempo de bloqueo.",
-      );
-      setIsSubmitting(false);
+      setMfaError(toUserFriendlyMfaError(error, "No se pudo desactivar MFA."));
+      setIsMfaSubmitting(false);
     }
+  }
+
+  function handleToggleMfa(nextValue: boolean) {
+    if (nextValue) {
+      void handleOpenMfaEnable();
+      return;
+    }
+
+    setMfaCode("");
+    setMfaError(null);
+    setMfaSheet("disable");
   }
 
   return (
@@ -472,7 +562,7 @@ export default function SettingsScreen() {
               <View style={styles.walletText}>
                 <Text style={styles.walletName}>{wallet.name}</Text>
                 <Text style={styles.walletMeta}>
-                  {wallet.currency} • ${wallet.balance.toFixed(2)} •{" "}
+                  {wallet.currency} - ${wallet.balance.toFixed(2)} -{" "}
                   {wallet.isActive ? "activa" : "archivada"}
                 </Text>
               </View>
@@ -540,26 +630,32 @@ export default function SettingsScreen() {
         <Section title="Seguridad">
           <View style={styles.securityRow}>
             <View style={styles.rowText}>
-              <Text style={styles.rowTitle}>PIN</Text>
+              <Text style={styles.rowTitle}>MFA (Authenticator)</Text>
               <Text style={styles.rowHint}>
-                Protege la app al volver desde segundo plano.
+                Activa verificacion en dos pasos con codigo de 6 digitos.
               </Text>
             </View>
-            <AppSwitch onValueChange={(value) => void handleTogglePin(value)} value={isPinEnabled} />
+            <AppSwitch
+              disabled={isMfaSubmitting || isDevBypass}
+              onValueChange={handleToggleMfa}
+              value={mfaEnabled}
+            />
           </View>
           <Row
-            hint="Restablece el PIN actual y vuelve a configurarlo"
-            onPress={isPinEnabled ? () => setSheet("pin") : undefined}
-            showChevron={isPinEnabled}
-            title="Cambiar PIN"
-            value={isPinEnabled ? "Activo" : "No configurado"}
+            hint="Nombre del factor que se mostrara en tu app autenticadora"
+            onPress={!mfaEnabled ? () => void handleOpenMfaEnable() : undefined}
+            showChevron={!mfaEnabled}
+            title="Activar MFA"
+            value={mfaEnabled ? "Activo" : "Pendiente"}
           />
           <Row
-            hint="Tiempo antes de volver a pedir el PIN"
-            onPress={() => setSheet("lock_time")}
-            title="Lock Time"
-            value={formatLockTimeout(lockTimeoutMs)}
+            hint="Ingresa un codigo actual para confirmar el cambio"
+            onPress={mfaEnabled ? () => setMfaSheet("disable") : undefined}
+            showChevron={mfaEnabled}
+            title="Desactivar MFA"
+            value={mfaEnabled ? "Disponible" : "No activo"}
           />
+          {mfaError ? <Text style={styles.inlineError}>{mfaError}</Text> : null}
         </Section>
 
         <Section title="Gestion de datos">
@@ -570,7 +666,7 @@ export default function SettingsScreen() {
             value={String(categories.length)}
           />
           <Row
-            hint="Gestion tu salario y trabajos secundarios"
+            hint="Gestiona tu salario y trabajos secundarios"
             onPress={() => setSheet("libraries")}
             title="Fuentes de ingresos"
             value={String(incomeSources.length)}
@@ -591,13 +687,9 @@ export default function SettingsScreen() {
         categories={categories}
         incomeSources={incomeSources}
         isSubmitting={isSubmitting}
-        lockTimeoutMs={lockTimeoutMs}
         onClose={closeSheet}
-        onSelectLockTimeout={(value) => void handleSelectLockTimeout(value)}
-        onStartPinReset={() => void handleStartPinReset()}
         onSubmitPreferences={() => void handleSavePreferences()}
         onSubmitWallet={() => void handleSaveWallet()}
-        pinEnabled={isPinEnabled}
         setSettingsDraft={setSettingsDraft}
         setWalletDraft={setWalletDraft}
         settings={settings}
@@ -607,6 +699,64 @@ export default function SettingsScreen() {
         walletDraft={walletDraft}
         wallets={wallets}
       />
+
+      <BottomSheet onClose={closeMfaSheet} visible={mfaSheet === "enable"}>
+        <Text style={styles.sheetTitle}>Activar MFA TOTP</Text>
+        <Text style={styles.sheetDescription}>
+          1) Agrega este secreto en tu autenticador.
+        </Text>
+        <Text style={styles.mfaSecret}>{enrollment?.secret ?? "--"}</Text>
+        <Text style={styles.sheetDescription}>
+          2) Usa este codigo URI si tu app lo soporta.
+        </Text>
+        <Text style={styles.mfaUri}>{enrollment?.uri ?? "--"}</Text>
+        <Text style={styles.sheetDescription}>
+          3) Ingresa un codigo de 6 digitos para verificar.
+        </Text>
+        <TextInput
+          keyboardType="number-pad"
+          maxLength={6}
+          onChangeText={setMfaCode}
+          placeholder="123456"
+          placeholderTextColor="#64748B"
+          style={styles.mfaCodeInput}
+          value={mfaCode}
+        />
+        {mfaError ? <Text style={styles.error}>{mfaError}</Text> : null}
+        <Pressable
+          onPress={() => {
+            void handleVerifyMfaEnable();
+          }}
+          style={({ pressed }) => [styles.button, pressed && styles.pressed, isMfaSubmitting && styles.buttonDisabled]}
+        >
+          <Text style={styles.buttonText}>{isMfaSubmitting ? "Verificando..." : "Verificar y activar"}</Text>
+        </Pressable>
+      </BottomSheet>
+
+      <BottomSheet onClose={closeMfaSheet} visible={mfaSheet === "disable"}>
+        <Text style={styles.sheetTitle}>Desactivar MFA</Text>
+        <Text style={styles.sheetDescription}>
+          Confirma con un codigo actual de tu autenticador.
+        </Text>
+        <TextInput
+          keyboardType="number-pad"
+          maxLength={6}
+          onChangeText={setMfaCode}
+          placeholder="123456"
+          placeholderTextColor="#64748B"
+          style={styles.mfaCodeInput}
+          value={mfaCode}
+        />
+        {mfaError ? <Text style={styles.error}>{mfaError}</Text> : null}
+        <Pressable
+          onPress={() => {
+            void handleDisableMfa();
+          }}
+          style={({ pressed }) => [styles.button, pressed && styles.pressed, isMfaSubmitting && styles.buttonDisabled]}
+        >
+          <Text style={styles.buttonText}>{isMfaSubmitting ? "Desactivando..." : "Confirmar y desactivar"}</Text>
+        </Pressable>
+      </BottomSheet>
     </SafeAreaView>
   );
 }
@@ -697,7 +847,13 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "rgba(88, 104, 149, 0.12)",
   },
-  rowMuted: { color: "#8A96B3", fontSize: 12, fontWeight: "700" },
+  inlineError: {
+    color: "#FCA5A5",
+    fontSize: 12,
+    lineHeight: 18,
+    marginHorizontal: 14,
+    marginBottom: 12,
+  },
   signOutButton: {
     minHeight: 50,
     borderRadius: 14,
@@ -708,5 +864,38 @@ const styles = StyleSheet.create({
     borderColor: "rgba(88, 104, 149, 0.14)",
   },
   signOutText: { color: "#F8FAFC", fontSize: 14, fontWeight: "800" },
+  sheetTitle: { color: "#F8FAFC", fontSize: 22, fontWeight: "900", marginBottom: 8 },
+  sheetDescription: { color: "#8A96B3", fontSize: 13, lineHeight: 19, marginBottom: 10 },
+  mfaSecret: {
+    color: "#F8FAFC",
+    fontSize: 18,
+    fontWeight: "900",
+    letterSpacing: 1,
+    marginBottom: 10,
+  },
+  mfaUri: { color: "#8AA0D7", fontSize: 12, lineHeight: 18, marginBottom: 10 },
+  mfaCodeInput: {
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(92, 108, 149, 0.24)",
+    backgroundColor: "#192035",
+    color: "#D9E3F6",
+    fontSize: 24,
+    fontWeight: "800",
+    letterSpacing: 6,
+    textAlign: "center",
+    paddingVertical: 10,
+    marginBottom: 8,
+  },
+  error: { color: "#F7A9AA", fontSize: 13, lineHeight: 20, marginBottom: 8 },
+  button: {
+    minHeight: 50,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#4664FF",
+  },
+  buttonDisabled: { opacity: 0.7 },
+  buttonText: { color: "#FFFFFF", fontSize: 14, fontWeight: "900" },
   pressed: { opacity: 0.88 },
 });

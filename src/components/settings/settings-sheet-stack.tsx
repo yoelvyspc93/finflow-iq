@@ -9,11 +9,6 @@ import {
 } from "react-native";
 
 import { BottomSheet } from "@/components/ui/bottom-sheet";
-import {
-  formatLockTimeout,
-  lockTimeoutOptions,
-  type LockTimeoutMs,
-} from "@/lib/security/security-preferences";
 import type { Category } from "@/modules/categories/types";
 import type { IncomeSource } from "@/modules/income-sources/types";
 import type {
@@ -24,13 +19,7 @@ import type {
 } from "@/modules/settings/types";
 import type { Wallet } from "@/modules/wallets/types";
 
-export type SettingsSheetKind =
-  | "preferences"
-  | "wallet"
-  | "libraries"
-  | "pin"
-  | "lock_time"
-  | null;
+export type SettingsSheetKind = "preferences" | "wallet" | "libraries" | null;
 
 export type SettingsDraft = {
   aiAnalysisFrequency: AiAnalysisFrequency;
@@ -52,13 +41,9 @@ type SettingsSheetStackProps = {
   categories: Category[];
   incomeSources: IncomeSource[];
   isSubmitting: boolean;
-  lockTimeoutMs: LockTimeoutMs;
   onClose: () => void;
-  onSelectLockTimeout: (lockTimeoutMs: LockTimeoutMs) => void;
-  onStartPinReset: () => void;
   onSubmitPreferences: () => void;
   onSubmitWallet: () => void;
-  pinEnabled: boolean;
   setSettingsDraft: Dispatch<SetStateAction<SettingsDraft>>;
   setWalletDraft: Dispatch<SetStateAction<WalletDraft>>;
   settings: AppSettings | null;
@@ -134,13 +119,9 @@ export function SettingsSheetStack({
   categories,
   incomeSources,
   isSubmitting,
-  lockTimeoutMs,
   onClose,
-  onSelectLockTimeout,
-  onStartPinReset,
   onSubmitPreferences,
   onSubmitWallet,
-  pinEnabled,
   setSettingsDraft,
   setWalletDraft,
   settings,
@@ -387,82 +368,8 @@ export function SettingsSheetStack({
         </View>
 
         <Text style={styles.helperText}>
-          Formato actual: {settings?.dateFormat ?? "DD/MM/YYYY"} · Moneda principal:{" "}
+          Formato actual: {settings?.dateFormat ?? "DD/MM/YYYY"} - Moneda principal:{" "}
           {settings?.primaryCurrency ?? "USD"}
-        </Text>
-      </BottomSheet>
-
-      <BottomSheet onClose={onClose} visible={sheet === "pin"}>
-        <Text style={styles.sheetTitle}>Cambiar PIN</Text>
-        <Text style={styles.sheetDescription}>
-          Eliminaremos el PIN actual y te llevaremos otra vez al flujo de
-          configuracion para crear uno nuevo.
-        </Text>
-
-        <Text style={styles.helperText}>
-          Estado actual: {pinEnabled ? "PIN activo" : "PIN no configurado"}.
-        </Text>
-
-        <Pressable
-          disabled={!pinEnabled}
-          onPress={onStartPinReset}
-          style={({ pressed }) => [
-            styles.submitButton,
-            !pinEnabled && styles.submitButtonDisabled,
-            pressed && pinEnabled && styles.pressed,
-          ]}
-        >
-          <Text style={styles.submitButtonText}>Continuar</Text>
-        </Pressable>
-      </BottomSheet>
-
-      <BottomSheet onClose={onClose} visible={sheet === "lock_time"}>
-        <Text style={styles.sheetTitle}>Tiempo de bloqueo</Text>
-        <Text style={styles.sheetDescription}>
-          Define cuanto puede estar la app en segundo plano antes de volver a
-          pedir el PIN.
-        </Text>
-
-        <View style={styles.lockTimeGroup}>
-          {lockTimeoutOptions.map((option) => {
-            const isActive = lockTimeoutMs === option.value;
-
-            return (
-              <Pressable
-                key={option.value}
-                onPress={() => onSelectLockTimeout(option.value)}
-                style={({ pressed }) => [
-                  styles.lockTimeOption,
-                  isActive && styles.lockTimeOptionActive,
-                  pressed && styles.pressed,
-                ]}
-              >
-                <View style={styles.lockTimeText}>
-                  <Text
-                    style={[
-                      styles.lockTimeLabel,
-                      isActive && styles.lockTimeLabelActive,
-                    ]}
-                  >
-                    {option.label}
-                  </Text>
-                  <Text style={styles.lockTimeHint}>{option.description}</Text>
-                </View>
-                <Text
-                  style={[
-                    styles.lockTimeValue,
-                    isActive && styles.lockTimeValueActive,
-                  ]}
-                >
-                  {isActive ? "Activo" : "Seleccionar"}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-
-        <Text style={styles.helperText}>
-          Seleccion actual: {formatLockTimeout(lockTimeoutMs)}.
         </Text>
       </BottomSheet>
     </>
@@ -579,51 +486,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
   },
-  lockTimeGroup: {
-    gap: 10,
-    marginTop: 4,
-  },
-  lockTimeOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: "#24314E",
-    backgroundColor: "#11182D",
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-  },
-  lockTimeOptionActive: {
-    borderColor: "#4F6BFF",
-    backgroundColor: "rgba(79, 107, 255, 0.12)",
-  },
-  lockTimeText: {
-    flex: 1,
-    gap: 4,
-  },
-  lockTimeLabel: {
-    color: "#F8FAFC",
-    fontSize: 14,
-    fontWeight: "800",
-  },
-  lockTimeLabelActive: {
-    color: "#FFFFFF",
-  },
-  lockTimeHint: {
-    color: "#8D98B2",
-    fontSize: 12,
-    lineHeight: 18,
-  },
-  lockTimeValue: {
-    color: "#8D98B2",
-    fontSize: 12,
-    fontWeight: "800",
-  },
-  lockTimeValueActive: {
-    color: "#D9F99D",
-  },
   errorText: {
     color: "#FCA5A5",
     fontSize: 13,
@@ -651,3 +513,4 @@ const styles = StyleSheet.create({
     opacity: 0.88,
   },
 });
+

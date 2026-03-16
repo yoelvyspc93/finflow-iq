@@ -10,40 +10,40 @@ import {
 } from "react-native";
 
 import { Feather } from "@expo/vector-icons";
-import { Image } from "expo-image";
 import { Link, Redirect, router } from "expo-router";
 
-import { getPendingMfaFactorId } from "@/lib/auth/mfa";
-import { signInWithPassword } from "@/lib/auth/session";
-import { isSupabaseConfigured } from "@/lib/supabase/client";
 import { DecorativeBackground } from "@/components/ui/decorative-background";
+import { isSupabaseConfigured } from "@/lib/supabase/client";
+import { signUpWithPassword } from "@/lib/auth/session";
 import { useAuthStore } from "@/stores/auth-store";
 
 function isValidEmail(email: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 }
 
-export default function LoginScreen() {
+export default function SignUpScreen() {
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
 
-  const authError = useAuthStore((state) => state.error);
-  const enableDevBypass = useAuthStore((state) => state.enableDevBypass);
   const isReady = useAuthStore((state) => state.isReady);
   const pendingMfaFactorId = useAuthStore((state) => state.pendingMfaFactorId);
-  const setError = useAuthStore((state) => state.setError);
-  const setPendingMfaFactorId = useAuthStore((state) => state.setPendingMfaFactorId);
   const status = useAuthStore((state) => state.status);
 
   const canSubmit = useMemo(
     () =>
       isSupabaseConfigured &&
+      firstName.trim().length > 0 &&
+      lastName.trim().length > 0 &&
       isValidEmail(email) &&
       password.length >= 8 &&
+      password === confirmPassword &&
       !isSubmitting,
-    [email, isSubmitting, password.length],
+    [confirmPassword, email, firstName, isSubmitting, lastName, password],
   );
 
   if (isReady && status === "authenticated") {
@@ -53,22 +53,30 @@ export default function LoginScreen() {
   async function handleSubmit() {
     const normalizedEmail = email.trim().toLowerCase();
 
+    if (!firstName.trim() || !lastName.trim()) {
+      setFeedback("Completa nombre y apellidos.");
+      return;
+    }
     if (!isValidEmail(normalizedEmail)) {
       setFeedback("Escribe un correo valido.");
       return;
     }
-
     if (password.length < 8) {
       setFeedback("La contrasena debe tener al menos 8 caracteres.");
       return;
     }
+    if (password !== confirmPassword) {
+      setFeedback("Las contrasenas no coinciden.");
+      return;
+    }
 
     setIsSubmitting(true);
-    setError(null);
     setFeedback(null);
 
-    const { error } = await signInWithPassword({
+    const { error } = await signUpWithPassword({
       email: normalizedEmail,
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
       password,
     });
 
@@ -78,27 +86,8 @@ export default function LoginScreen() {
       return;
     }
 
-    try {
-      const factorId = await getPendingMfaFactorId();
-      setPendingMfaFactorId(factorId);
-      router.replace(factorId ? "/mfa" : "/");
-    } catch (mfaError) {
-      setFeedback(
-        mfaError instanceof Error ? mfaError.message : "No se pudo validar MFA.",
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  function handleDevBypass() {
-    const normalizedEmail = email.trim().toLowerCase();
-    const safeEmail = isValidEmail(normalizedEmail)
-      ? normalizedEmail
-      : "dev@finflow.local";
-
-    setPendingMfaFactorId(null);
-    enableDevBypass(safeEmail);
+    setIsSubmitting(false);
+    router.replace("/");
   }
 
   return (
@@ -106,19 +95,35 @@ export default function LoginScreen() {
       <DecorativeBackground />
       <View style={styles.container}>
         <View style={styles.card}>
-          <View style={styles.badge}>
-            <Image
-              contentFit="contain"
-              source={require("../../../assets/logo.png")}
-              style={styles.badgeImage}
-            />
+          <Text style={styles.title}>Crear cuenta</Text>
+          <Text style={styles.subtitle}>
+            Usa tu nombre real, correo y contrasena.
+          </Text>
+
+          <View style={styles.fieldGroup}>
+            <Text style={styles.label}>Nombre</Text>
+            <View style={styles.inputShell}>
+              <TextInput
+                onChangeText={setFirstName}
+                placeholder="Tu nombre"
+                placeholderTextColor="#65728E"
+                style={styles.input}
+                value={firstName}
+              />
+            </View>
           </View>
 
-          <View style={styles.header}>
-            <Text style={styles.title}>
-              FinFlow <Text style={styles.titleAccent}>IQ</Text>
-            </Text>
-            <Text style={styles.subtitle}>Accede con tu cuenta</Text>
+          <View style={styles.fieldGroup}>
+            <Text style={styles.label}>Apellidos</Text>
+            <View style={styles.inputShell}>
+              <TextInput
+                onChangeText={setLastName}
+                placeholder="Tus apellidos"
+                placeholderTextColor="#65728E"
+                style={styles.input}
+                value={lastName}
+              />
+            </View>
           </View>
 
           <View style={styles.fieldGroup}>
@@ -155,15 +160,30 @@ export default function LoginScreen() {
             </View>
           </View>
 
+          <View style={styles.fieldGroup}>
+            <Text style={styles.label}>Confirmar contrasena</Text>
+            <View style={styles.inputShell}>
+              <Feather color="#95A1BD" name="lock" size={17} />
+              <TextInput
+                autoCapitalize="none"
+                autoComplete="password"
+                onChangeText={setConfirmPassword}
+                placeholder="Repite la contrasena"
+                placeholderTextColor="#65728E"
+                secureTextEntry
+                style={styles.input}
+                value={confirmPassword}
+              />
+            </View>
+          </View>
+
           {!isSupabaseConfigured ? (
             <Text style={styles.errorText}>
               Falta configurar `EXPO_PUBLIC_SUPABASE_URL` y
               `EXPO_PUBLIC_SUPABASE_ANON_KEY`.
             </Text>
           ) : null}
-
-          {feedback ? <Text style={styles.helperText}>{feedback}</Text> : null}
-          {authError ? <Text style={styles.errorText}>{authError}</Text> : null}
+          {feedback ? <Text style={styles.errorText}>{feedback}</Text> : null}
 
           <Pressable
             disabled={!canSubmit}
@@ -179,28 +199,13 @@ export default function LoginScreen() {
             {isSubmitting ? (
               <ActivityIndicator color="#F8FAFC" />
             ) : (
-              <Text style={styles.buttonText}>Entrar</Text>
+              <Text style={styles.buttonText}>Crear cuenta</Text>
             )}
-            {!isSubmitting ? (
-              <Feather color="#F8FAFC" name="arrow-right" size={16} />
-            ) : null}
           </Pressable>
 
-          <Link href="/signup" style={styles.signUpLink}>
-            Crear cuenta nueva
+          <Link href="/login" style={styles.link}>
+            Ya tengo cuenta
           </Link>
-
-          {__DEV__ ? (
-            <Pressable
-              onPress={handleDevBypass}
-              style={({ pressed }) => [
-                styles.secondaryButton,
-                pressed && styles.buttonPressed,
-              ]}
-            >
-              <Text style={styles.secondaryButtonText}>Entrar en modo desarrollo</Text>
-            </Pressable>
-          ) : null}
         </View>
       </View>
     </SafeAreaView>
@@ -208,21 +213,13 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#0B1020",
-  },
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 24,
-  },
+  safeArea: { flex: 1, backgroundColor: "#0B1020" },
+  container: { flex: 1, justifyContent: "center", paddingHorizontal: 16, paddingVertical: 24 },
   card: {
     width: "100%",
-    maxWidth: 344,
+    maxWidth: 360,
     alignSelf: "center",
-    gap: 16,
+    gap: 12,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: "rgba(72, 97, 173, 0.16)",
@@ -230,46 +227,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 16,
   },
-  badge: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: "rgba(43, 61, 136, 0.96)",
-    alignItems: "center",
-    justifyContent: "center",
-    alignSelf: "center",
-  },
-  badgeImage: {
-    width: 21,
-    height: 21,
-  },
-  header: {
-    alignItems: "center",
-    gap: 6,
-  },
-  title: {
-    color: "#F8FAFC",
-    fontSize: 22,
-    fontWeight: "900",
-    textAlign: "center",
-  },
-  titleAccent: {
-    color: "#4B69FF",
-  },
-  subtitle: {
-    color: "#7F8AA6",
-    fontSize: 14,
-    fontWeight: "600",
-    textAlign: "center",
-  },
-  fieldGroup: {
-    gap: 10,
-  },
-  label: {
-    color: "#D7E0F3",
-    fontSize: 14,
-    fontWeight: "700",
-  },
+  title: { color: "#F8FAFC", fontSize: 24, fontWeight: "900", textAlign: "center" },
+  subtitle: { color: "#7F8AA6", fontSize: 14, textAlign: "center", marginBottom: 4 },
+  fieldGroup: { gap: 8 },
+  label: { color: "#D7E0F3", fontSize: 14, fontWeight: "700" },
   inputShell: {
     flexDirection: "row",
     alignItems: "center",
@@ -280,63 +241,19 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(17, 22, 39, 0.92)",
     paddingHorizontal: 14,
   },
-  input: {
-    flex: 1,
-    color: "#F8FAFC",
-    fontSize: 16,
-    paddingVertical: 13,
-  },
-  helperText: {
-    color: "#BFD4FF",
-    fontSize: 13,
-    lineHeight: 20,
-  },
-  errorText: {
-    color: "#F6A6A8",
-    fontSize: 13,
-    lineHeight: 20,
-  },
+  input: { flex: 1, color: "#F8FAFC", fontSize: 16, paddingVertical: 13 },
+  errorText: { color: "#F6A6A8", fontSize: 13, lineHeight: 20 },
   button: {
     minHeight: 44,
     borderRadius: 10,
     backgroundColor: "#4A66FF",
     alignItems: "center",
     justifyContent: "center",
-    flexDirection: "row",
-    gap: 8,
-    paddingHorizontal: 18,
+    marginTop: 8,
   },
-  buttonDisabled: {
-    opacity: 0.58,
-  },
-  buttonPressed: {
-    opacity: 0.88,
-  },
-  buttonText: {
-    color: "#F8FAFC",
-    fontSize: 14,
-    fontWeight: "800",
-  },
-  signUpLink: {
-    color: "#CBD6F7",
-    fontSize: 13,
-    fontWeight: "700",
-    textAlign: "center",
-  },
-  secondaryButton: {
-    minHeight: 42,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "rgba(74, 102, 255, 0.26)",
-    backgroundColor: "rgba(18, 24, 42, 0.90)",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 18,
-  },
-  secondaryButtonText: {
-    color: "#CBD6F7",
-    fontSize: 13,
-    fontWeight: "700",
-  },
+  buttonDisabled: { opacity: 0.58 },
+  buttonPressed: { opacity: 0.88 },
+  buttonText: { color: "#F8FAFC", fontSize: 14, fontWeight: "800" },
+  link: { color: "#CBD6F7", fontSize: 13, fontWeight: "700", textAlign: "center", marginTop: 6 },
 });
 
