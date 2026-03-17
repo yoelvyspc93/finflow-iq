@@ -1,13 +1,5 @@
-import { useEffect, useState } from "react";
-import {
-  Pressable,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { useRouter } from "expo-router";
 
@@ -23,22 +15,31 @@ import {
   toUserFriendlyMfaError,
   verifyTotpChallenge,
 } from "@/lib/auth/mfa";
+import { updateSettings } from "@/modules/settings/service";
+import type { SessionTimeoutMinutes } from "@/modules/settings/types";
+import { useAppStore } from "@/stores/app-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { useSecurityStore } from "@/stores/security-store";
 import { theme } from "@/utils/theme";
 
 type MfaSheetMode = "enable" | "disable" | null;
 
+const timeoutOptions: { label: string; value: SessionTimeoutMinutes }[] = [
+  { label: "Inmediato", value: 0 },
+  { label: "5 min", value: 5 },
+  { label: "10 min", value: 10 },
+  { label: "20 min", value: 20 },
+  { label: "30 min", value: 30 },
+];
+
 function Row({
   hint,
   onPress,
-  showChevron = Boolean(onPress),
   title,
   value,
 }: {
   hint?: string;
   onPress?: () => void;
-  showChevron?: boolean;
   title: string;
   value?: string;
 }) {
@@ -54,7 +55,6 @@ function Row({
       </View>
       <View style={styles.rowValueWrap}>
         {value ? <Text style={styles.rowValue}>{value}</Text> : null}
-        {showChevron ? <Text style={styles.chevron}>{">"}</Text> : null}
       </View>
     </Pressable>
   );
@@ -63,6 +63,7 @@ function Row({
 export default function SecuritySettingsScreen() {
   const router = useRouter();
   const [mfaSheet, setMfaSheet] = useState<MfaSheetMode>(null);
+  const [timeoutSheetOpen, setTimeoutSheetOpen] = useState(false);
   const [mfaError, setMfaError] = useState<string | null>(null);
   const [mfaCode, setMfaCode] = useState("");
   const [mfaFriendlyName] = useState("FinFlow Authenticator");
@@ -75,9 +76,16 @@ export default function SecuritySettingsScreen() {
 
   const isDevBypass = useAuthStore((state) => state.isDevBypass);
   const user = useAuthStore((state) => state.user);
+  const settings = useAppStore((state) => state.settings);
+  const replaceLocalSettings = useAppStore((state) => state.replaceLocalSettings);
   const mfaEnabled = useSecurityStore((state) => state.mfaEnabled);
   const mfaFactorId = useSecurityStore((state) => state.mfaFactorId);
   const setMfa = useSecurityStore((state) => state.setMfa);
+
+  const timeoutLabel = useMemo(() => {
+    const current = settings?.sessionTimeoutMinutes ?? 5;
+    return timeoutOptions.find((item) => item.value === current)?.label ?? "5 min";
+  }, [settings?.sessionTimeoutMinutes]);
 
   useEffect(() => {
     if (!user?.id || isDevBypass) {
@@ -204,6 +212,32 @@ export default function SecuritySettingsScreen() {
     setMfaSheet("disable");
   }
 
+  async function handleSelectTimeout(value: SessionTimeoutMinutes) {
+    if (!settings || !user?.id) {
+      return;
+    }
+
+    if (settings.sessionTimeoutMinutes === value) {
+      setTimeoutSheetOpen(false);
+      return;
+    }
+
+    if (isDevBypass) {
+      replaceLocalSettings({
+        ...settings,
+        sessionTimeoutMinutes: value,
+        updatedAt: new Date().toISOString(),
+      });
+    } else {
+      const nextSettings = await updateSettings({
+        patch: { session_timeout_minutes: value },
+        userId: user.id,
+      });
+      replaceLocalSettings(nextSettings);
+    }
+    setTimeoutSheetOpen(false);
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <DecorativeBackground />
@@ -218,7 +252,7 @@ export default function SecuritySettingsScreen() {
             <View style={styles.rowText}>
               <Text style={styles.rowTitle}>MFA (Authenticator)</Text>
               <Text style={styles.rowHint}>
-                Activa verificacion en dos pasos con codigo de 6 digitos.
+                Toggle unico para activar/desactivar MFA TOTP.
               </Text>
             </View>
             <AppSwitch
@@ -228,18 +262,10 @@ export default function SecuritySettingsScreen() {
             />
           </View>
           <Row
-            hint="Nombre del factor que se mostrara en tu app autenticadora"
-            onPress={!mfaEnabled ? () => void handleOpenMfaEnable() : undefined}
-            showChevron={!mfaEnabled}
-            title="Activar MFA"
-            value={mfaEnabled ? "Activo" : "Pendiente"}
-          />
-          <Row
-            hint="Ingresa un codigo actual para confirmar el cambio"
-            onPress={mfaEnabled ? () => setMfaSheet("disable") : undefined}
-            showChevron={mfaEnabled}
-            title="Desactivar MFA"
-            value={mfaEnabled ? "Disponible" : "No activo"}
+            hint="Cierra sesion automaticamente cuando no uses la app."
+            onPress={() => setTimeoutSheetOpen(true)}
+            title="Tiempo por inactividad"
+            value={timeoutLabel}
           />
         </View>
         {mfaError ? <Text style={styles.inlineError}>{mfaError}</Text> : null}
@@ -259,7 +285,7 @@ export default function SecuritySettingsScreen() {
           maxLength={6}
           onChangeText={setMfaCode}
           placeholder="123456"
-          placeholderTextColor="#64748B"
+          placeholderTextColor={theme.colors.grayLight}
           style={styles.mfaCodeInput}
           value={mfaCode}
         />
@@ -290,7 +316,7 @@ export default function SecuritySettingsScreen() {
           maxLength={6}
           onChangeText={setMfaCode}
           placeholder="123456"
-          placeholderTextColor="#64748B"
+          placeholderTextColor={theme.colors.grayLight}
           style={styles.mfaCodeInput}
           value={mfaCode}
         />
@@ -310,13 +336,48 @@ export default function SecuritySettingsScreen() {
           </Text>
         </Pressable>
       </BottomSheet>
+
+      <BottomSheet onClose={() => setTimeoutSheetOpen(false)} visible={timeoutSheetOpen}>
+        <Text style={styles.sheetTitle}>Tiempo por inactividad</Text>
+        <Text style={styles.sheetDescription}>
+          Selecciona cuando cerrar sesion automaticamente.
+        </Text>
+        <View style={styles.timeoutList}>
+          {timeoutOptions.map((option) => (
+            <Pressable
+              key={option.value}
+              onPress={() => {
+                void handleSelectTimeout(option.value);
+              }}
+              style={({ pressed }) => [
+                styles.timeoutItem,
+                settings?.sessionTimeoutMinutes === option.value && styles.timeoutItemActive,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.timeoutText,
+                  settings?.sessionTimeoutMinutes === option.value && styles.timeoutTextActive,
+                ]}
+              >
+                {option.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </BottomSheet>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: theme.colors.background },
-  content: { paddingHorizontal: theme.spacing.md, paddingVertical: theme.spacing.lg, gap: theme.spacing.lg },
+  content: {
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.lg,
+    gap: theme.spacing.lg,
+  },
   section: {
     borderRadius: 14,
     backgroundColor: theme.colors.backgroundCard,
@@ -344,12 +405,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.divider,
   },
-  rowText: { flex: 1, gap: 2 },
+  rowText: { flex: 1, gap: 2, maxWidth: "70%" },
   rowTitle: { color: theme.colors.white, fontSize: 14, fontWeight: "700" },
   rowHint: { color: theme.colors.grayLight, fontSize: 11, lineHeight: 16 },
   rowValueWrap: { flexDirection: "row", alignItems: "center", gap: 6 },
   rowValue: { color: theme.colors.primary, fontSize: 12, fontWeight: "700" },
-  chevron: { color: theme.colors.grayLight, fontSize: 16, fontWeight: "700" },
   inlineError: {
     color: theme.colors.red,
     fontSize: 12,
@@ -357,8 +417,18 @@ const styles = StyleSheet.create({
     marginHorizontal: 14,
     marginBottom: 12,
   },
-  sheetTitle: { color: theme.colors.white, fontSize: 22, fontWeight: "700", marginBottom: 8 },
-  sheetDescription: { color: theme.colors.grayLight, fontSize: 13, lineHeight: 19, marginBottom: 10 },
+  sheetTitle: {
+    color: theme.colors.white,
+    fontSize: 22,
+    fontWeight: "700",
+    marginBottom: 8,
+  },
+  sheetDescription: {
+    color: theme.colors.grayLight,
+    fontSize: 13,
+    lineHeight: 19,
+    marginBottom: 10,
+  },
   mfaSecret: {
     color: theme.colors.white,
     fontSize: 18,
@@ -366,7 +436,12 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     marginBottom: 10,
   },
-  mfaUri: { color: theme.colors.grayLight, fontSize: 12, lineHeight: 18, marginBottom: 10 },
+  mfaUri: {
+    color: theme.colors.grayLight,
+    fontSize: 12,
+    lineHeight: 18,
+    marginBottom: 10,
+  },
   mfaCodeInput: {
     borderRadius: 12,
     borderWidth: 1,
@@ -390,5 +465,31 @@ const styles = StyleSheet.create({
   },
   buttonDisabled: { opacity: 0.7 },
   buttonText: { color: theme.colors.white, fontSize: 14, fontWeight: "700" },
+  timeoutList: {
+    gap: 8,
+    marginTop: 8,
+  },
+  timeoutItem: {
+    minHeight: 46,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: theme.colors.divider,
+    backgroundColor: theme.colors.backgroundCard,
+    justifyContent: "center",
+    paddingHorizontal: 14,
+  },
+  timeoutItemActive: {
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.blueSoft,
+  },
+  timeoutText: {
+    color: theme.colors.white,
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  timeoutTextActive: {
+    color: theme.colors.white,
+    fontWeight: "700",
+  },
   pressed: { opacity: 0.88 },
 });
