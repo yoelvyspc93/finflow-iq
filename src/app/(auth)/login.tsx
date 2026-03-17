@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
@@ -12,6 +11,7 @@ import {
 import { Feather } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { Link, Redirect, router } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { getPendingMfaFactorId } from "@/lib/auth/mfa";
 import { signInWithPassword } from "@/lib/auth/session";
@@ -102,7 +102,7 @@ export default function LoginScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
       <DecorativeBackground />
       <View style={styles.container}>
         <View style={styles.card}>
@@ -339,4 +339,3 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 });
-

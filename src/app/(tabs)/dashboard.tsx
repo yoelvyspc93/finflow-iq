@@ -1,7 +1,6 @@
 import { useEffect, useMemo } from "react";
 import {
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,6 +14,7 @@ import {
   MaterialCommunityIcons,
 } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { DecorativeBackground } from "@/components/ui/decorative-background";
 import { ScreenHeader } from "@/components/ui/screen-header";
@@ -170,7 +170,7 @@ export default function DashboardScreen() {
   const ringRotation = `${Math.round(clamp(healthScore / 100, 0.12, 1) * 280)}deg`;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={["top"]} style={styles.safeArea}>
       <DecorativeBackground />
       <ScreenHeader
         secondaryAction={{

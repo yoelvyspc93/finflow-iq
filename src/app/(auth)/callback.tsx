@@ -1,6 +1,7 @@
-import { SafeAreaView, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 import { Link, Redirect } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { DecorativeBackground } from "@/components/ui/decorative-background";
 import { useAuthStore } from "@/stores/auth-store";
@@ -14,7 +15,7 @@ export default function CallbackScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
       <DecorativeBackground />
       <View style={styles.container}>
         <Text style={styles.title}>Redireccion no soportada</Text>
@@ -59,4 +60,3 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 });
-

@@ -2,6 +2,7 @@ import { StyleSheet, View } from "react-native";
 
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Redirect, Tabs } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppLoadingScreen } from "@/components/app/app-loading-screen";
 import { useOnboardingGuard } from "@/hooks/use-onboarding-guard";
@@ -47,6 +48,7 @@ function TabGlyph({
 
 export default function TabsLayout() {
   const guard = useOnboardingGuard();
+  const insets = useSafeAreaInsets();
 
   if (guard.isLoading) {
     return <AppLoadingScreen message={guard.loadingMessage} />;
@@ -67,7 +69,13 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarActiveTintColor: theme.colors.primary,
         tabBarInactiveTintColor: theme.colors.grayLight,
-        tabBarStyle: styles.tabBar,
+        tabBarStyle: [
+          styles.tabBar,
+          {
+            height: 74 + insets.bottom,
+            paddingBottom: Math.max(theme.spacing.xs, insets.bottom),
+          },
+        ],
         tabBarLabelStyle: styles.tabBarLabel,
         tabBarItemStyle: styles.tabItem,
         sceneStyle: styles.scene,

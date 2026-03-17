@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,6 +10,7 @@ import {
 
 import { Feather, Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
+import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { AppSwitch } from '@/components/ui/app-switch'
 import { BottomSheet } from '@/components/ui/bottom-sheet'
@@ -602,7 +602,7 @@ export default function FinancesScreen() {
     : 'Guardar'
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={['top']} style={styles.safeArea}>
       <DecorativeBackground />
       <ScreenHeader
         primaryAction={{ icon: 'plus', onPress: () => setSheet('quick') }}

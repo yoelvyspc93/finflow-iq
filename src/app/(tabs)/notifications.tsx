@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { type Href, useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { DecorativeBackground } from "@/components/ui/decorative-background";
 import { FilterList } from "@/components/ui/filter-list";
@@ -239,7 +240,7 @@ export default function NotificationsScreen() {
         : "No hay notificaciones disponibles en este momento.";
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={["top"]} style={styles.safeArea}>
       <DecorativeBackground />
       <ScreenHeader
         leftAction={{ icon: "back", onPress: () => router.back() }}

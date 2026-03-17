@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AppSwitch } from "@/components/ui/app-switch";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
@@ -239,7 +240,7 @@ export default function SecuritySettingsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
       <DecorativeBackground />
       <ScreenHeader
         leftAction={{ icon: "back", onPress: () => router.back() }}

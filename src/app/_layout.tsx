@@ -3,6 +3,7 @@ import { StyleSheet, View } from "react-native";
 import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { Stack } from "expo-router";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AppDataBootstrap } from "@/components/app/app-data-bootstrap";
 import { AuthBootstrap } from "@/components/auth/auth-bootstrap";
@@ -17,25 +18,27 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={styles.root}>
-      <BottomSheetModalProvider>
-        <View
-          onTouchStart={() => setLastActivityAt()}
-          style={styles.contentRoot}
-        >
-          <AuthBootstrap />
-          <SecurityBootstrap />
-          <SessionTimeoutGuard />
-          <AppDataBootstrap />
-          <LedgerBootstrap />
-          <DecorativeBackground />
-          <Stack
-            screenOptions={{
-              headerShown: false,
-              contentStyle: { backgroundColor: "transparent" },
-            }}
-          />
-        </View>
-      </BottomSheetModalProvider>
+      <SafeAreaProvider>
+        <BottomSheetModalProvider>
+          <View
+            onTouchStart={() => setLastActivityAt()}
+            style={styles.contentRoot}
+          >
+            <AuthBootstrap />
+            <SecurityBootstrap />
+            <SessionTimeoutGuard />
+            <AppDataBootstrap />
+            <LedgerBootstrap />
+            <DecorativeBackground />
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: "transparent" },
+              }}
+            />
+          </View>
+        </BottomSheetModalProvider>
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }

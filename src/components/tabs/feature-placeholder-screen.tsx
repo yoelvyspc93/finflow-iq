@@ -1,4 +1,5 @@
-import { SafeAreaView, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { DecorativeBackground } from "@/components/ui/decorative-background";
 
@@ -16,7 +17,7 @@ export function FeaturePlaceholderScreen({
   title,
 }: FeaturePlaceholderScreenProps) {
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
       <DecorativeBackground />
       <View style={styles.container}>
         <View style={styles.heroCard}>

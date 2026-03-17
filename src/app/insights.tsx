@@ -1,7 +1,6 @@
 import { useEffect, useMemo } from 'react'
 import {
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,6 +9,7 @@ import {
 
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
+import { SafeAreaView } from 'react-native-safe-area-context'
 
 import { DecorativeBackground } from '@/components/ui/decorative-background'
 import { ScreenHeader } from '@/components/ui/screen-header'
@@ -108,7 +108,7 @@ export default function InsightsScreen() {
   )
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
       <DecorativeBackground />
       <ScreenHeader
         leftAction={{ icon: 'back', onPress: () => router.back() }}
