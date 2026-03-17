@@ -20,6 +20,7 @@ type AppStore = {
   hasCompletedOnboarding: boolean;
   isLoading: boolean;
   isReady: boolean;
+  removeLocalWallet: (walletId: string) => void;
   replaceLocalSettings: (settings: AppSettings) => void;
   refreshAppData: (args: { isDevBypass: boolean; userId: string }) => Promise<void>;
   reset: () => void;
@@ -41,7 +42,10 @@ const initialState = {
 };
 
 function resolveSelectedWalletId(wallets: Wallet[], current: string | null) {
-  if (current && wallets.some((wallet) => wallet.id === current)) {
+  if (
+    current &&
+    wallets.some((wallet) => wallet.id === current && wallet.isActive)
+  ) {
     return current;
   }
 
@@ -83,6 +87,18 @@ export const useAppStore = create<AppStore>((set, get) => ({
           : wallet,
       ),
     })),
+  removeLocalWallet: (walletId) =>
+    set((state) =>
+      buildStateFromData(
+        {
+          settings:
+            state.settings ??
+            createMockSettings(state.wallets[0]?.userId ?? "dev-user-id"),
+          wallets: state.wallets.filter((wallet) => wallet.id !== walletId),
+        },
+        state.selectedWalletId,
+      ),
+    ),
   replaceLocalSettings: (settings) => set({ settings }),
   refreshAppData: async ({ isDevBypass, userId }) => {
     set({ error: null, isLoading: true });

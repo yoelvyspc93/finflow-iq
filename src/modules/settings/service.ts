@@ -29,10 +29,14 @@ export async function updateSettings({
   patch,
   userId,
 }: UpdateSettingsArgs): Promise<AppSettings> {
+  const payload = {
+    ...patch,
+    user_id: userId,
+  };
+
   const { data, error } = await supabase
     .from("settings")
-    .update(patch)
-    .eq("user_id", userId)
+    .upsert(payload, { onConflict: "user_id" })
     .select("*")
     .single();
 

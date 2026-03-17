@@ -13,6 +13,8 @@ export function WalletSwitcher({
   selectedWalletId,
   wallets,
 }: WalletSwitcherProps) {
+  const visibleWallets = wallets.filter((wallet) => wallet.isActive);
+
   return (
     <View style={styles.wrapper}>
       <Text style={styles.label}>Wallets</Text>
@@ -21,7 +23,7 @@ export function WalletSwitcher({
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.row}
       >
-        {wallets.map((wallet) => {
+        {visibleWallets.map((wallet) => {
           const isActive = wallet.id === selectedWalletId;
 
           return (

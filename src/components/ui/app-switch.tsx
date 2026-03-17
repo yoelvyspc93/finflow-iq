@@ -1,4 +1,5 @@
-import { Pressable, StyleSheet, View } from "react-native";
+import { useEffect, useRef } from "react";
+import { Animated, Easing, Pressable, StyleSheet } from "react-native";
 
 type AppSwitchProps = {
   disabled?: boolean;
@@ -11,6 +12,22 @@ export function AppSwitch({
   onValueChange,
   value,
 }: AppSwitchProps) {
+  const progress = useRef(new Animated.Value(value ? 1 : 0)).current;
+
+  useEffect(() => {
+    Animated.timing(progress, {
+      toValue: value ? 1 : 0,
+      duration: 160,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [progress, value]);
+
+  const translateX = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 18],
+  });
+
   return (
     <Pressable
       accessibilityRole="switch"
@@ -24,24 +41,30 @@ export function AppSwitch({
         pressed && !disabled && styles.pressed,
       ]}
     >
-      <View style={[styles.thumb, value && styles.thumbActive]} />
+      <Animated.View
+        style={[
+          styles.thumb,
+          value && styles.thumbActive,
+          { transform: [{ translateX }] },
+        ]}
+      />
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   track: {
-    width: 52,
-    height: 32,
+    width: 44,
+    height: 26,
     borderRadius: 999,
-    padding: 4,
-    justifyContent: "flex-start",
+    padding: 3,
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: "#2C3552",
     borderWidth: 1,
     borderColor: "rgba(120, 136, 177, 0.24)",
   },
   trackActive: {
-    justifyContent: "flex-end",
     backgroundColor: "#4B69FF",
     borderColor: "rgba(100, 127, 255, 0.52)",
   },
@@ -49,8 +72,8 @@ const styles = StyleSheet.create({
     opacity: 0.56,
   },
   thumb: {
-    width: 22,
-    height: 22,
+    width: 18,
+    height: 18,
     borderRadius: 999,
     backgroundColor: "#FFFFFF",
   },

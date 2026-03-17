@@ -8,7 +8,7 @@ export const theme = {
     grayDark: "#1E293B",
     grayLight: "#94A3B8",
 
-    backgroundCard: "rgba(30, 41, 59, 0.40)",
+    backgroundCard: "rgba(30, 41, 59, 0.6)",
 
     red: "#F43F5E",
     redSoft: "rgba(244, 63, 94, 0.20)",
@@ -18,6 +18,8 @@ export const theme = {
     yellowSoft: "rgba(245, 158, 11, 0.20)",
     green: "#10B981",
     greenSoft: "rgba(16, 185, 129, 0.20)",
+
+    divider: "rgba(88, 104, 149, 0.12)",
   },
   spacing: {
     xs: 6,

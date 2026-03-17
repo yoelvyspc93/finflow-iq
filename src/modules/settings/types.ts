@@ -5,6 +5,7 @@ export type AlertLevel = "conservative" | "normal" | "aggressive";
 export type DateFormat = "DD/MM/YYYY" | "MM/DD/YYYY" | "YYYY-MM-DD";
 export type PrimaryCurrency = "USD" | "CUP";
 export type ThemeMode = "light" | "dark" | "auto";
+export type SessionTimeoutMinutes = 0 | 5 | 10 | 20 | 30;
 export type WeeklySummaryDay =
   | "monday"
   | "tuesday"
@@ -27,6 +28,7 @@ export type AppSettings = {
   primaryCurrency: PrimaryCurrency;
   salaryReferenceAmount: number | null;
   savingsGoalPercent: number;
+  sessionTimeoutMinutes: SessionTimeoutMinutes;
   subscriptionAlertDays: number;
   theme: ThemeMode;
   updatedAt: string;
@@ -45,6 +47,7 @@ export type SettingsUpdateInput = Pick<
   | "primary_currency"
   | "salary_reference_amount"
   | "savings_goal_percent"
+  | "session_timeout_minutes"
   | "subscription_alert_days"
   | "theme"
   | "usd_cup_rate"
@@ -63,6 +66,7 @@ export function mapSettings(row: SettingsRow): AppSettings {
     primaryCurrency: row.primary_currency as PrimaryCurrency,
     salaryReferenceAmount: row.salary_reference_amount,
     savingsGoalPercent: row.savings_goal_percent,
+    sessionTimeoutMinutes: row.session_timeout_minutes as SessionTimeoutMinutes,
     subscriptionAlertDays: row.subscription_alert_days,
     theme: row.theme as ThemeMode,
     updatedAt: row.updated_at,
@@ -86,6 +90,7 @@ export function createMockSettings(userId: string): AppSettings {
     primaryCurrency: "USD",
     salaryReferenceAmount: null,
     savingsGoalPercent: 20,
+    sessionTimeoutMinutes: 5,
     subscriptionAlertDays: 3,
     theme: "dark",
     updatedAt: now,

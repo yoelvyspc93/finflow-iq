@@ -5,11 +5,16 @@ export function selectActiveWallet(
   wallets: Wallet[],
   selectedWalletId: string | null,
 ) {
-  if (!selectedWalletId) {
-    return null;
+  if (selectedWalletId) {
+    const selected = wallets.find(
+      (wallet) => wallet.id === selectedWalletId && wallet.isActive,
+    );
+    if (selected) {
+      return selected;
+    }
   }
 
-  return wallets.find((wallet) => wallet.id === selectedWalletId) ?? null;
+  return wallets.find((wallet) => wallet.isActive) ?? null;
 }
 
 export function selectActiveWalletBalance(

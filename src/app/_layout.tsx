@@ -8,15 +8,23 @@ import { AppDataBootstrap } from "@/components/app/app-data-bootstrap";
 import { AuthBootstrap } from "@/components/auth/auth-bootstrap";
 import { LedgerBootstrap } from "@/components/ledger/ledger-bootstrap";
 import { SecurityBootstrap } from "@/components/security/security-bootstrap";
+import { SessionTimeoutGuard } from "@/components/security/session-timeout-guard";
 import { DecorativeBackground } from "@/components/ui/decorative-background";
+import { useSecurityStore } from "@/stores/security-store";
 
 export default function RootLayout() {
+  const setLastActivityAt = useSecurityStore((state) => state.setLastActivityAt);
+
   return (
     <GestureHandlerRootView style={styles.root}>
       <BottomSheetModalProvider>
-        <View style={styles.contentRoot}>
+        <View
+          onTouchStart={() => setLastActivityAt()}
+          style={styles.contentRoot}
+        >
           <AuthBootstrap />
           <SecurityBootstrap />
+          <SessionTimeoutGuard />
           <AppDataBootstrap />
           <LedgerBootstrap />
           <DecorativeBackground />

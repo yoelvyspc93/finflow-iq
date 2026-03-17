@@ -303,30 +303,6 @@ export type Database = {
           },
         ]
       }
-      profiles: {
-        Row: {
-          created_at: string
-          first_name: string
-          last_name: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          first_name: string
-          last_name: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          first_name?: string
-          last_name?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
       income_sources: {
         Row: {
           created_at: string
@@ -441,6 +417,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          first_name: string
+          last_name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          first_name: string
+          last_name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          first_name?: string
+          last_name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       recurring_expenses: {
         Row: {
@@ -661,6 +661,7 @@ export type Database = {
           primary_currency: string
           salary_reference_amount: number | null
           savings_goal_percent: number
+          session_timeout_minutes: number
           subscription_alert_days: number
           theme: string
           updated_at: string
@@ -679,6 +680,7 @@ export type Database = {
           primary_currency?: string
           salary_reference_amount?: number | null
           savings_goal_percent?: number
+          session_timeout_minutes?: number
           subscription_alert_days?: number
           theme?: string
           updated_at?: string
@@ -697,6 +699,7 @@ export type Database = {
           primary_currency?: string
           salary_reference_amount?: number | null
           savings_goal_percent?: number
+          session_timeout_minutes?: number
           subscription_alert_days?: number
           theme?: string
           updated_at?: string
@@ -848,6 +851,10 @@ export type Database = {
       }
       bootstrap_user_defaults: {
         Args: { target_user_id: string }
+        Returns: undefined
+      }
+      bootstrap_user_profile: {
+        Args: { target_metadata: Json; target_user_id: string }
         Returns: undefined
       }
       create_adjustment: {

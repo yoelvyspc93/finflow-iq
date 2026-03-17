@@ -98,6 +98,7 @@ export default function DashboardScreen() {
   const commitmentOverview = useCommitmentStore((state) => state.overview);
   const refreshSalaryData = useSalaryStore((state) => state.refreshSalaryData);
   const salaryOverview = useSalaryStore((state) => state.overview);
+  const visibleWallets = wallets.filter((wallet) => wallet.isActive);
 
   const activeWallet = selectActiveWallet(wallets, selectedWalletId);
 
@@ -185,24 +186,24 @@ export default function DashboardScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.sectionTitle}>Your Wallets</Text>
+        <Text style={styles.sectionTitle}>Tus wallets</Text>
 
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.walletsRow}
         >
-          {wallets.length > 0 ? (
-            wallets.map((wallet, index) => {
+          {visibleWallets.length > 0 ? (
+            visibleWallets.map((wallet, index) => {
               const isActive = wallet.id === selectedWalletId;
-
+              const min = visibleWallets.length === 1 ? viewportWidth : viewportWidth * 0.85
               return (
                 <Pressable
                   key={wallet.id}
                   onPress={() => setSelectedWalletId(wallet.id)}
                   style={({ pressed }) => [
                     styles.walletCard,
-                    { width: Math.min(viewportWidth * 0.8, 320) },
+                    { width: min - 32 },
                     isActive ? styles.walletCardActive : styles.walletCardMuted,
                     !isActive && index % 2 === 1 && styles.walletCardMutedAlt,
                     pressed && styles.pressed,
@@ -237,37 +238,37 @@ export default function DashboardScreen() {
           )}
         </ScrollView>
 
-        <Text style={styles.sectionTitle}>Active Wallet Details</Text>
+        <Text style={styles.sectionTitle}>Detalle de wallet activa</Text>
 
         <View style={styles.metricStack}>
           <MetricCard
             amount={`${formatMoney(activeWallet?.balance ?? 0)} ${activeWallet?.currency ?? null}`}
             icon="bank"
             iconTone="green"
-            label="Available Balance"
+            label="Balance disponible"
           />
           <MetricCard
             amount={`${formatMoney(committedAmount)} ${activeWallet?.currency ?? null}`}
             icon="lock"
             iconTone="blue"
-            label="Committed Funds"
+            label="Fondos comprometidos"
           />
           <MetricCard
             amount={`${formatMoney(assignableAmount)} ${activeWallet?.currency ?? null}`}
             icon="wallet"
             iconTone="orange"
-            label="Assignable Amount"
+            label="Monto asignable"
           />
         </View>
 
         <View style={styles.sectionRow}>
-          <Text style={styles.sectionTitle}>Salary Outlook</Text>
-          <Text style={styles.badge}>PENDING</Text>
+          <Text style={styles.sectionTitle}>Estado salarial</Text>
+          <Text style={styles.badge}>PENDIENTE</Text>
         </View>
 
         <View style={styles.salaryCard}>
           <View style={styles.salaryMain}>
-            <Text style={styles.salaryLabel}>Remaining to receive</Text>
+            <Text style={styles.salaryLabel}>Pendiente por recibir</Text>
             <Text style={styles.salaryValue}>
               {formatMoney(effectiveSalaryOverview?.pendingTotal ?? 0)} {activeWallet?.currency ?? settings?.primaryCurrency ?? "USD"}
             </Text>
@@ -290,21 +291,21 @@ export default function DashboardScreen() {
           </View>
 
           <View style={styles.salaryAside}>
-            <Text style={styles.salaryLabel}>Months left</Text>
+            <Text style={styles.salaryLabel}>Meses pendientes</Text>
             <Text style={styles.salaryMonths}>
               {effectiveSalaryOverview?.monthsWithoutPayment ?? 0}
             </Text>
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>Financial Health</Text>
+        <Text style={styles.sectionTitle}>Salud financiera</Text>
 
         <View style={styles.healthCard}>
           <View style={styles.ringTrack}>
             <View style={[styles.ringArc, { transform: [{ rotate: ringRotation }] }]} />
             <View style={styles.ringInner}>
               <Text style={styles.healthValue}>{healthScore}</Text>
-              <Text style={styles.healthMeta}>SCORE / 100</Text>
+              <Text style={styles.healthMeta}>PUNTAJE / 100</Text>
             </View>
           </View>
         </View>
@@ -314,35 +315,40 @@ export default function DashboardScreen() {
             <Ionicons color="#5E7BFF" name="sparkles-outline" size={15} />
           </View>
           <View style={styles.tipBody}>
-            <Text style={styles.tipEyebrow}>AI TIP</Text>
+            <Text style={styles.tipEyebrow}>TIP IA</Text>
             <Text style={styles.tipText}>
-              Reducing your dining expenses by 10% this month could boost your
-              score by 4 points. Try our budget automation!
+              Reducir 10% los gastos de comida este mes puede mejorar tu
+              puntaje en 4 puntos. Prueba automatizar tu presupuesto.
             </Text>
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>Quick Insights</Text>
+        <View style={styles.sectionRow}>
+          <Text style={styles.sectionTitle}>Insights rapidos</Text>
+          <Pressable onPress={() => router.push("/insights")} style={({ pressed }) => [styles.insightLink, pressed && styles.pressed]}>
+            <Text style={styles.insightLinkText}>Ver todos</Text>
+          </Pressable>
+        </View>
 
         <View style={styles.insightGrid}>
           <View style={styles.insightCard}>
             <View style={styles.insightIconBlue}>
               <Ionicons color="#6C83FF" name="trending-up-outline" size={15} />
             </View>
-            <Text style={styles.insightLabel}>Investment Growth</Text>
+            <Text style={styles.insightLabel}>Crecimiento</Text>
             <Text style={styles.insightValue}>
               +{liquidityRatio * 100 > 0 ? Math.round(liquidityRatio * 12.4) : 0}.4%
             </Text>
-            <Text style={styles.insightMetaPositive}>▲ $1,200 this month</Text>
+            <Text style={styles.insightMetaPositive}>+ $1,200 este mes</Text>
           </View>
 
           <View style={styles.insightCard}>
             <View style={styles.insightIconRed}>
               <Ionicons color="#FF6B6D" name="warning-outline" size={15} />
             </View>
-            <Text style={styles.insightLabel}>Budget Alert</Text>
+            <Text style={styles.insightLabel}>Alerta de presupuesto</Text>
             <Text style={styles.insightValue}>{budgetAlert}%</Text>
-            <Text style={styles.insightMetaNegative}>Entertainment limit</Text>
+            <Text style={styles.insightMetaNegative}>Limite de ocio</Text>
           </View>
         </View>
       </ScrollView>
@@ -370,6 +376,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: 12,
+  },
+  insightLink: {
+    minHeight: 28,
+    paddingHorizontal: 10,
+    borderRadius: theme.radii.pill,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(84, 101, 146, 0.25)",
+    backgroundColor: "rgba(24, 30, 51, 0.96)",
+  },
+  insightLinkText: {
+    color: theme.colors.white,
+    fontSize: 11,
+    fontWeight: "700",
   },
   walletsRow: {
     gap: 12,
@@ -647,3 +668,4 @@ const styles = StyleSheet.create({
     opacity: 0.88,
   },
 });
+
