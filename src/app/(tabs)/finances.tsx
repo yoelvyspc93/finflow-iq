@@ -56,7 +56,18 @@ function groupLabel(value: string) {
   const label = date.toLocaleDateString("es-ES", { day: "2-digit", month: "long" }).toUpperCase();
   return value === now ? `HOY, ${label}` : value === yesterday ? `AYER, ${label}` : label;
 }
-const periodLabel = (value: string) => new Date(`${value}T00:00:00.000Z`).toLocaleDateString("es-ES", { month: "long", year: "numeric" });
+const periodLabel = (value: string) => {
+  const [year, rawMonth, rawDay] = value.slice(0, 10).split("-");
+  const monthIndex = Math.max(0, Number(rawMonth) - 1);
+  const day = Number(rawDay || "1");
+  const safeDate = new Date(Date.UTC(Number(year), monthIndex, day));
+
+  return safeDate.toLocaleDateString("es-ES", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+};
 
 export default function FinancesScreen() {
   const router = useRouter();

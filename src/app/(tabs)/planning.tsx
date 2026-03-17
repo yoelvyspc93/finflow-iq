@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 
@@ -23,12 +24,16 @@ import { DecorativeBackground } from "@/components/ui/decorative-background";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { ScreenHeader } from "@/components/ui/screen-header";
 import { SegmentedControl } from "@/components/ui/segmented-control";
+import { createRecurringExpense } from "@/modules/commitments/service";
+import { createLocalRecurringExpense } from "@/modules/commitments/types";
 import { addGoalContribution, createGoal } from "@/modules/goals/service";
 import {
   createLocalGoal,
   createLocalGoalContribution,
 } from "@/modules/goals/types";
 import { createLocalLedgerEntry } from "@/modules/ledger/types";
+import { createBudgetProvision } from "@/modules/provisions/service";
+import { createLocalBudgetProvision } from "@/modules/provisions/types";
 import { createWish } from "@/modules/wishes/service";
 import { createLocalWish } from "@/modules/wishes/types";
 import { useAppStore } from "@/stores/app-store";
@@ -39,16 +44,31 @@ import { usePlanningStore } from "@/stores/planning-store";
 
 type PlanningView = "desires" | "commitments" | "insights";
 type DesireFilter = "all" | "bought" | "pending";
+type CommitmentDraft = {
+  amount: string;
+  day: string;
+  kind: "fixed" | "event";
+  month: string;
+  name: string;
+  notes: string;
+  walletId: string;
+};
 
 function dateLabel(value: string | null, month = false) {
   if (!value) {
     return "--";
   }
 
-  return new Date(`${value}T00:00:00.000Z`).toLocaleDateString("en-US", {
+  const [year, rawMonth, rawDay] = value.slice(0, 10).split("-");
+  const monthIndex = Math.max(0, Number(rawMonth) - 1);
+  const day = Number(rawDay || "1");
+  const safeDate = new Date(Date.UTC(Number(year), monthIndex, day));
+
+  return safeDate.toLocaleDateString("en-US", {
     day: month ? undefined : "2-digit",
     month: "short",
     year: month ? "numeric" : undefined,
+    timeZone: "UTC",
   });
 }
 
@@ -95,6 +115,18 @@ export default function PlanningScreen() {
   });
   const [sheetError, setSheetError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [commitmentDraft, setCommitmentDraft] = useState<CommitmentDraft>({
+    amount: "",
+    day: String(new Date().getUTCDate()).padStart(2, "0"),
+    kind: "fixed",
+    month: new Date().toISOString().slice(0, 7),
+    name: "",
+    notes: "",
+    walletId: "",
+  });
+  const [commitmentOpen, setCommitmentOpen] = useState(false);
+  const [commitmentError, setCommitmentError] = useState<string | null>(null);
+  const [isCommitmentSubmitting, setIsCommitmentSubmitting] = useState(false);
 
   const isDevBypass = useAuthStore((state) => state.isDevBypass);
   const user = useAuthStore((state) => state.user);
@@ -122,6 +154,12 @@ export default function PlanningScreen() {
   const refreshCommitmentData = useCommitmentStore((state) => state.refreshCommitmentData);
   const recurringExpenses = useCommitmentStore((state) => state.recurringExpenses);
   const budgetProvisions = useCommitmentStore((state) => state.budgetProvisions);
+  const addLocalRecurringExpense = useCommitmentStore(
+    (state) => state.addLocalRecurringExpense,
+  );
+  const addLocalBudgetProvision = useCommitmentStore(
+    (state) => state.addLocalBudgetProvision,
+  );
   const currentMonth = `${new Date().toISOString().slice(0, 7)}-01`;
 
   useEffect(() => {
@@ -254,6 +292,25 @@ export default function PlanningScreen() {
     });
     setPickerOpen(false);
     setSheet("wish");
+  }
+
+  function openCommitmentSheet() {
+    setPickerOpen(false);
+    setCommitmentError(null);
+    setIsCommitmentSubmitting(false);
+    setCommitmentDraft({
+      amount: "",
+      day: String(new Date().getUTCDate()).padStart(2, "0"),
+      kind: "fixed",
+      month: new Date().toISOString().slice(0, 7),
+      name: "",
+      notes: "",
+      walletId:
+        selectedWalletId ??
+        wallets.find((wallet) => wallet.isActive)?.id ??
+        "",
+    });
+    setCommitmentOpen(true);
   }
 
   async function refreshAll() {
@@ -446,6 +503,118 @@ export default function PlanningScreen() {
     }
   }
 
+  async function handleCreateCommitment() {
+    if (!user?.id) {
+      setCommitmentError("No hay sesion activa.");
+      return;
+    }
+
+    const amount = Number(commitmentDraft.amount);
+    const billingDay = Number(commitmentDraft.day);
+    const targetMonth = `${commitmentDraft.month.slice(0, 7)}-01`;
+
+    if (
+      !commitmentDraft.name.trim() ||
+      Number.isNaN(amount) ||
+      amount <= 0 ||
+      !commitmentDraft.walletId
+    ) {
+      setCommitmentError("Completa nombre, monto y wallet.");
+      return;
+    }
+
+    setIsCommitmentSubmitting(true);
+    setCommitmentError(null);
+
+    try {
+      if (commitmentDraft.kind === "fixed") {
+        if (
+          Number.isNaN(billingDay) ||
+          billingDay < 1 ||
+          billingDay > 31
+        ) {
+          setCommitmentError("El dia de cobro debe ser entre 1 y 31.");
+          setIsCommitmentSubmitting(false);
+          return;
+        }
+
+        if (isDevBypass) {
+          addLocalRecurringExpense(
+            createLocalRecurringExpense({
+              amount,
+              billingDay,
+              categoryId: null,
+              frequency: "monthly",
+              name: commitmentDraft.name,
+              notes: commitmentDraft.notes || null,
+              type: "fixed_expense",
+              userId: user.id,
+              walletId: commitmentDraft.walletId,
+            }),
+          );
+        } else {
+          await createRecurringExpense({
+            amount,
+            billingDay,
+            categoryId: null,
+            frequency: "monthly",
+            name: commitmentDraft.name,
+            notes: commitmentDraft.notes || undefined,
+            type: "fixed_expense",
+            walletId: commitmentDraft.walletId,
+          });
+        }
+      } else {
+        if (!/^\d{4}-\d{2}-01$/.test(targetMonth)) {
+          setCommitmentError("El mes debe tener formato YYYY-MM.");
+          setIsCommitmentSubmitting(false);
+          return;
+        }
+
+        if (isDevBypass) {
+          addLocalBudgetProvision(
+            createLocalBudgetProvision({
+              amount,
+              categoryId: null,
+              month: targetMonth,
+              name: commitmentDraft.name,
+              notes: commitmentDraft.notes || null,
+              recurrence: "once",
+              userId: user.id,
+              walletId: commitmentDraft.walletId,
+            }),
+          );
+        } else {
+          await createBudgetProvision({
+            amount,
+            categoryId: null,
+            month: targetMonth,
+            name: commitmentDraft.name,
+            notes: commitmentDraft.notes || undefined,
+            recurrence: "once",
+            walletId: commitmentDraft.walletId,
+          });
+        }
+      }
+
+      await refreshCommitmentData({
+        isDevBypass,
+        month: currentMonth,
+        userId: user.id,
+        walletId: selectedWalletId ?? commitmentDraft.walletId,
+      });
+      setCommitmentOpen(false);
+      setIsCommitmentSubmitting(false);
+    } catch (submitError) {
+      setCommitmentError(
+        submitError instanceof Error
+          ? submitError.message
+          : "No se pudo crear el compromiso.",
+      );
+      setIsCommitmentSubmitting(false);
+    }
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <DecorativeBackground />
@@ -465,7 +634,6 @@ export default function PlanningScreen() {
           options={[
             { label: "Deseos", value: "desires" },
             { label: "Compromisos", value: "commitments" },
-            { label: "Insights", value: "insights" },
           ]}
           value={view}
         />
@@ -510,20 +678,20 @@ export default function PlanningScreen() {
                   {item.wish.isPurchased
                     ? "COMPRADO"
                     : item.confidenceLevel === "high"
-                      ? "IA: High Confidence"
+                      ? "IA: Alta confianza"
                       : item.confidenceLevel === "medium"
-                        ? "IA: Medium"
+                        ? "IA: Media"
                         : item.confidenceLevel === "low"
-                          ? "IA: Low"
-                          : "IA: Risky"}
+                          ? "IA: Baja"
+                          : "IA: Riesgo"}
                 </Text>
                 <Text style={styles.bodyText}>{item.wish.notes ?? item.confidenceReason}</Text>
                 <Text style={styles.softText}>
                   {item.wish.isPurchased
-                    ? "Successfully budgeted in June"
-                    : `Requires ${item.monthsUntilPurchase ?? "more"} ${
-                        item.monthsUntilPurchase === 1 ? "month" : "months"
-                      } of saving`}
+                    ? "Presupuestado correctamente"
+                    : `Requiere ${item.monthsUntilPurchase ?? "mas"} ${
+                        item.monthsUntilPurchase === 1 ? "mes" : "meses"
+                      } de ahorro`}
                 </Text>
                 <View style={styles.rowBetween}>
                   <View style={styles.inlineRow}>
@@ -714,19 +882,174 @@ export default function PlanningScreen() {
           Todas las altas salen por BottomSheet para mantener el flujo limpio.
         </Text>
         <View style={styles.sheetGrid}>
-          <Pressable onPress={openGoalSheet} style={({ pressed }) => [styles.sheetAction, pressed && styles.pressed]}>
-            <Ionicons color="#6C83FF" name="flag-outline" size={20} />
-            <Text style={styles.sheetActionText}>Nueva Meta</Text>
-          </Pressable>
-          <Pressable onPress={() => openContributionSheet()} style={({ pressed }) => [styles.sheetAction, pressed && styles.pressed]}>
-            <Feather color="#2AD596" name="plus" size={20} />
-            <Text style={styles.sheetActionText}>Registrar Aporte</Text>
-          </Pressable>
           <Pressable onPress={openWishSheet} style={({ pressed }) => [styles.sheetAction, pressed && styles.pressed]}>
             <Ionicons color="#F59E0B" name="sparkles-outline" size={20} />
-            <Text style={styles.sheetActionText}>Nuevo Deseo</Text>
+            <Text style={styles.sheetActionText}>Adicionar deseo</Text>
+          </Pressable>
+          <Pressable onPress={openCommitmentSheet} style={({ pressed }) => [styles.sheetAction, pressed && styles.pressed]}>
+            <Ionicons color="#6C83FF" name="calendar-outline" size={20} />
+            <Text style={styles.sheetActionText}>Adicionar compromiso</Text>
           </Pressable>
         </View>
+      </BottomSheet>
+
+      <BottomSheet onClose={() => setCommitmentOpen(false)} visible={commitmentOpen}>
+        <Text style={styles.sheetTitle}>Adicionar compromiso</Text>
+        <Text style={styles.softText}>
+          Puedes crear un fijo mensual o un evento especial futuro.
+        </Text>
+
+        <Text style={styles.label}>TIPO</Text>
+        <View style={styles.chipRow}>
+          <Pressable
+            onPress={() =>
+              setCommitmentDraft((current) => ({ ...current, kind: "fixed" }))
+            }
+            style={[
+              styles.chip,
+              commitmentDraft.kind === "fixed" && styles.chipActive,
+            ]}
+          >
+            <Text
+              style={[
+                styles.chipText,
+                commitmentDraft.kind === "fixed" && styles.chipTextActive,
+              ]}
+            >
+              Fijo mensual
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() =>
+              setCommitmentDraft((current) => ({ ...current, kind: "event" }))
+            }
+            style={[
+              styles.chip,
+              commitmentDraft.kind === "event" && styles.chipActive,
+            ]}
+          >
+            <Text
+              style={[
+                styles.chipText,
+                commitmentDraft.kind === "event" && styles.chipTextActive,
+              ]}
+            >
+              Evento
+            </Text>
+          </Pressable>
+        </View>
+
+        <Text style={styles.label}>NOMBRE</Text>
+        <TextInput
+          onChangeText={(value) =>
+            setCommitmentDraft((current) => ({ ...current, name: value }))
+          }
+          placeholder="Ej: Renta casa"
+          placeholderTextColor="#7C89A8"
+          style={styles.input}
+          value={commitmentDraft.name}
+        />
+
+        <Text style={styles.label}>MONTO</Text>
+        <TextInput
+          keyboardType="decimal-pad"
+          onChangeText={(value) =>
+            setCommitmentDraft((current) => ({ ...current, amount: value }))
+          }
+          placeholder="120"
+          placeholderTextColor="#7C89A8"
+          style={styles.input}
+          value={commitmentDraft.amount}
+        />
+
+        <Text style={styles.label}>WALLET</Text>
+        <View style={styles.chipRow}>
+          {wallets
+            .filter((wallet) => wallet.isActive)
+            .map((wallet) => (
+              <Pressable
+                key={wallet.id}
+                onPress={() =>
+                  setCommitmentDraft((current) => ({
+                    ...current,
+                    walletId: wallet.id,
+                  }))
+                }
+                style={[
+                  styles.chip,
+                  commitmentDraft.walletId === wallet.id && styles.chipActive,
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.chipText,
+                    commitmentDraft.walletId === wallet.id && styles.chipTextActive,
+                  ]}
+                >
+                  {wallet.name}
+                </Text>
+              </Pressable>
+            ))}
+        </View>
+
+        {commitmentDraft.kind === "fixed" ? (
+          <>
+            <Text style={styles.label}>DIA DE COBRO (1-31)</Text>
+            <TextInput
+              keyboardType="number-pad"
+              onChangeText={(value) =>
+                setCommitmentDraft((current) => ({ ...current, day: value }))
+              }
+              placeholder="08"
+              placeholderTextColor="#7C89A8"
+              style={styles.input}
+              value={commitmentDraft.day}
+            />
+          </>
+        ) : (
+          <>
+            <Text style={styles.label}>MES (YYYY-MM)</Text>
+            <TextInput
+              onChangeText={(value) =>
+                setCommitmentDraft((current) => ({ ...current, month: value }))
+              }
+              placeholder="2026-08"
+              placeholderTextColor="#7C89A8"
+              style={styles.input}
+              value={commitmentDraft.month}
+            />
+          </>
+        )}
+
+        <Text style={styles.label}>NOTA</Text>
+        <TextInput
+          multiline
+          onChangeText={(value) =>
+            setCommitmentDraft((current) => ({ ...current, notes: value }))
+          }
+          placeholder="Opcional"
+          placeholderTextColor="#7C89A8"
+          style={[styles.input, styles.textArea]}
+          value={commitmentDraft.notes}
+        />
+
+        {commitmentError ? <Text style={styles.errorText}>{commitmentError}</Text> : null}
+
+        <Pressable
+          disabled={isCommitmentSubmitting}
+          onPress={() => void handleCreateCommitment()}
+          style={({ pressed }) => [
+            styles.submitAction,
+            pressed && !isCommitmentSubmitting && styles.pressed,
+            isCommitmentSubmitting && styles.submitActionDisabled,
+          ]}
+        >
+          {isCommitmentSubmitting ? (
+            <ActivityIndicator color="#09111E" />
+          ) : (
+            <Text style={styles.submitActionText}>Guardar compromiso</Text>
+          )}
+        </Pressable>
       </BottomSheet>
 
       <PlanningSheetStack
@@ -810,6 +1133,43 @@ const styles = StyleSheet.create({
   },
   tipBody: { flex: 1, gap: 6 },
   tipTitle: { color: "#4F6DFF", fontSize: 11, fontWeight: "900" },
+  label: { color: "#8A96B3", fontSize: 11, fontWeight: "800", marginTop: 10, marginBottom: 6 },
+  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  chip: {
+    minHeight: 36,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(92, 108, 149, 0.24)",
+    backgroundColor: "#192035",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 12,
+  },
+  chipActive: { borderColor: "#4B69FF", backgroundColor: "rgba(75, 105, 255, 0.16)" },
+  chipText: { color: "#8A96B3", fontSize: 12, fontWeight: "700" },
+  chipTextActive: { color: "#F8FAFC" },
+  input: {
+    minHeight: 42,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(92, 108, 149, 0.24)",
+    backgroundColor: "#192035",
+    color: "#D9E3F6",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  textArea: { minHeight: 88, textAlignVertical: "top" },
+  errorText: { color: "#F7A9AA", fontSize: 13, lineHeight: 20, marginTop: 10 },
+  submitAction: {
+    minHeight: 50,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#4664FF",
+    marginTop: 16,
+  },
+  submitActionDisabled: { opacity: 0.75 },
+  submitActionText: { color: "#FFFFFF", fontSize: 14, fontWeight: "900" },
   track: { width: 72, height: 4, borderRadius: 999, backgroundColor: "rgba(92, 103, 135, 0.34)", overflow: "hidden" },
   trackLong: { height: 5, borderRadius: 999, backgroundColor: "rgba(92, 103, 135, 0.34)", overflow: "hidden" },
   trackFill: { height: "100%", borderRadius: 999, backgroundColor: "#4B69FF" },
