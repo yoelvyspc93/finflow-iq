@@ -4,8 +4,9 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
 import { DecorativeBackground } from "@/components/ui/decorative-background";
+import { FilterList } from "@/components/ui/filter-list";
 import { ScreenHeader } from "@/components/ui/screen-header";
-import { SegmentedControl } from "@/components/ui/segmented-control";
+import { theme } from "@/utils/theme";
 
 const filters = [
   { label: "Todos", value: "all" },
@@ -66,8 +67,7 @@ export default function NotificationsScreen() {
       />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        <SegmentedControl
-          compact
+        <FilterList
           onChange={() => undefined}
           options={filters.map((filter) => ({ ...filter }))}
           value="all"
@@ -123,55 +123,55 @@ export default function NotificationsScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#0B1020" },
-  content: { paddingHorizontal: 14, paddingTop: 12, paddingBottom: 104, gap: 12 },
+  safeArea: { flex: 1, backgroundColor: theme.colors.background },
+  content: {
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.lg,
+    gap: theme.spacing.md
+  },
   groupHeader: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 12,
+    gap: theme.spacing.sm,
     marginTop: 10,
   },
   groupTitle: {
-    color: "#7C89A8",
+    color: theme.colors.grayLight,
     fontSize: 11,
-    fontWeight: "900",
+    fontWeight: "700",
     letterSpacing: 1.6,
   },
   groupTitleSpaced: { marginTop: 8 },
-  groupAction: { color: "#4B69FF", fontSize: 11, fontWeight: "800" },
+  groupAction: { color: theme.colors.primary, fontSize: 11, fontWeight: "700" },
   card: {
     flexDirection: "row",
     gap: 12,
-    borderRadius: 16,
-    backgroundColor: "rgba(21, 28, 47, 0.96)",
+    borderRadius: theme.radii.sm,
+    backgroundColor: theme.colors.backgroundCard,
     borderWidth: 1,
-    borderColor: "rgba(88, 104, 149, 0.14)",
-    paddingHorizontal: 14,
-    paddingVertical: 14,
+    borderColor: theme.colors.divider,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
   },
   iconWrap: {
     width: 40,
     height: 40,
-    borderRadius: 10,
+    borderRadius: theme.radii.sm,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 2,
+    marginTop: theme.spacing.xs,
   },
   cardBody: { flex: 1, gap: 6 },
   rowTop: { flexDirection: "row", justifyContent: "space-between", gap: 12 },
-  cardTitle: { flex: 1, color: "#F8FAFC", fontSize: 16, fontWeight: "800" },
+  cardTitle: { flex: 1, color: theme.colors.white, fontSize: 16, fontWeight: "700" },
   timeWrap: { flexDirection: "row", alignItems: "center", gap: 6 },
-  timeText: { color: "#8A96B3", fontSize: 11, fontWeight: "700" },
+  timeText: { color: theme.colors.grayLight, fontSize: 11, fontWeight: "700" },
   unreadDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-    backgroundColor: "#4B69FF",
-    shadowColor: "#4B69FF",
-    shadowOpacity: 0.55,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 0 },
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: theme.colors.primary,
   },
-  cardText: { color: "#AAB5D0", fontSize: 14, lineHeight: 21 },
+  cardText: { color: theme.colors.grayLight, fontSize: 14, lineHeight: 21 },
 });
