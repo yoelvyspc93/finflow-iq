@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   Pressable,
@@ -8,10 +8,10 @@ import {
   Text,
   TextInput,
   View,
-} from "react-native";
+} from 'react-native'
 
-import { Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
+import { useLocalSearchParams, useRouter } from 'expo-router'
 
 import {
   PlanningSheetStack,
@@ -19,160 +19,195 @@ import {
   type GoalDraft,
   type PlanningSheetKind,
   type WishDraft,
-} from "@/components/planning/planning-sheet-stack";
-import { DecorativeBackground } from "@/components/ui/decorative-background";
-import { BottomSheet } from "@/components/ui/bottom-sheet";
-import { ScreenHeader } from "@/components/ui/screen-header";
-import { SegmentedControl } from "@/components/ui/segmented-control";
-import { createRecurringExpense } from "@/modules/commitments/service";
-import { createLocalRecurringExpense } from "@/modules/commitments/types";
-import { addGoalContribution, createGoal } from "@/modules/goals/service";
+} from '@/components/planning/planning-sheet-stack'
+import { BottomSheet } from '@/components/ui/bottom-sheet'
+import { DecorativeBackground } from '@/components/ui/decorative-background'
+import { FilterList } from '@/components/ui/filter-list'
+import { ScreenHeader } from '@/components/ui/screen-header'
+import { SegmentedControl } from '@/components/ui/segmented-control'
+import { createRecurringExpense } from '@/modules/commitments/service'
+import { createLocalRecurringExpense } from '@/modules/commitments/types'
+import { addGoalContribution, createGoal } from '@/modules/goals/service'
 import {
   createLocalGoal,
   createLocalGoalContribution,
-} from "@/modules/goals/types";
-import { createLocalLedgerEntry } from "@/modules/ledger/types";
-import { createBudgetProvision } from "@/modules/provisions/service";
-import { createLocalBudgetProvision } from "@/modules/provisions/types";
-import { createWish } from "@/modules/wishes/service";
-import { createLocalWish } from "@/modules/wishes/types";
-import { useAppStore } from "@/stores/app-store";
-import { useAuthStore } from "@/stores/auth-store";
-import { useCommitmentStore } from "@/stores/commitment-store";
-import { useLedgerStore } from "@/stores/ledger-store";
-import { usePlanningStore } from "@/stores/planning-store";
+} from '@/modules/goals/types'
+import { createLocalLedgerEntry } from '@/modules/ledger/types'
+import { createBudgetProvision } from '@/modules/provisions/service'
+import { createLocalBudgetProvision } from '@/modules/provisions/types'
+import { createWish } from '@/modules/wishes/service'
+import { createLocalWish } from '@/modules/wishes/types'
+import { useAppStore } from '@/stores/app-store'
+import { useAuthStore } from '@/stores/auth-store'
+import { useCommitmentStore } from '@/stores/commitment-store'
+import { useLedgerStore } from '@/stores/ledger-store'
+import { usePlanningStore } from '@/stores/planning-store'
+import { theme } from '@/utils/theme'
 
-type PlanningView = "desires" | "commitments" | "insights";
-type DesireFilter = "all" | "bought" | "pending";
+type PlanningView = 'desires' | 'commitments' | 'insights'
+type DesireFilter = 'all' | 'bought' | 'pending'
 type CommitmentDraft = {
-  amount: string;
-  day: string;
-  kind: "fixed" | "event";
-  month: string;
-  name: string;
-  notes: string;
-  walletId: string;
-};
+  amount: string
+  day: string
+  kind: 'fixed' | 'event'
+  month: string
+  name: string
+  notes: string
+  walletId: string
+}
 
 function dateLabel(value: string | null, month = false) {
   if (!value) {
-    return "--";
+    return '--'
   }
 
-  const [year, rawMonth, rawDay] = value.slice(0, 10).split("-");
-  const monthIndex = Math.max(0, Number(rawMonth) - 1);
-  const day = Number(rawDay || "1");
-  const safeDate = new Date(Date.UTC(Number(year), monthIndex, day));
+  const [year, rawMonth, rawDay] = value.slice(0, 10).split('-')
+  const monthIndex = Math.max(0, Number(rawMonth) - 1)
+  const day = Number(rawDay || '1')
+  const safeDate = new Date(Date.UTC(Number(year), monthIndex, day))
 
-  return safeDate.toLocaleDateString("en-US", {
-    day: month ? undefined : "2-digit",
-    month: "short",
-    year: month ? "numeric" : undefined,
-    timeZone: "UTC",
-  });
+  return safeDate.toLocaleDateString('en-US', {
+    day: month ? undefined : '2-digit',
+    month: 'short',
+    year: month ? 'numeric' : undefined,
+    timeZone: 'UTC',
+  })
 }
 
 function tip(args: {
-  assignableAmount: number;
-  goalShortfall: number;
-  nextWishAmount: number | null;
+  assignableAmount: number
+  goalShortfall: number
+  nextWishAmount: number | null
 }) {
   if (args.assignableAmount > 0 && args.goalShortfall > 0) {
-    return `Tienes margen para mover ${args.assignableAmount.toFixed(0)} a metas sin tocar tu reserva.`;
+    return `Tienes margen para mover ${args.assignableAmount.toFixed(0)} a metas sin tocar tu reserva.`
   }
 
-  if (args.nextWishAmount !== null && args.assignableAmount >= args.nextWishAmount) {
-    return "Tu primera prioridad ya cabe en el dinero asignable actual.";
+  if (
+    args.nextWishAmount !== null &&
+    args.assignableAmount >= args.nextWishAmount
+  ) {
+    return 'Tu primera prioridad ya cabe en el dinero asignable actual.'
   }
 
-  return "Conviene mantener el foco en ahorro estable antes de subir nuevas prioridades.";
+  return 'Conviene mantener el foco en ahorro estable antes de subir nuevas prioridades.'
 }
 
 export default function PlanningScreen() {
-  const router = useRouter();
-  const [view, setView] = useState<PlanningView>("desires");
-  const [filter, setFilter] = useState<DesireFilter>("all");
-  const [sheet, setSheet] = useState<PlanningSheetKind>(null);
-  const [pickerOpen, setPickerOpen] = useState(false);
+  const router = useRouter()
+  const params = useLocalSearchParams<{ view?: string | string[] }>()
+  const lastHandledViewParam = useRef<string | undefined>(undefined)
+  const [view, setView] = useState<PlanningView>('desires')
+  const [filter, setFilter] = useState<DesireFilter>('all')
+  const [sheet, setSheet] = useState<PlanningSheetKind>(null)
+  const [pickerOpen, setPickerOpen] = useState(false)
   const [goalDraft, setGoalDraft] = useState<GoalDraft>({
-    deadline: "",
-    name: "",
-    targetAmount: "",
-    walletId: "",
-  });
-  const [contributionDraft, setContributionDraft] = useState<ContributionDraft>({
-    amount: "",
-    date: new Date().toISOString().slice(0, 10),
-    goalId: "",
-    note: "",
-  });
+    deadline: '',
+    name: '',
+    targetAmount: '',
+    walletId: '',
+  })
+  const [contributionDraft, setContributionDraft] = useState<ContributionDraft>(
+    {
+      amount: '',
+      date: new Date().toISOString().slice(0, 10),
+      goalId: '',
+      note: '',
+    },
+  )
   const [wishDraft, setWishDraft] = useState<WishDraft>({
-    amount: "",
-    name: "",
-    notes: "",
-    priority: "1",
-    walletId: "",
-  });
-  const [sheetError, setSheetError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+    amount: '',
+    name: '',
+    notes: '',
+    priority: '1',
+    walletId: '',
+  })
+  const [sheetError, setSheetError] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [commitmentDraft, setCommitmentDraft] = useState<CommitmentDraft>({
-    amount: "",
-    day: String(new Date().getUTCDate()).padStart(2, "0"),
-    kind: "fixed",
+    amount: '',
+    day: String(new Date().getUTCDate()).padStart(2, '0'),
+    kind: 'fixed',
     month: new Date().toISOString().slice(0, 7),
-    name: "",
-    notes: "",
-    walletId: "",
-  });
-  const [commitmentOpen, setCommitmentOpen] = useState(false);
-  const [commitmentError, setCommitmentError] = useState<string | null>(null);
-  const [isCommitmentSubmitting, setIsCommitmentSubmitting] = useState(false);
+    name: '',
+    notes: '',
+    walletId: '',
+  })
+  const [commitmentOpen, setCommitmentOpen] = useState(false)
+  const [commitmentError, setCommitmentError] = useState<string | null>(null)
+  const [isCommitmentSubmitting, setIsCommitmentSubmitting] = useState(false)
 
-  const isDevBypass = useAuthStore((state) => state.isDevBypass);
-  const user = useAuthStore((state) => state.user);
-  const settings = useAppStore((state) => state.settings);
-  const wallets = useAppStore((state) => state.wallets);
-  const selectedWalletId = useAppStore((state) => state.selectedWalletId);
-  const applyWalletBalanceDelta = useAppStore((state) => state.applyWalletBalanceDelta);
-  const refreshAppData = useAppStore((state) => state.refreshAppData);
-  const goalSnapshots = usePlanningStore((state) => state.goalSnapshots);
-  const wishProjections = usePlanningStore((state) => state.wishProjections);
-  const currentScore = usePlanningStore((state) => state.currentScore);
-  const recentScores = usePlanningStore((state) => state.recentScores);
-  const overview = usePlanningStore((state) => state.overview);
-  const error = usePlanningStore((state) => state.error);
-  const isLoading = usePlanningStore((state) => state.isLoading);
-  const isReady = usePlanningStore((state) => state.isReady);
-  const refreshPlanningData = usePlanningStore((state) => state.refreshPlanningData);
-  const addLocalGoal = usePlanningStore((state) => state.addLocalGoal);
+  const isDevBypass = useAuthStore((state) => state.isDevBypass)
+  const user = useAuthStore((state) => state.user)
+  const settings = useAppStore((state) => state.settings)
+  const wallets = useAppStore((state) => state.wallets)
+  const selectedWalletId = useAppStore((state) => state.selectedWalletId)
+  const applyWalletBalanceDelta = useAppStore(
+    (state) => state.applyWalletBalanceDelta,
+  )
+  const refreshAppData = useAppStore((state) => state.refreshAppData)
+  const goalSnapshots = usePlanningStore((state) => state.goalSnapshots)
+  const wishProjections = usePlanningStore((state) => state.wishProjections)
+  const currentScore = usePlanningStore((state) => state.currentScore)
+  const recentScores = usePlanningStore((state) => state.recentScores)
+  const overview = usePlanningStore((state) => state.overview)
+  const error = usePlanningStore((state) => state.error)
+  const isLoading = usePlanningStore((state) => state.isLoading)
+  const isReady = usePlanningStore((state) => state.isReady)
+  const refreshPlanningData = usePlanningStore(
+    (state) => state.refreshPlanningData,
+  )
+  const addLocalGoal = usePlanningStore((state) => state.addLocalGoal)
   const addLocalGoalContribution = usePlanningStore(
     (state) => state.addLocalGoalContribution,
-  );
-  const addLocalWish = usePlanningStore((state) => state.addLocalWish);
-  const addLocalEntry = useLedgerStore((state) => state.addLocalEntry);
-  const refreshLedger = useLedgerStore((state) => state.refreshLedger);
-  const refreshCommitmentData = useCommitmentStore((state) => state.refreshCommitmentData);
-  const recurringExpenses = useCommitmentStore((state) => state.recurringExpenses);
-  const budgetProvisions = useCommitmentStore((state) => state.budgetProvisions);
+  )
+  const addLocalWish = usePlanningStore((state) => state.addLocalWish)
+  const addLocalEntry = useLedgerStore((state) => state.addLocalEntry)
+  const refreshLedger = useLedgerStore((state) => state.refreshLedger)
+  const refreshCommitmentData = useCommitmentStore(
+    (state) => state.refreshCommitmentData,
+  )
+  const recurringExpenses = useCommitmentStore(
+    (state) => state.recurringExpenses,
+  )
+  const budgetProvisions = useCommitmentStore((state) => state.budgetProvisions)
   const addLocalRecurringExpense = useCommitmentStore(
     (state) => state.addLocalRecurringExpense,
-  );
+  )
   const addLocalBudgetProvision = useCommitmentStore(
     (state) => state.addLocalBudgetProvision,
-  );
-  const currentMonth = `${new Date().toISOString().slice(0, 7)}-01`;
+  )
+  const currentMonth = `${new Date().toISOString().slice(0, 7)}-01`
+
+  useEffect(() => {
+    const requestedView = Array.isArray(params.view) ? params.view[0] : params.view
+    if (requestedView === lastHandledViewParam.current) {
+      return
+    }
+
+    lastHandledViewParam.current = requestedView
+
+    if (requestedView === 'commitments') {
+      setView('commitments')
+    }
+  }, [params.view])
 
   useEffect(() => {
     if (!user?.id || !settings) {
-      return;
+      return
     }
 
-    void refreshPlanningData({ isDevBypass, settings, userId: user.id, wallets });
-  }, [isDevBypass, refreshPlanningData, settings, user?.id, wallets]);
+    void refreshPlanningData({
+      isDevBypass,
+      settings,
+      userId: user.id,
+      wallets,
+    })
+  }, [isDevBypass, refreshPlanningData, settings, user?.id, wallets])
 
   useEffect(() => {
     if (!user?.id || !selectedWalletId) {
-      return;
+      return
     }
 
     void refreshCommitmentData({
@@ -180,142 +215,163 @@ export default function PlanningScreen() {
       month: currentMonth,
       userId: user.id,
       walletId: selectedWalletId,
-    });
+    })
   }, [
     currentMonth,
     isDevBypass,
     refreshCommitmentData,
     selectedWalletId,
     user?.id,
-  ]);
+  ])
 
   const activeGoals = goalSnapshots.filter(
-    (snapshot) => snapshot.goal.status === "active" || snapshot.status === "at_risk",
-  );
+    (snapshot) =>
+      snapshot.goal.status === 'active' || snapshot.status === 'at_risk',
+  )
   const filteredWishes = useMemo(() => {
-    if (filter === "all") {
-      return wishProjections;
+    if (filter === 'all') {
+      return wishProjections
     }
 
-    if (filter === "bought") {
-      return wishProjections.filter((item) => item.wish.isPurchased);
+    if (filter === 'bought') {
+      return wishProjections.filter((item) => item.wish.isPurchased)
     }
 
-    return wishProjections.filter((item) => !item.wish.isPurchased);
-  }, [filter, wishProjections]);
+    return wishProjections.filter((item) => !item.wish.isPurchased)
+  }, [filter, wishProjections])
   const pendingGoalAmount = goalSnapshots.reduce(
     (total, snapshot) => total + snapshot.remainingAmount,
     0,
-  );
+  )
   const nextWishAmount =
     wishProjections.find((projection) => !projection.wish.isPurchased)?.wish
-      .estimatedAmount ?? null;
+      .estimatedAmount ?? null
   const coverageDays =
     overview?.monthlyCommitmentAverage && overview.monthlyCommitmentAverage > 0
       ? Math.max(
         0,
         Math.round(
-          (Math.max((overview.availableBalance ?? 0) - (overview.committedAmount ?? 0), 0) /
+          (Math.max(
+            (overview.availableBalance ?? 0) -
+            (overview.committedAmount ?? 0),
+            0,
+          ) /
             overview.monthlyCommitmentAverage) *
-            30,
+          30,
         ),
       )
-      : 0;
+      : 0
   const savingsRatio =
     overview?.monthlyIncome && overview.monthlyIncome > 0
       ? Math.round(
-        ((overview.monthlyGoalContributionAverage ?? 0) / overview.monthlyIncome) *
-          100,
+        ((overview.monthlyGoalContributionAverage ?? 0) /
+          overview.monthlyIncome) *
+        100,
       )
-      : 0;
+      : 0
   const actionTip = tip({
     assignableAmount: overview?.assignableAmount ?? 0,
     goalShortfall: pendingGoalAmount,
     nextWishAmount,
-  });
-  const scoreBars = (recentScores.slice(0, 6).reverse().length
-    ? recentScores.slice(0, 6).reverse().map((item) => ({
-      label: new Date(`${item.weekStart}T00:00:00.000Z`)
-        .toLocaleDateString("en-US", { month: "short" })
-        .toUpperCase(),
-      value: item.score,
-    }))
-    : [
-      { label: "ENE", value: currentScore?.breakdown.liquidity_score ?? 42 },
-      { label: "FEB", value: currentScore?.breakdown.commitment_score ?? 56 },
-      { label: "MAR", value: currentScore?.breakdown.savings_score ?? 48 },
-      { label: "ABR", value: currentScore?.breakdown.salary_stability_score ?? 62 },
-      { label: "MAY", value: currentScore?.breakdown.wishlist_pressure_score ?? 58 },
-      { label: "JUN", value: currentScore?.score ?? 64 },
-    ]) as { label: string; value: number }[];
+  })
+  const scoreBars = (
+    recentScores.slice(0, 6).reverse().length
+      ? recentScores
+        .slice(0, 6)
+        .reverse()
+        .map((item) => ({
+          label: new Date(`${item.weekStart}T00:00:00.000Z`)
+            .toLocaleDateString('en-US', { month: 'short' })
+            .toUpperCase(),
+          value: item.score,
+        }))
+      : [
+        {
+          label: 'ENE',
+          value: currentScore?.breakdown.liquidity_score ?? 42,
+        },
+        {
+          label: 'FEB',
+          value: currentScore?.breakdown.commitment_score ?? 56,
+        },
+        { label: 'MAR', value: currentScore?.breakdown.savings_score ?? 48 },
+        {
+          label: 'ABR',
+          value: currentScore?.breakdown.salary_stability_score ?? 62,
+        },
+        {
+          label: 'MAY',
+          value: currentScore?.breakdown.wishlist_pressure_score ?? 58,
+        },
+        { label: 'JUN', value: currentScore?.score ?? 64 },
+      ]
+  ) as { label: string; value: number }[]
 
   function closeSheet() {
-    setSheet(null);
-    setSheetError(null);
-    setIsSubmitting(false);
+    setSheet(null)
+    setSheetError(null)
+    setIsSubmitting(false)
   }
 
   function openGoalSheet() {
     setGoalDraft({
-      deadline: "",
-      name: "",
-      targetAmount: "",
-      walletId: wallets.find((wallet) => wallet.isActive)?.id ?? "",
-    });
-    setPickerOpen(false);
-    setSheet("goal");
+      deadline: '',
+      name: '',
+      targetAmount: '',
+      walletId: wallets.find((wallet) => wallet.isActive)?.id ?? '',
+    })
+    setPickerOpen(false)
+    setSheet('goal')
   }
 
   function openContributionSheet(goalId?: string) {
     setContributionDraft({
-      amount: "",
+      amount: '',
       date: new Date().toISOString().slice(0, 10),
-      goalId: goalId ?? activeGoals[0]?.goal.id ?? "",
-      note: "",
-    });
-    setPickerOpen(false);
-    setSheet("contribution");
+      goalId: goalId ?? activeGoals[0]?.goal.id ?? '',
+      note: '',
+    })
+    setPickerOpen(false)
+    setSheet('contribution')
   }
 
   function openWishSheet() {
     const maxPriority = wishProjections.reduce(
       (highest, projection) => Math.max(highest, projection.wish.priority),
       0,
-    );
+    )
 
     setWishDraft({
-      amount: "",
-      name: "",
-      notes: "",
+      amount: '',
+      name: '',
+      notes: '',
       priority: String(maxPriority + 1 || 1),
-      walletId: wallets.find((wallet) => wallet.isActive)?.id ?? "",
-    });
-    setPickerOpen(false);
-    setSheet("wish");
+      walletId: wallets.find((wallet) => wallet.isActive)?.id ?? '',
+    })
+    setPickerOpen(false)
+    setSheet('wish')
   }
 
   function openCommitmentSheet() {
-    setPickerOpen(false);
-    setCommitmentError(null);
-    setIsCommitmentSubmitting(false);
+    setPickerOpen(false)
+    setCommitmentError(null)
+    setIsCommitmentSubmitting(false)
     setCommitmentDraft({
-      amount: "",
-      day: String(new Date().getUTCDate()).padStart(2, "0"),
-      kind: "fixed",
+      amount: '',
+      day: String(new Date().getUTCDate()).padStart(2, '0'),
+      kind: 'fixed',
       month: new Date().toISOString().slice(0, 7),
-      name: "",
-      notes: "",
+      name: '',
+      notes: '',
       walletId:
-        selectedWalletId ??
-        wallets.find((wallet) => wallet.isActive)?.id ??
-        "",
-    });
-    setCommitmentOpen(true);
+        selectedWalletId ?? wallets.find((wallet) => wallet.isActive)?.id ?? '',
+    })
+    setCommitmentOpen(true)
   }
 
   async function refreshAll() {
     if (!user?.id || !settings) {
-      return;
+      return
     }
 
     await refreshPlanningData({
@@ -323,27 +379,31 @@ export default function PlanningScreen() {
       settings,
       userId: user.id,
       wallets: useAppStore.getState().wallets,
-    });
+    })
   }
 
   async function handleCreateGoal() {
     if (!user?.id) {
-      setSheetError("No hay sesion activa.");
-      return;
+      setSheetError('No hay sesion activa.')
+      return
     }
 
-    const targetAmount = Number(goalDraft.targetAmount);
+    const targetAmount = Number(goalDraft.targetAmount)
     if (!goalDraft.name.trim()) {
-      setSheetError("Escribe un nombre para la meta.");
-      return;
+      setSheetError('Escribe un nombre para la meta.')
+      return
     }
-    if (Number.isNaN(targetAmount) || targetAmount <= 0 || !goalDraft.walletId) {
-      setSheetError("Completa nombre, monto y wallet.");
-      return;
+    if (
+      Number.isNaN(targetAmount) ||
+      targetAmount <= 0 ||
+      !goalDraft.walletId
+    ) {
+      setSheetError('Completa nombre, monto y wallet.')
+      return
     }
 
-    setIsSubmitting(true);
-    setSheetError(null);
+    setIsSubmitting(true)
+    setSheetError(null)
 
     try {
       if (isDevBypass) {
@@ -355,7 +415,7 @@ export default function PlanningScreen() {
             userId: user.id,
             walletId: goalDraft.walletId,
           }),
-        );
+        )
       } else {
         await createGoal({
           deadline: goalDraft.deadline || null,
@@ -363,37 +423,39 @@ export default function PlanningScreen() {
           targetAmount,
           userId: user.id,
           walletId: goalDraft.walletId,
-        });
+        })
       }
 
-      await refreshAll();
-      closeSheet();
+      await refreshAll()
+      closeSheet()
     } catch (submitError) {
       setSheetError(
-        submitError instanceof Error ? submitError.message : "No se pudo crear la meta.",
-      );
-      setIsSubmitting(false);
+        submitError instanceof Error
+          ? submitError.message
+          : 'No se pudo crear la meta.',
+      )
+      setIsSubmitting(false)
     }
   }
 
   async function handleCreateContribution() {
     if (!user?.id) {
-      setSheetError("No hay sesion activa.");
-      return;
+      setSheetError('No hay sesion activa.')
+      return
     }
 
-    const amount = Number(contributionDraft.amount);
+    const amount = Number(contributionDraft.amount)
     const selectedGoal = activeGoals.find(
       (snapshot) => snapshot.goal.id === contributionDraft.goalId,
-    )?.goal;
+    )?.goal
 
     if (!selectedGoal || Number.isNaN(amount) || amount <= 0) {
-      setSheetError("Selecciona una meta valida y un monto mayor que cero.");
-      return;
+      setSheetError('Selecciona una meta valida y un monto mayor que cero.')
+      return
     }
 
-    setIsSubmitting(true);
-    setSheetError(null);
+    setIsSubmitting(true)
+    setSheetError(null)
 
     try {
       if (isDevBypass) {
@@ -406,18 +468,21 @@ export default function PlanningScreen() {
             userId: user.id,
             walletId: selectedGoal.walletId,
           }),
-        );
+        )
         addLocalEntry(
           createLocalLedgerEntry({
             amount: amount * -1,
             date: contributionDraft.date,
             description: contributionDraft.note || selectedGoal.name,
-            type: "goal_deposit",
+            type: 'goal_deposit',
             userId: user.id,
             walletId: selectedGoal.walletId,
           }),
-        );
-        applyWalletBalanceDelta({ amount: amount * -1, walletId: selectedGoal.walletId });
+        )
+        applyWalletBalanceDelta({
+          amount: amount * -1,
+          walletId: selectedGoal.walletId,
+        })
       } else {
         await addGoalContribution({
           amount,
@@ -425,35 +490,37 @@ export default function PlanningScreen() {
           goalId: selectedGoal.id,
           note: contributionDraft.note || null,
           walletId: selectedGoal.walletId,
-        });
-        await refreshAppData({ isDevBypass: false, userId: user.id });
+        })
+        await refreshAppData({ isDevBypass: false, userId: user.id })
         if (selectedWalletId) {
           await refreshLedger({
             isDevBypass: false,
             userId: user.id,
             walletId: selectedWalletId,
-          });
+          })
         }
       }
 
-      await refreshAll();
-      closeSheet();
+      await refreshAll()
+      closeSheet()
     } catch (submitError) {
       setSheetError(
-        submitError instanceof Error ? submitError.message : "No se pudo registrar el aporte.",
-      );
-      setIsSubmitting(false);
+        submitError instanceof Error
+          ? submitError.message
+          : 'No se pudo registrar el aporte.',
+      )
+      setIsSubmitting(false)
     }
   }
 
   async function handleCreateWish() {
     if (!user?.id) {
-      setSheetError("No hay sesion activa.");
-      return;
+      setSheetError('No hay sesion activa.')
+      return
     }
 
-    const estimatedAmount = Number(wishDraft.amount);
-    const priority = Number(wishDraft.priority);
+    const estimatedAmount = Number(wishDraft.amount)
+    const priority = Number(wishDraft.priority)
 
     if (
       !wishDraft.name.trim() ||
@@ -463,12 +530,12 @@ export default function PlanningScreen() {
       priority <= 0 ||
       !wishDraft.walletId
     ) {
-      setSheetError("Completa nombre, monto, prioridad y wallet.");
-      return;
+      setSheetError('Completa nombre, monto, prioridad y wallet.')
+      return
     }
 
-    setIsSubmitting(true);
-    setSheetError(null);
+    setIsSubmitting(true)
+    setSheetError(null)
 
     try {
       if (isDevBypass) {
@@ -481,7 +548,7 @@ export default function PlanningScreen() {
             userId: user.id,
             walletId: wishDraft.walletId,
           }),
-        );
+        )
       } else {
         await createWish({
           estimatedAmount,
@@ -490,28 +557,30 @@ export default function PlanningScreen() {
           priority,
           userId: user.id,
           walletId: wishDraft.walletId,
-        });
+        })
       }
 
-      await refreshAll();
-      closeSheet();
+      await refreshAll()
+      closeSheet()
     } catch (submitError) {
       setSheetError(
-        submitError instanceof Error ? submitError.message : "No se pudo crear el deseo.",
-      );
-      setIsSubmitting(false);
+        submitError instanceof Error
+          ? submitError.message
+          : 'No se pudo crear el deseo.',
+      )
+      setIsSubmitting(false)
     }
   }
 
   async function handleCreateCommitment() {
     if (!user?.id) {
-      setCommitmentError("No hay sesion activa.");
-      return;
+      setCommitmentError('No hay sesion activa.')
+      return
     }
 
-    const amount = Number(commitmentDraft.amount);
-    const billingDay = Number(commitmentDraft.day);
-    const targetMonth = `${commitmentDraft.month.slice(0, 7)}-01`;
+    const amount = Number(commitmentDraft.amount)
+    const billingDay = Number(commitmentDraft.day)
+    const targetMonth = `${commitmentDraft.month.slice(0, 7)}-01`
 
     if (
       !commitmentDraft.name.trim() ||
@@ -519,23 +588,19 @@ export default function PlanningScreen() {
       amount <= 0 ||
       !commitmentDraft.walletId
     ) {
-      setCommitmentError("Completa nombre, monto y wallet.");
-      return;
+      setCommitmentError('Completa nombre, monto y wallet.')
+      return
     }
 
-    setIsCommitmentSubmitting(true);
-    setCommitmentError(null);
+    setIsCommitmentSubmitting(true)
+    setCommitmentError(null)
 
     try {
-      if (commitmentDraft.kind === "fixed") {
-        if (
-          Number.isNaN(billingDay) ||
-          billingDay < 1 ||
-          billingDay > 31
-        ) {
-          setCommitmentError("El dia de cobro debe ser entre 1 y 31.");
-          setIsCommitmentSubmitting(false);
-          return;
+      if (commitmentDraft.kind === 'fixed') {
+        if (Number.isNaN(billingDay) || billingDay < 1 || billingDay > 31) {
+          setCommitmentError('El dia de cobro debe ser entre 1 y 31.')
+          setIsCommitmentSubmitting(false)
+          return
         }
 
         if (isDevBypass) {
@@ -544,31 +609,31 @@ export default function PlanningScreen() {
               amount,
               billingDay,
               categoryId: null,
-              frequency: "monthly",
+              frequency: 'monthly',
               name: commitmentDraft.name,
               notes: commitmentDraft.notes || null,
-              type: "fixed_expense",
+              type: 'fixed_expense',
               userId: user.id,
               walletId: commitmentDraft.walletId,
             }),
-          );
+          )
         } else {
           await createRecurringExpense({
             amount,
             billingDay,
             categoryId: null,
-            frequency: "monthly",
+            frequency: 'monthly',
             name: commitmentDraft.name,
             notes: commitmentDraft.notes || undefined,
-            type: "fixed_expense",
+            type: 'fixed_expense',
             walletId: commitmentDraft.walletId,
-          });
+          })
         }
       } else {
         if (!/^\d{4}-\d{2}-01$/.test(targetMonth)) {
-          setCommitmentError("El mes debe tener formato YYYY-MM.");
-          setIsCommitmentSubmitting(false);
-          return;
+          setCommitmentError('El mes debe tener formato YYYY-MM.')
+          setIsCommitmentSubmitting(false)
+          return
         }
 
         if (isDevBypass) {
@@ -579,11 +644,11 @@ export default function PlanningScreen() {
               month: targetMonth,
               name: commitmentDraft.name,
               notes: commitmentDraft.notes || null,
-              recurrence: "once",
+              recurrence: 'once',
               userId: user.id,
               walletId: commitmentDraft.walletId,
             }),
-          );
+          )
         } else {
           await createBudgetProvision({
             amount,
@@ -591,9 +656,9 @@ export default function PlanningScreen() {
             month: targetMonth,
             name: commitmentDraft.name,
             notes: commitmentDraft.notes || undefined,
-            recurrence: "once",
+            recurrence: 'once',
             walletId: commitmentDraft.walletId,
-          });
+          })
         }
       }
 
@@ -602,16 +667,16 @@ export default function PlanningScreen() {
         month: currentMonth,
         userId: user.id,
         walletId: selectedWalletId ?? commitmentDraft.walletId,
-      });
-      setCommitmentOpen(false);
-      setIsCommitmentSubmitting(false);
+      })
+      setCommitmentOpen(false)
+      setIsCommitmentSubmitting(false)
     } catch (submitError) {
       setCommitmentError(
         submitError instanceof Error
           ? submitError.message
-          : "No se pudo crear el compromiso.",
-      );
-      setIsCommitmentSubmitting(false);
+          : 'No se pudo crear el compromiso.',
+      )
+      setIsCommitmentSubmitting(false)
     }
   }
 
@@ -619,21 +684,24 @@ export default function PlanningScreen() {
     <SafeAreaView style={styles.safeArea}>
       <DecorativeBackground />
       <ScreenHeader
-        primaryAction={{ icon: "plus", onPress: () => setPickerOpen(true) }}
+        primaryAction={{ icon: 'plus', onPress: () => setPickerOpen(true) }}
         secondaryAction={{
-          icon: "bell",
-          onPress: () => router.push("/notifications"),
+          icon: 'bell',
+          onPress: () => router.push('/notifications'),
           showBadge: true,
         }}
         title="Planificacion"
       />
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         <SegmentedControl
           onChange={setView}
           options={[
-            { label: "Deseos", value: "desires" },
-            { label: "Compromisos", value: "commitments" },
+            { label: 'Deseos', value: 'desires' },
+            { label: 'Compromisos', value: 'commitments' },
           ]}
           value={view}
         />
@@ -648,15 +716,14 @@ export default function PlanningScreen() {
             <Text style={styles.cardTitle}>No se pudo cargar</Text>
             <Text style={styles.softText}>{error}</Text>
           </View>
-        ) : view === "desires" ? (
+        ) : view === 'desires' ? (
           <>
-            <SegmentedControl
-              compact
+            <FilterList
               onChange={setFilter}
               options={[
-                { label: "Todos", value: "all" },
-                { label: "Pendientes", value: "pending" },
-                { label: "Comprados", value: "bought" },
+                { label: 'Todos', value: 'all' },
+                { label: 'Pendientes', value: 'pending' },
+                { label: 'Comprados', value: 'bought' },
               ]}
               value={filter}
             />
@@ -669,36 +736,51 @@ export default function PlanningScreen() {
                 style={[styles.card, item.wish.isPurchased && styles.cardDim]}
               >
                 <View style={styles.rowBetween}>
-                  <Text style={[styles.cardTitle, item.wish.isPurchased && styles.strike]}>
+                  <Text
+                    style={[
+                      styles.cardTitle,
+                      item.wish.isPurchased && styles.strike,
+                    ]}
+                  >
                     {item.wish.name}
                   </Text>
-                  <Text style={styles.price}>${item.wish.estimatedAmount.toFixed(0)}</Text>
+                  <Text style={styles.price}>
+                    ${item.wish.estimatedAmount.toFixed(0)}
+                  </Text>
                 </View>
                 <Text style={styles.pill}>
                   {item.wish.isPurchased
-                    ? "COMPRADO"
-                    : item.confidenceLevel === "high"
-                      ? "IA: Alta confianza"
-                      : item.confidenceLevel === "medium"
-                        ? "IA: Media"
-                        : item.confidenceLevel === "low"
-                          ? "IA: Baja"
-                          : "IA: Riesgo"}
+                    ? 'COMPRADO'
+                    : item.confidenceLevel === 'high'
+                      ? 'IA: Alta confianza'
+                      : item.confidenceLevel === 'medium'
+                        ? 'IA: Media'
+                        : item.confidenceLevel === 'low'
+                          ? 'IA: Baja'
+                          : 'IA: Riesgo'}
                 </Text>
-                <Text style={styles.bodyText}>{item.wish.notes ?? item.confidenceReason}</Text>
+                <Text style={styles.bodyText}>
+                  {item.wish.notes ?? item.confidenceReason}
+                </Text>
                 <Text style={styles.softText}>
                   {item.wish.isPurchased
-                    ? "Presupuestado correctamente"
-                    : `Requiere ${item.monthsUntilPurchase ?? "mas"} ${
-                        item.monthsUntilPurchase === 1 ? "mes" : "meses"
-                      } de ahorro`}
+                    ? 'Presupuestado correctamente'
+                    : `Requiere ${item.monthsUntilPurchase ?? 'mas'} ${item.monthsUntilPurchase === 1 ? 'mes' : 'meses'
+                    } de ahorro`}
                 </Text>
                 <View style={styles.rowBetween}>
                   <View style={styles.inlineRow}>
-                    <MaterialCommunityIcons color="#7C89A8" name="calendar-month-outline" size={13} />
+                    <MaterialCommunityIcons
+                      color="#7C89A8"
+                      name="calendar-month-outline"
+                      size={13}
+                    />
                     <Text style={styles.softText}>
                       {item.wish.isPurchased
-                        ? dateLabel(item.wish.purchasedAt?.slice(0, 10) ?? null, true)
+                        ? dateLabel(
+                          item.wish.purchasedAt?.slice(0, 10) ?? null,
+                          true,
+                        )
                         : dateLabel(item.estimatedPurchaseDate)}
                     </Text>
                   </View>
@@ -707,7 +789,9 @@ export default function PlanningScreen() {
                       <View
                         style={[
                           styles.trackFill,
-                          { width: `${Math.max(item.progressRatio * 100, 18)}%` },
+                          {
+                            width: `${Math.max(item.progressRatio * 100, 18)}%`,
+                          },
                         ]}
                       />
                     </View>
@@ -726,11 +810,13 @@ export default function PlanningScreen() {
               </View>
             </View>
           </>
-        ) : view === "commitments" ? (
+        ) : view === 'commitments' ? (
           <>
             <Text style={styles.sectionTitle}>Fijos</Text>
             {recurringExpenses
-              .filter((item) => item.walletId === selectedWalletId && item.isActive)
+              .filter(
+                (item) => item.walletId === selectedWalletId && item.isActive,
+              )
               .map((item) => (
                 <View key={item.id} style={styles.card}>
                   <View style={styles.rowBetween}>
@@ -738,19 +824,23 @@ export default function PlanningScreen() {
                     <Text style={styles.price}>${item.amount.toFixed(2)}</Text>
                   </View>
                   <Text style={styles.softText}>
-                    {item.frequency === "monthly"
-                      ? `Mensual - dia ${String(item.billingDay).padStart(2, "0")}`
-                      : `Anual - ${String(item.billingDay).padStart(2, "0")}/${String(
-                          item.billingMonth ?? 1,
-                        ).padStart(2, "0")}`}
+                    {item.frequency === 'monthly'
+                      ? `Mensual - dia ${String(item.billingDay).padStart(2, '0')}`
+                      : `Anual - ${String(item.billingDay).padStart(2, '0')}/${String(
+                        item.billingMonth ?? 1,
+                      ).padStart(2, '0')}`}
                   </Text>
-                  {item.notes ? <Text style={styles.bodyText}>{item.notes}</Text> : null}
+                  {item.notes ? (
+                    <Text style={styles.bodyText}>{item.notes}</Text>
+                  ) : null}
                 </View>
               ))}
 
             <Text style={styles.sectionTitle}>Eventos Especiales</Text>
             {budgetProvisions
-              .filter((item) => item.walletId === selectedWalletId && item.isActive)
+              .filter(
+                (item) => item.walletId === selectedWalletId && item.isActive,
+              )
               .map((item) => (
                 <View key={item.id} style={styles.card}>
                   <View style={styles.rowBetween}>
@@ -758,10 +848,12 @@ export default function PlanningScreen() {
                     <Text style={styles.price}>${item.amount.toFixed(2)}</Text>
                   </View>
                   <Text style={styles.softText}>
-                    {item.recurrence === "yearly" ? "Anual" : "Una vez"} -{" "}
+                    {item.recurrence === 'yearly' ? 'Anual' : 'Una vez'} -{' '}
                     {dateLabel(item.month, true)}
                   </Text>
-                  {item.notes ? <Text style={styles.bodyText}>{item.notes}</Text> : null}
+                  {item.notes ? (
+                    <Text style={styles.bodyText}>{item.notes}</Text>
+                  ) : null}
                 </View>
               ))}
           </>
@@ -782,22 +874,42 @@ export default function PlanningScreen() {
                 <Text style={styles.metricLabel}>LIQUIDEZ</Text>
               </View>
               <View style={styles.metric}>
-                <MaterialCommunityIcons color="#F59E0B" name="briefcase-clock-outline" size={14} />
+                <MaterialCommunityIcons
+                  color="#F59E0B"
+                  name="briefcase-clock-outline"
+                  size={14}
+                />
                 <Text style={styles.metricValue}>
-                  {Math.max(0, 100 - (currentScore?.breakdown.commitment_score ?? 0))}%
+                  {Math.max(
+                    0,
+                    100 - (currentScore?.breakdown.commitment_score ?? 0),
+                  )}
+                  %
                 </Text>
                 <Text style={styles.metricLabel}>COMPROMISOS</Text>
               </View>
               <View style={styles.metric}>
-                <Ionicons color="#2AD596" name="shield-checkmark-outline" size={14} />
+                <Ionicons
+                  color="#2AD596"
+                  name="shield-checkmark-outline"
+                  size={14}
+                />
                 <Text style={styles.metricValue}>
-                  {(currentScore?.breakdown.salary_stability_score ?? 0) >= 70 ? "Alta" : "Media"}
+                  {(currentScore?.breakdown.salary_stability_score ?? 0) >= 70
+                    ? 'Alta'
+                    : 'Media'}
                 </Text>
                 <Text style={styles.metricLabel}>ESTABILIDAD</Text>
               </View>
               <View style={styles.metric}>
-                <Ionicons color="#6C83FF" name="trending-up-outline" size={14} />
-                <Text style={styles.metricValue}>{Math.max(savingsRatio, 0)}%</Text>
+                <Ionicons
+                  color="#6C83FF"
+                  name="trending-up-outline"
+                  size={14}
+                />
+                <Text style={styles.metricValue}>
+                  {Math.max(savingsRatio, 0)}%
+                </Text>
                 <Text style={styles.metricLabel}>RATIO AHORRO</Text>
               </View>
             </View>
@@ -808,7 +920,11 @@ export default function PlanningScreen() {
                 <Text style={styles.days}>{coverageDays} dias</Text>
               </View>
               <View style={styles.hourglass}>
-                <MaterialCommunityIcons color="#E1E7F8" name="timer-sand" size={18} />
+                <MaterialCommunityIcons
+                  color="#E1E7F8"
+                  name="timer-sand"
+                  size={18}
+                />
               </View>
             </View>
 
@@ -817,13 +933,20 @@ export default function PlanningScreen() {
               <Text style={styles.cardTitle}>
                 {overview?.monthlyIncome
                   ? `${(
-                      Math.max(overview.availableBalance - overview.committedAmount, 0) /
-                      overview.monthlyIncome
-                    ).toFixed(1)} meses de vida`
-                  : "0.0 meses de vida"}
+                    Math.max(
+                      overview.availableBalance - overview.committedAmount,
+                      0,
+                    ) / overview.monthlyIncome
+                  ).toFixed(1)} meses de vida`
+                  : '0.0 meses de vida'}
               </Text>
               <View style={styles.trackLong}>
-                <View style={[styles.trackFillGreen, { width: `${Math.max(coverageDays * 1.8, 18)}%` }]} />
+                <View
+                  style={[
+                    styles.trackFillGreen,
+                    { width: `${Math.max(coverageDays * 1.8, 18)}%` },
+                  ]}
+                />
               </View>
             </View>
 
@@ -837,8 +960,19 @@ export default function PlanningScreen() {
                 {scoreBars.map((bar) => (
                   <View key={bar.label} style={styles.chartGroup}>
                     <View style={styles.chartCols}>
-                      <View style={[styles.chartBar, { height: Math.max(26, bar.value * 0.72) }]} />
-                      <View style={[styles.chartBar, styles.chartBarMuted, { height: Math.max(22, (bar.value - 10) * 0.7) }]} />
+                      <View
+                        style={[
+                          styles.chartBar,
+                          { height: Math.max(26, bar.value * 0.72) },
+                        ]}
+                      />
+                      <View
+                        style={[
+                          styles.chartBar,
+                          styles.chartBarMuted,
+                          { height: Math.max(22, (bar.value - 10) * 0.7) },
+                        ]}
+                      />
                     </View>
                     <Text style={styles.chartLabel}>{bar.label}</Text>
                   </View>
@@ -851,13 +985,14 @@ export default function PlanningScreen() {
               <Text style={styles.bodyText}>
                 {savingsRatio > 0
                   ? `Este mes has logrado reducir tus gastos hormiga en un ${Math.min(
-                      savingsRatio,
-                      14,
-                    )}%. Tus ingresos han sido estables, pero el ratio de ahorro ha crecido gracias a la optimizacion de suscripciones.`
-                  : "Tu estructura actual mantiene liquidez, pero todavia depende de convertir parte del dinero libre en ahorro sostenido."}
+                    savingsRatio,
+                    14,
+                  )}%. Tus ingresos han sido estables, pero el ratio de ahorro ha crecido gracias a la optimizacion de suscripciones.`
+                  : 'Tu estructura actual mantiene liquidez, pero todavia depende de convertir parte del dinero libre en ahorro sostenido.'}
               </Text>
               <Text style={styles.bodyText}>
-                Si mantienes este ritmo, alcanzaras tu meta de fondo operativo en al menos {Math.max(coverageDays, 30)} dias.
+                Si mantienes este ritmo, alcanzaras tu meta de fondo operativo
+                en al menos {Math.max(coverageDays, 30)} dias.
               </Text>
             </View>
 
@@ -868,7 +1003,10 @@ export default function PlanningScreen() {
               <View style={styles.tipBody}>
                 <Text style={styles.tipTitle}>TIP DE IA</Text>
                 <Text style={styles.bodyText}>
-                  Detectamos un excedente de ${(overview?.assignableAmount ?? 0).toFixed(0)} en tu cuenta corriente. Moverlo hoy a tu cuenta de ahorros generaria un rendimiento extra solo en intereses.
+                  Detectamos un excedente de $
+                  {(overview?.assignableAmount ?? 0).toFixed(0)} en tu cuenta
+                  corriente. Moverlo hoy a tu cuenta de ahorros generaria un
+                  rendimiento extra solo en intereses.
                 </Text>
               </View>
             </View>
@@ -882,18 +1020,33 @@ export default function PlanningScreen() {
           Todas las altas salen por BottomSheet para mantener el flujo limpio.
         </Text>
         <View style={styles.sheetGrid}>
-          <Pressable onPress={openWishSheet} style={({ pressed }) => [styles.sheetAction, pressed && styles.pressed]}>
+          <Pressable
+            onPress={openWishSheet}
+            style={({ pressed }) => [
+              styles.sheetAction,
+              pressed && styles.pressed,
+            ]}
+          >
             <Ionicons color="#F59E0B" name="sparkles-outline" size={20} />
             <Text style={styles.sheetActionText}>Adicionar deseo</Text>
           </Pressable>
-          <Pressable onPress={openCommitmentSheet} style={({ pressed }) => [styles.sheetAction, pressed && styles.pressed]}>
+          <Pressable
+            onPress={openCommitmentSheet}
+            style={({ pressed }) => [
+              styles.sheetAction,
+              pressed && styles.pressed,
+            ]}
+          >
             <Ionicons color="#6C83FF" name="calendar-outline" size={20} />
             <Text style={styles.sheetActionText}>Adicionar compromiso</Text>
           </Pressable>
         </View>
       </BottomSheet>
 
-      <BottomSheet onClose={() => setCommitmentOpen(false)} visible={commitmentOpen}>
+      <BottomSheet
+        onClose={() => setCommitmentOpen(false)}
+        visible={commitmentOpen}
+      >
         <Text style={styles.sheetTitle}>Adicionar compromiso</Text>
         <Text style={styles.softText}>
           Puedes crear un fijo mensual o un evento especial futuro.
@@ -903,17 +1056,17 @@ export default function PlanningScreen() {
         <View style={styles.chipRow}>
           <Pressable
             onPress={() =>
-              setCommitmentDraft((current) => ({ ...current, kind: "fixed" }))
+              setCommitmentDraft((current) => ({ ...current, kind: 'fixed' }))
             }
             style={[
               styles.chip,
-              commitmentDraft.kind === "fixed" && styles.chipActive,
+              commitmentDraft.kind === 'fixed' && styles.chipActive,
             ]}
           >
             <Text
               style={[
                 styles.chipText,
-                commitmentDraft.kind === "fixed" && styles.chipTextActive,
+                commitmentDraft.kind === 'fixed' && styles.chipTextActive,
               ]}
             >
               Fijo mensual
@@ -921,17 +1074,17 @@ export default function PlanningScreen() {
           </Pressable>
           <Pressable
             onPress={() =>
-              setCommitmentDraft((current) => ({ ...current, kind: "event" }))
+              setCommitmentDraft((current) => ({ ...current, kind: 'event' }))
             }
             style={[
               styles.chip,
-              commitmentDraft.kind === "event" && styles.chipActive,
+              commitmentDraft.kind === 'event' && styles.chipActive,
             ]}
           >
             <Text
               style={[
                 styles.chipText,
-                commitmentDraft.kind === "event" && styles.chipTextActive,
+                commitmentDraft.kind === 'event' && styles.chipTextActive,
               ]}
             >
               Evento
@@ -983,7 +1136,8 @@ export default function PlanningScreen() {
                 <Text
                   style={[
                     styles.chipText,
-                    commitmentDraft.walletId === wallet.id && styles.chipTextActive,
+                    commitmentDraft.walletId === wallet.id &&
+                    styles.chipTextActive,
                   ]}
                 >
                   {wallet.name}
@@ -992,7 +1146,7 @@ export default function PlanningScreen() {
             ))}
         </View>
 
-        {commitmentDraft.kind === "fixed" ? (
+        {commitmentDraft.kind === 'fixed' ? (
           <>
             <Text style={styles.label}>DIA DE COBRO (1-31)</Text>
             <TextInput
@@ -1033,7 +1187,9 @@ export default function PlanningScreen() {
           value={commitmentDraft.notes}
         />
 
-        {commitmentError ? <Text style={styles.errorText}>{commitmentError}</Text> : null}
+        {commitmentError ? (
+          <Text style={styles.errorText}>{commitmentError}</Text>
+        ) : null}
 
         <Pressable
           disabled={isCommitmentSubmitting}
@@ -1070,154 +1226,208 @@ export default function PlanningScreen() {
         wishDraft={wishDraft}
       />
     </SafeAreaView>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#0B1020" },
-  content: { paddingHorizontal: 14, paddingTop: 12, paddingBottom: 104, gap: 14 },
-  sectionTitle: { color: "#F8FAFC", fontSize: 14, fontWeight: "800" },
+  safeArea: { flex: 1, backgroundColor: theme.colors.background },
+  content: {
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.lg,
+    gap: theme.spacing.lg,
+  },
+  sectionTitle: { color: theme.colors.white, fontSize: 14, fontWeight: '700' },
   card: {
-    borderRadius: 14,
-    backgroundColor: "rgba(21, 28, 47, 0.96)",
+    borderRadius: theme.radii.sm,
+    backgroundColor: theme.colors.backgroundCard,
     borderWidth: 1,
-    borderColor: "rgba(88, 104, 149, 0.14)",
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    gap: 8,
+    borderColor: theme.colors.divider,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
+    gap: theme.spacing.sm,
   },
   cardWide: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     borderRadius: 14,
-    backgroundColor: "rgba(21, 28, 47, 0.96)",
+    backgroundColor: theme.colors.backgroundCard,
     borderWidth: 1,
-    borderColor: "rgba(88, 104, 149, 0.14)",
-    paddingHorizontal: 14,
-    paddingVertical: 14,
+    borderColor: theme.colors.divider,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
   },
   cardCenter: {
-    borderRadius: 14,
-    backgroundColor: "rgba(21, 28, 47, 0.96)",
-    alignItems: "center",
-    padding: 18,
-    gap: 10,
+    borderRadius: theme.radii.sm,
+    backgroundColor: theme.colors.backgroundCard,
+    alignItems: 'center',
+    padding: theme.spacing.md,
+    gap: theme.spacing.sm,
   },
   cardDim: { opacity: 0.52 },
-  rowBetween: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
-  inlineRow: { flexDirection: "row", alignItems: "center", gap: 4 },
-  cardTitle: { color: "#F8FAFC", fontSize: 15, fontWeight: "800", flex: 1 },
-  strike: { textDecorationLine: "line-through" },
-  price: { color: "#4B69FF", fontSize: 15, fontWeight: "800" },
-  pill: { color: "#8AE6C0", fontSize: 10, fontWeight: "800" },
-  bodyText: { color: "#CBD4EA", fontSize: 13, lineHeight: 19 },
-  softText: { color: "#8A96B3", fontSize: 12, lineHeight: 18 },
+  rowBetween: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: theme.spacing.sm,
+  },
+  inlineRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  cardTitle: { color: theme.colors.white, fontSize: 15, fontWeight: '700', flex: 1 },
+  strike: { textDecorationLine: 'line-through' },
+  price: { color: theme.colors.primary, fontSize: 15, fontWeight: '700' },
+  pill: { color: theme.colors.green, fontSize: 10, fontWeight: '700' },
+  bodyText: { color: theme.colors.grayLight, fontSize: 13, lineHeight: 19 },
+  softText: { color: theme.colors.grayLight, fontSize: 12, lineHeight: 18 },
   tipCard: {
-    flexDirection: "row",
+    flexDirection: 'row',
     gap: 12,
-    borderRadius: 14,
+    borderRadius: theme.radii.sm,
     borderWidth: 1,
-    borderColor: "rgba(75, 105, 255, 0.22)",
-    backgroundColor: "rgba(22, 30, 52, 0.90)",
-    paddingHorizontal: 14,
-    paddingVertical: 14,
+    borderColor: theme.colors.divider,
+    backgroundColor: theme.colors.blueSoft,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
   },
   tipIcon: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(49, 68, 138, 0.28)",
+    width: 40,
+    height: 40,
+    borderRadius: theme.radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.blueSoft,
   },
   tipBody: { flex: 1, gap: 6 },
-  tipTitle: { color: "#4F6DFF", fontSize: 11, fontWeight: "900" },
-  label: { color: "#8A96B3", fontSize: 11, fontWeight: "800", marginTop: 10, marginBottom: 6 },
-  chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  tipTitle: { color: theme.colors.primary, fontSize: 11, fontWeight: '700' },
+  label: {
+    color: theme.colors.grayLight,
+    fontSize: 11,
+    fontWeight: '700',
+    marginTop: 10,
+    marginBottom: 6,
+  },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
     minHeight: 36,
-    borderRadius: 10,
+    borderRadius: theme.radii.sm,
     borderWidth: 1,
-    borderColor: "rgba(92, 108, 149, 0.24)",
-    backgroundColor: "#192035",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 12,
+    borderColor: theme.colors.divider,
+    backgroundColor: theme.colors.backgroundCard,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: theme.spacing.md,
   },
-  chipActive: { borderColor: "#4B69FF", backgroundColor: "rgba(75, 105, 255, 0.16)" },
-  chipText: { color: "#8A96B3", fontSize: 12, fontWeight: "700" },
-  chipTextActive: { color: "#F8FAFC" },
+  chipActive: {
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.blueSoft,
+  },
+  chipText: { color: theme.colors.grayLight, fontSize: 12, fontWeight: '700' },
+  chipTextActive: { color: theme.colors.white },
   input: {
     minHeight: 42,
-    borderRadius: 12,
+    borderRadius: theme.radii.sm,
     borderWidth: 1,
-    borderColor: "rgba(92, 108, 149, 0.24)",
-    backgroundColor: "#192035",
-    color: "#D9E3F6",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderColor: theme.colors.divider,
+    backgroundColor: theme.colors.backgroundCard,
+    color: theme.colors.white,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
   },
-  textArea: { minHeight: 88, textAlignVertical: "top" },
-  errorText: { color: "#F7A9AA", fontSize: 13, lineHeight: 20, marginTop: 10 },
+  textArea: { minHeight: 88, textAlignVertical: 'top' },
+  errorText: { color: theme.colors.red, fontSize: 13, lineHeight: 20, marginTop: 10 },
   submitAction: {
     minHeight: 50,
-    borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#4664FF",
+    borderRadius: theme.radii.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.primary,
     marginTop: 16,
   },
   submitActionDisabled: { opacity: 0.75 },
-  submitActionText: { color: "#FFFFFF", fontSize: 14, fontWeight: "900" },
-  track: { width: 72, height: 4, borderRadius: 999, backgroundColor: "rgba(92, 103, 135, 0.34)", overflow: "hidden" },
-  trackLong: { height: 5, borderRadius: 999, backgroundColor: "rgba(92, 103, 135, 0.34)", overflow: "hidden" },
-  trackFill: { height: "100%", borderRadius: 999, backgroundColor: "#4B69FF" },
-  trackFillGreen: { height: "100%", borderRadius: 999, backgroundColor: "#20D396" },
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  submitActionText: { color: theme.colors.white, fontSize: 14, fontWeight: '700' },
+  track: {
+    width: 72,
+    height: 4,
+    borderRadius: theme.radii.pill,
+    backgroundColor: theme.colors.grayLight,
+    overflow: 'hidden',
+  },
+  trackLong: {
+    height: 4,
+    borderRadius: theme.radii.pill,
+    backgroundColor: 'rgba(92, 103, 135, 0.34)',
+    overflow: 'hidden',
+  },
+  trackFill: { height: '100%', borderRadius: theme.radii.pill, backgroundColor: theme.colors.primary },
+  trackFillGreen: {
+    height: '100%',
+    borderRadius: theme.radii.pill,
+    backgroundColor: theme.colors.green,
+  },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   metric: {
     minWidth: 148,
     flexGrow: 1,
     flexBasis: 148,
-    borderRadius: 12,
-    backgroundColor: "rgba(21, 28, 47, 0.96)",
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    borderRadius: theme.radii.sm,
+    backgroundColor: theme.colors.backgroundCard,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
     gap: 8,
   },
-  metricValue: { color: "#F8FAFC", fontSize: 28, fontWeight: "900" },
-  metricScale: { color: "#94A1BE", fontSize: 11, fontWeight: "800" },
-  metricLabel: { color: "#8A96B3", fontSize: 11, fontWeight: "800" },
-  days: { color: "#FFFFFF", fontSize: 36, fontWeight: "900" },
+  metricValue: { color: theme.colors.white, fontSize: 28, fontWeight: '700' },
+  metricScale: { color: theme.colors.grayLight, fontSize: 11, fontWeight: '700' },
+  metricLabel: { color: theme.colors.grayLight, fontSize: 11, fontWeight: '700' },
+  days: { color: theme.colors.white, fontSize: 36, fontWeight: '700' },
   hourglass: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(54, 71, 156, 0.28)",
+    width: 40,
+    height: 40,
+    borderRadius: theme.radii.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: theme.colors.blueSoft,
   },
-  linkText: { color: "#4F6DFF", fontSize: 10, fontWeight: "700" },
-  chart: { minHeight: 160, flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between", gap: 8 },
-  chartGroup: { flex: 1, alignItems: "center", gap: 8 },
-  chartCols: { minHeight: 126, flexDirection: "row", alignItems: "flex-end", gap: 4 },
-  chartBar: { width: 6, borderRadius: 999, backgroundColor: "#4B69FF" },
-  chartBarMuted: { backgroundColor: "rgba(84, 102, 158, 0.62)" },
-  chartLabel: { color: "#7C89A8", fontSize: 10, fontWeight: "700" },
-  sheetTitle: { color: "#F8FAFC", fontSize: 24, fontWeight: "900", marginBottom: 8 },
-  sheetGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12, marginTop: 18 },
+  linkText: { color: theme.colors.primary, fontSize: 10, fontWeight: '700' },
+  chart: {
+    minHeight: 160,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    gap: theme.spacing.sm,
+  },
+  chartGroup: { flex: 1, alignItems: 'center', gap: 8 },
+  chartCols: {
+    minHeight: 126,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 4,
+  },
+  chartBar: { width: 6, borderRadius: theme.radii.pill, backgroundColor: theme.colors.primary },
+  chartBarMuted: { backgroundColor: theme.colors.grayLight },
+  chartLabel: { color: theme.colors.grayLight, fontSize: 10, fontWeight: '700' },
+  sheetTitle: {
+    color: theme.colors.white,
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: theme.spacing.md,
+  },
+  sheetGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 18 },
   sheetAction: {
-    width: "48%",
-    borderRadius: 16,
-    backgroundColor: "rgba(24, 30, 51, 0.96)",
+    width: '48%',
+    borderRadius: theme.radii.sm,
+    backgroundColor: theme.colors.backgroundCard,
     borderWidth: 1,
-    borderColor: "rgba(84, 101, 146, 0.16)",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 18,
-    gap: 12,
+    borderColor: theme.colors.divider,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
+    gap: theme.spacing.md,
   },
-  sheetActionText: { color: "#F8FAFC", fontSize: 14, fontWeight: "800", textAlign: "center" },
+  sheetActionText: {
+    color: theme.colors.primary,
+    fontSize: 14,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
   pressed: { opacity: 0.88 },
-});
+})
