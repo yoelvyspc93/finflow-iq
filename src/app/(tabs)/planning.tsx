@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   Pressable,
@@ -11,7 +11,7 @@ import {
 } from 'react-native'
 
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
-import { useRouter } from 'expo-router'
+import { useLocalSearchParams, useRouter } from 'expo-router'
 
 import {
   PlanningSheetStack,
@@ -95,6 +95,8 @@ function tip(args: {
 
 export default function PlanningScreen() {
   const router = useRouter()
+  const params = useLocalSearchParams<{ view?: string | string[] }>()
+  const lastHandledViewParam = useRef<string | undefined>(undefined)
   const [view, setView] = useState<PlanningView>('desires')
   const [filter, setFilter] = useState<DesireFilter>('all')
   const [sheet, setSheet] = useState<PlanningSheetKind>(null)
@@ -176,6 +178,19 @@ export default function PlanningScreen() {
     (state) => state.addLocalBudgetProvision,
   )
   const currentMonth = `${new Date().toISOString().slice(0, 7)}-01`
+
+  useEffect(() => {
+    const requestedView = Array.isArray(params.view) ? params.view[0] : params.view
+    if (requestedView === lastHandledViewParam.current) {
+      return
+    }
+
+    lastHandledViewParam.current = requestedView
+
+    if (requestedView === 'commitments') {
+      setView('commitments')
+    }
+  }, [params.view])
 
   useEffect(() => {
     if (!user?.id || !settings) {
