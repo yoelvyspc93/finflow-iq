@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
@@ -11,6 +10,7 @@ import {
 
 import { Feather } from "@expo/vector-icons";
 import { Link, Redirect, router } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { DecorativeBackground } from "@/components/ui/decorative-background";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
@@ -91,7 +91,7 @@ export default function SignUpScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
       <DecorativeBackground />
       <View style={styles.container}>
         <View style={styles.card}>
@@ -256,4 +256,3 @@ const styles = StyleSheet.create({
   buttonText: { color: "#F8FAFC", fontSize: 14, fontWeight: "800" },
   link: { color: "#CBD6F7", fontSize: 13, fontWeight: "700", textAlign: "center", marginTop: 6 },
 });
-

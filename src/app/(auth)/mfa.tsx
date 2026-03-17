@@ -2,7 +2,6 @@ import { useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
@@ -10,6 +9,7 @@ import {
 } from "react-native";
 
 import { Redirect, router } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
   createTotpChallenge,
@@ -75,7 +75,7 @@ export default function MfaScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
       <DecorativeBackground />
       <View style={styles.container}>
         <View style={styles.card}>

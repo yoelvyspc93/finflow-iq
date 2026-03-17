@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,6 +11,7 @@ import {
 
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AppAlert } from "@/components/ui/app-alert";
 import { AppSwitch } from "@/components/ui/app-switch";
@@ -352,7 +352,7 @@ export default function WalletSettingsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
       <DecorativeBackground />
       <ScreenHeader
         leftAction={{ icon: "back", onPress: () => router.back() }}
@@ -587,4 +587,3 @@ const styles = StyleSheet.create({
   submitButtonText: { color: theme.colors.white, fontSize: 14, fontWeight: "900" },
   pressed: { opacity: 0.88 },
 });
-

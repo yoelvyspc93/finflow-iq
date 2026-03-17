@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { SafeAreaView, StyleSheet } from "react-native";
+import { StyleSheet } from "react-native";
 
 import { Redirect, router } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import {
   OnboardingForm,
@@ -115,7 +116,7 @@ export default function OnboardingScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
       <DecorativeBackground />
       <OnboardingForm
         initialDateFormat={settings?.dateFormat ?? "DD/MM/YYYY"}

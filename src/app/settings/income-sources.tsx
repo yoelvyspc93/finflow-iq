@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Pressable,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,6 +10,7 @@ import {
 
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { AppAlert } from "@/components/ui/app-alert";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
@@ -192,7 +192,7 @@ export default function IncomeSourceSettingsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
       <DecorativeBackground />
       <ScreenHeader
         leftAction={{ icon: "back", onPress: () => router.back() }}
@@ -305,4 +305,3 @@ const styles = StyleSheet.create({
   submitButtonText: { color: theme.colors.white, fontSize: 14, fontWeight: "700" },
   pressed: { opacity: 0.88 },
 });
-
