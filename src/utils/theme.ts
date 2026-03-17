@@ -18,6 +18,8 @@ export const theme = {
     yellowSoft: "rgba(245, 158, 11, 0.20)",
     green: "#10B981",
     greenSoft: "rgba(16, 185, 129, 0.20)",
+
+    divider: "rgba(88, 104, 149, 0.12)",
   },
   spacing: {
     xs: 6,

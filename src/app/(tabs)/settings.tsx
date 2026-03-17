@@ -3,10 +3,11 @@ import { Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from "rea
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
-import { supabase } from "@/lib/supabase/client";
 import { DecorativeBackground } from "@/components/ui/decorative-background";
 import { ScreenHeader } from "@/components/ui/screen-header";
+import { supabase } from "@/lib/supabase/client";
 import { useAuthStore } from "@/stores/auth-store";
+import { theme } from "@/utils/theme";
 
 function Section({
   children,
@@ -102,14 +103,14 @@ export default function SettingsScreen() {
 
         <Section title="Ajustes">
           <Row
-            hint="Sesion, MFA y proteccion de acceso"
-            onPress={() => router.push("/settings/security")}
-            title="Seguridad"
-          />
-          <Row
             hint="Crear, editar y administrar carteras"
             onPress={() => router.push("/settings/wallets")}
             title="Wallets"
+          />
+          <Row
+            hint="Sesion, MFA y proteccion de acceso"
+            onPress={() => router.push("/settings/security")}
+            title="Seguridad"
           />
           <Row
             hint="Gestion de categorias personales"
@@ -137,20 +138,24 @@ export default function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#0B1020" },
-  content: { paddingHorizontal: 14, paddingTop: 8, paddingBottom: 104, gap: 16 },
+  safeArea: { flex: 1, backgroundColor: theme.colors.background },
+  content: {
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.lg,
+    gap: theme.spacing.lg,
+  },
   profileCard: { alignItems: "center", gap: 6, paddingTop: 4 },
   avatar: {
     width: 74,
     height: 74,
     borderRadius: 37,
     borderWidth: 2,
-    borderColor: "#4B69FF",
+    borderColor: theme.colors.primary,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#18213A",
+    backgroundColor: theme.colors.backgroundCard,
   },
-  avatarText: { color: "#F8FAFC", fontSize: 28, fontWeight: "900" },
+  avatarText: { color: theme.colors.white, fontSize: 28, fontWeight: "900" },
   avatarBadge: {
     position: "absolute",
     right: 2,
@@ -159,17 +164,17 @@ const styles = StyleSheet.create({
     height: 14,
     borderRadius: 7,
     borderWidth: 2,
-    borderColor: "#0B1020",
-    backgroundColor: "#4B69FF",
+    borderColor: theme.colors.background,
+    backgroundColor: theme.colors.primary,
   },
-  profileName: { color: "#FFFFFF", fontSize: 28, fontWeight: "900" },
-  profileEmail: { color: "#8A96B3", fontSize: 13 },
+  profileName: { color: theme.colors.white, fontSize: 28, fontWeight: "900" },
+  profileEmail: { color: theme.colors.grayLight, fontSize: 13 },
   section: { gap: 8 },
   sectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
-  sectionTitle: { color: "#F8FAFC", fontSize: 14, fontWeight: "800" },
+  sectionTitle: { color: theme.colors.white, fontSize: 14, fontWeight: "800" },
   sectionBody: {
     borderRadius: 14,
-    backgroundColor: "rgba(21, 28, 47, 0.96)",
+    backgroundColor: theme.colors.backgroundCard,
     borderWidth: 1,
     borderColor: "rgba(88, 104, 149, 0.14)",
     overflow: "hidden",
@@ -182,22 +187,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(88, 104, 149, 0.12)",
+    borderBottomColor: theme.colors.divider,
   },
   rowText: { flex: 1, gap: 2 },
-  rowTitle: { color: "#F8FAFC", fontSize: 14, fontWeight: "700" },
-  rowHint: { color: "#8A96B3", fontSize: 11, lineHeight: 16 },
+  rowTitle: { color: theme.colors.white, fontSize: 14, fontWeight: "700" },
+  rowHint: { color: theme.colors.grayLight, fontSize: 11, lineHeight: 16 },
   rowValueWrap: { flexDirection: "row", alignItems: "center", gap: 6 },
-  rowValue: { color: "#4B69FF", fontSize: 12, fontWeight: "800" },
+  rowValue: { color: theme.colors.primary, fontSize: 12, fontWeight: "800" },
   signOutButton: {
     minHeight: 50,
     borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "rgba(21, 28, 47, 0.96)",
+    backgroundColor: theme.colors.backgroundCard,
     borderWidth: 1,
     borderColor: "rgba(88, 104, 149, 0.14)",
   },
-  signOutText: { color: "#F8FAFC", fontSize: 14, fontWeight: "800" },
+  signOutText: { color: theme.colors.white, fontSize: 14, fontWeight: "800" },
   pressed: { opacity: 0.88 },
 });

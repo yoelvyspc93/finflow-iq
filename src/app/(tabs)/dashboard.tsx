@@ -98,6 +98,7 @@ export default function DashboardScreen() {
   const commitmentOverview = useCommitmentStore((state) => state.overview);
   const refreshSalaryData = useSalaryStore((state) => state.refreshSalaryData);
   const salaryOverview = useSalaryStore((state) => state.overview);
+  const visibleWallets = wallets.filter((wallet) => wallet.isActive);
 
   const activeWallet = selectActiveWallet(wallets, selectedWalletId);
 
@@ -192,17 +193,17 @@ export default function DashboardScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.walletsRow}
         >
-          {wallets.length > 0 ? (
-            wallets.map((wallet, index) => {
+          {visibleWallets.length > 0 ? (
+            visibleWallets.map((wallet, index) => {
               const isActive = wallet.id === selectedWalletId;
-
+              const min = visibleWallets.length === 1 ? viewportWidth : viewportWidth * 0.85
               return (
                 <Pressable
                   key={wallet.id}
                   onPress={() => setSelectedWalletId(wallet.id)}
                   style={({ pressed }) => [
                     styles.walletCard,
-                    { width: Math.min(viewportWidth * 0.8, 320) },
+                    { width: min - 32 },
                     isActive ? styles.walletCardActive : styles.walletCardMuted,
                     !isActive && index % 2 === 1 && styles.walletCardMutedAlt,
                     pressed && styles.pressed,

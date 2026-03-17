@@ -11,6 +11,10 @@ import {
 
 import { useRouter } from "expo-router";
 
+import { AppSwitch } from "@/components/ui/app-switch";
+import { BottomSheet } from "@/components/ui/bottom-sheet";
+import { DecorativeBackground } from "@/components/ui/decorative-background";
+import { ScreenHeader } from "@/components/ui/screen-header";
 import {
   createTotpChallenge,
   disableTotpFactor,
@@ -19,12 +23,9 @@ import {
   toUserFriendlyMfaError,
   verifyTotpChallenge,
 } from "@/lib/auth/mfa";
-import { AppSwitch } from "@/components/ui/app-switch";
-import { BottomSheet } from "@/components/ui/bottom-sheet";
-import { DecorativeBackground } from "@/components/ui/decorative-background";
-import { ScreenHeader } from "@/components/ui/screen-header";
 import { useAuthStore } from "@/stores/auth-store";
 import { useSecurityStore } from "@/stores/security-store";
+import { theme } from "@/utils/theme";
 
 type MfaSheetMode = "enable" | "disable" | null;
 
@@ -240,8 +241,8 @@ export default function SecuritySettingsScreen() {
             title="Desactivar MFA"
             value={mfaEnabled ? "Disponible" : "No activo"}
           />
-          {mfaError ? <Text style={styles.inlineError}>{mfaError}</Text> : null}
         </View>
+        {mfaError ? <Text style={styles.inlineError}>{mfaError}</Text> : null}
       </ScrollView>
 
       <BottomSheet onClose={closeMfaSheet} visible={mfaSheet === "enable"}>
@@ -314,13 +315,13 @@ export default function SecuritySettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#0B1020" },
-  content: { paddingHorizontal: 14, paddingTop: 8, paddingBottom: 104, gap: 16 },
+  safeArea: { flex: 1, backgroundColor: theme.colors.background },
+  content: { paddingHorizontal: theme.spacing.md, paddingVertical: theme.spacing.lg, gap: theme.spacing.lg },
   section: {
     borderRadius: 14,
-    backgroundColor: "rgba(21, 28, 47, 0.96)",
+    backgroundColor: theme.colors.backgroundCard,
     borderWidth: 1,
-    borderColor: "rgba(88, 104, 149, 0.14)",
+    borderColor: theme.colors.divider,
     overflow: "hidden",
   },
   securityRow: {
@@ -328,50 +329,50 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(88, 104, 149, 0.12)",
+    borderBottomColor: theme.colors.divider,
   },
   row: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     gap: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(88, 104, 149, 0.12)",
+    borderBottomColor: theme.colors.divider,
   },
   rowText: { flex: 1, gap: 2 },
-  rowTitle: { color: "#F8FAFC", fontSize: 14, fontWeight: "700" },
-  rowHint: { color: "#8A96B3", fontSize: 11, lineHeight: 16 },
+  rowTitle: { color: theme.colors.white, fontSize: 14, fontWeight: "700" },
+  rowHint: { color: theme.colors.grayLight, fontSize: 11, lineHeight: 16 },
   rowValueWrap: { flexDirection: "row", alignItems: "center", gap: 6 },
-  rowValue: { color: "#4B69FF", fontSize: 12, fontWeight: "800" },
-  chevron: { color: "#7D89A8", fontSize: 16, fontWeight: "700" },
+  rowValue: { color: theme.colors.primary, fontSize: 12, fontWeight: "700" },
+  chevron: { color: theme.colors.grayLight, fontSize: 16, fontWeight: "700" },
   inlineError: {
-    color: "#FCA5A5",
+    color: theme.colors.red,
     fontSize: 12,
     lineHeight: 18,
     marginHorizontal: 14,
     marginBottom: 12,
   },
-  sheetTitle: { color: "#F8FAFC", fontSize: 22, fontWeight: "900", marginBottom: 8 },
-  sheetDescription: { color: "#8A96B3", fontSize: 13, lineHeight: 19, marginBottom: 10 },
+  sheetTitle: { color: theme.colors.white, fontSize: 22, fontWeight: "700", marginBottom: 8 },
+  sheetDescription: { color: theme.colors.grayLight, fontSize: 13, lineHeight: 19, marginBottom: 10 },
   mfaSecret: {
-    color: "#F8FAFC",
+    color: theme.colors.white,
     fontSize: 18,
-    fontWeight: "900",
+    fontWeight: "700",
     letterSpacing: 1,
     marginBottom: 10,
   },
-  mfaUri: { color: "#8AA0D7", fontSize: 12, lineHeight: 18, marginBottom: 10 },
+  mfaUri: { color: theme.colors.grayLight, fontSize: 12, lineHeight: 18, marginBottom: 10 },
   mfaCodeInput: {
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(92, 108, 149, 0.24)",
-    backgroundColor: "#192035",
-    color: "#D9E3F6",
+    borderColor: theme.colors.divider,
+    backgroundColor: theme.colors.backgroundCard,
+    color: theme.colors.white,
     fontSize: 24,
     fontWeight: "800",
     letterSpacing: 6,
@@ -379,15 +380,15 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     marginBottom: 8,
   },
-  error: { color: "#F7A9AA", fontSize: 13, lineHeight: 20, marginBottom: 8 },
+  error: { color: theme.colors.red, fontSize: 13, lineHeight: 20, marginBottom: 8 },
   button: {
     minHeight: 50,
     borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#4664FF",
+    backgroundColor: theme.colors.primary,
   },
   buttonDisabled: { opacity: 0.7 },
-  buttonText: { color: "#FFFFFF", fontSize: 14, fontWeight: "900" },
+  buttonText: { color: theme.colors.white, fontSize: 14, fontWeight: "700" },
   pressed: { opacity: 0.88 },
 });

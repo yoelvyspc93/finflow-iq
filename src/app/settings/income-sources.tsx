@@ -8,6 +8,7 @@ import { ScreenHeader } from "@/components/ui/screen-header";
 import { listIncomeSources } from "@/modules/income-sources/service";
 import type { IncomeSource } from "@/modules/income-sources/types";
 import { useAuthStore } from "@/stores/auth-store";
+import { theme } from "@/utils/theme";
 
 export default function IncomeSourceSettingsScreen() {
   const router = useRouter();
@@ -47,24 +48,24 @@ export default function IncomeSourceSettingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#0B1020" },
-  content: { paddingHorizontal: 14, paddingTop: 8, paddingBottom: 104, gap: 16 },
+  safeArea: { flex: 1, backgroundColor: theme.colors.background },
+  content: { paddingHorizontal: theme.spacing.md, paddingVertical: theme.spacing.lg, gap: theme.spacing.lg },
   section: {
     borderRadius: 14,
-    backgroundColor: "rgba(21, 28, 47, 0.96)",
+    backgroundColor: theme.colors.backgroundCard,
     borderWidth: 1,
-    borderColor: "rgba(88, 104, 149, 0.14)",
+    borderColor: theme.colors.divider,
     overflow: "hidden",
   },
   row: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(88, 104, 149, 0.12)",
+    borderBottomColor: theme.colors.divider,
   },
-  dot: { width: 10, height: 10, borderRadius: 999, backgroundColor: "#94A3B8" },
-  name: { color: "#F8FAFC", fontSize: 14, fontWeight: "700" },
+  dot: { width: 10, height: 10, borderRadius: 999, backgroundColor: theme.colors.grayLight },
+  name: { color: theme.colors.white, fontSize: 14, fontWeight: "700" },
 });

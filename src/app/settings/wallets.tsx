@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   Pressable,
   SafeAreaView,
   ScrollView,
@@ -12,16 +13,33 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 
+import { AppAlert } from "@/components/ui/app-alert";
+import { AppSwitch } from "@/components/ui/app-switch";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { DecorativeBackground } from "@/components/ui/decorative-background";
 import { ScreenHeader } from "@/components/ui/screen-header";
-import { createWallet, deactivateWallet, updateWallet } from "@/modules/wallets/service";
+import {
+  activateWallet,
+  createWallet,
+  deactivateWallet,
+  deleteWallet,
+  getWalletReferenceSummary,
+  updateWallet,
+} from "@/modules/wallets/service";
 import { createMockWallet } from "@/modules/wallets/types";
 import { useAppStore } from "@/stores/app-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { theme } from "@/utils/theme";
 
 const walletColors = ["#4F6BFF", "#18B7A4", "#F97316", "#E11D48"] as const;
+
+type AlertState = {
+  confirmLabel?: string;
+  message: string;
+  onConfirm?: () => void;
+  title: string;
+  visible: boolean;
+};
 
 export default function WalletSettingsScreen() {
   const router = useRouter();
@@ -32,15 +50,75 @@ export default function WalletSettingsScreen() {
   const [color, setColor] = useState("#4F6BFF");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [referenceMap, setReferenceMap] = useState<
+    Record<string, { hasOperations: boolean; totalReferences: number }>
+  >({});
+  const [alertState, setAlertState] = useState<AlertState>({
+    message: "",
+    title: "",
+    visible: false,
+  });
+
   const isDevBypass = useAuthStore((state) => state.isDevBypass);
   const user = useAuthStore((state) => state.user);
   const wallets = useAppStore((state) => state.wallets);
+  const refreshAppData = useAppStore((state) => state.refreshAppData);
+  const removeLocalWallet = useAppStore((state) => state.removeLocalWallet);
   const upsertLocalWallet = useAppStore((state) => state.upsertLocalWallet);
   const activeWallets = wallets.filter((wallet) => wallet.isActive);
   const editingWallet = useMemo(
     () => wallets.find((wallet) => wallet.id === editingWalletId) ?? null,
     [editingWalletId, wallets],
   );
+
+  useEffect(() => {
+    if (!wallets.length) {
+      setReferenceMap({});
+      return;
+    }
+
+    if (isDevBypass || !user?.id) {
+      setReferenceMap(
+        Object.fromEntries(
+          wallets.map((wallet) => [
+            wallet.id,
+            {
+              hasOperations: wallet.balance !== 0,
+              totalReferences: wallet.balance !== 0 ? 1 : 0,
+            },
+          ]),
+        ),
+      );
+      return;
+    }
+
+    void Promise.allSettled(
+      wallets.map(async (wallet) => ({
+        summary: await getWalletReferenceSummary({ userId: user.id, walletId: wallet.id }),
+        walletId: wallet.id,
+      })),
+    ).then((results) => {
+      const next = Object.fromEntries(
+        results.map((result, index) => {
+          const fallback = { hasOperations: true, totalReferences: 1 };
+
+          if (result.status === "fulfilled") {
+            return [
+              result.value.walletId,
+              {
+                hasOperations: result.value.summary.hasOperations,
+                totalReferences: result.value.summary.totalReferences,
+              },
+            ];
+          }
+
+          return [wallets[index]?.id ?? `wallet-${index}`, fallback];
+        }),
+      );
+
+      setReferenceMap(next);
+    });
+  }, [isDevBypass, user?.id, wallets]);
 
   function openCreateSheet() {
     setEditingWalletId(null);
@@ -71,6 +149,28 @@ export default function WalletSettingsScreen() {
     setSheetOpen(false);
     setError(null);
     setIsSubmitting(false);
+  }
+
+  function openInfoAlert(title: string, message: string) {
+    setAlertState({
+      message,
+      title,
+      visible: true,
+    });
+  }
+
+  function closeAlert() {
+    setAlertState({
+      message: "",
+      title: "",
+      visible: false,
+    });
+  }
+
+  function handleConfirmAlert() {
+    const action = alertState.onConfirm;
+    closeAlert();
+    action?.();
   }
 
   async function handleSaveWallet() {
@@ -145,24 +245,110 @@ export default function WalletSettingsScreen() {
 
   async function handleDeactivateWallet(walletId: string) {
     if (!user?.id || activeWallets.length <= 1) {
+      openInfoAlert("No disponible", "Debe existir al menos una wallet activa.");
       return;
     }
 
-    if (isDevBypass) {
-      const wallet = wallets.find((item) => item.id === walletId);
-      if (!wallet) {
+    try {
+      if (isDevBypass) {
+        const wallet = wallets.find((item) => item.id === walletId);
+        if (!wallet) {
+          return;
+        }
+        upsertLocalWallet({
+          ...wallet,
+          isActive: false,
+          updatedAt: new Date().toISOString(),
+        });
         return;
       }
-      upsertLocalWallet({
-        ...wallet,
-        isActive: false,
-        updatedAt: new Date().toISOString(),
-      });
+
+      const updatedWallet = await deactivateWallet({ userId: user.id, walletId });
+      upsertLocalWallet(updatedWallet);
+    } catch (caughtError) {
+      openInfoAlert(
+        "No se pudo desactivar",
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Ocurrio un error desactivando la wallet.",
+      );
+    }
+  }
+
+  async function handleActivateWallet(walletId: string) {
+    if (!user?.id) {
       return;
     }
 
-    const updatedWallet = await deactivateWallet({ userId: user.id, walletId });
-    upsertLocalWallet(updatedWallet);
+    try {
+      if (isDevBypass) {
+        const wallet = wallets.find((item) => item.id === walletId);
+        if (!wallet) {
+          return;
+        }
+
+        upsertLocalWallet({
+          ...wallet,
+          isActive: true,
+          updatedAt: new Date().toISOString(),
+        });
+        return;
+      }
+
+      const updatedWallet = await activateWallet({ userId: user.id, walletId });
+      upsertLocalWallet(updatedWallet);
+    } catch (caughtError) {
+      openInfoAlert(
+        "No se pudo activar",
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Ocurrio un error activando la wallet.",
+      );
+    }
+  }
+
+  async function handleDeleteWallet(walletId: string) {
+    if (!user?.id) {
+      return;
+    }
+
+    try {
+      if (isDevBypass) {
+        removeLocalWallet(walletId);
+        return;
+      }
+
+      await deleteWallet({ userId: user.id, walletId });
+      await refreshAppData({ isDevBypass: false, userId: user.id });
+    } catch (caughtError) {
+      openInfoAlert(
+        "No se pudo eliminar",
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Ocurrio un error eliminando la wallet.",
+      );
+    }
+  }
+
+  function handleWalletSwitch(walletId: string, nextValue: boolean) {
+    if (nextValue) {
+      void handleActivateWallet(walletId);
+      return;
+    }
+
+    void handleDeactivateWallet(walletId);
+  }
+
+  function confirmDelete(walletId: string) {
+    setAlertState({
+      confirmLabel: "Eliminar",
+      message: "Esta wallet se eliminara por completo. Deseas continuar?",
+      onConfirm: () => {
+        void handleDeleteWallet(walletId);
+      },
+      title: "Eliminar wallet",
+      visible: true,
+    });
   }
 
   return (
@@ -187,24 +373,45 @@ export default function WalletSettingsScreen() {
                   {wallet.currency} - ${wallet.balance.toFixed(2)} -{" "}
                   {wallet.isActive ? "activa" : "archivada"}
                 </Text>
+                <Text style={styles.walletCapability}>
+                  {(referenceMap[wallet.id]?.totalReferences ?? 1) === 0
+                    ? "Se puede eliminar"
+                    : "No se puede eliminar tiene movimientos"}
+                </Text>
               </View>
               <View style={styles.walletActions}>
-                <Pressable
-                  onPress={() => openEditSheet(wallet.id)}
-                  style={({ pressed }) => pressed && styles.pressed}
-                >
-                  <Ionicons color={theme.colors.white} name="create-outline" size={17} />
-                </Pressable>
-                {activeWallets.length > 1 && wallet.isActive ? (
-                  <Pressable
-                    onPress={() => {
-                      void handleDeactivateWallet(wallet.id);
-                    }}
-                    style={({ pressed }) => pressed && styles.pressed}
-                  >
-                    <Ionicons color={theme.colors.grayLight} name="trash-outline" size={17} />
-                  </Pressable>
-                ) : null}
+                {(() => {
+                  const reference = referenceMap[wallet.id];
+                  const hasResolved = Boolean(reference);
+                  const canDelete = hasResolved && reference.totalReferences === 0;
+                  const shouldShowSwitch = hasResolved && reference.totalReferences > 0;
+
+                  return (
+                    <>
+                      <Pressable
+                        onPress={() => openEditSheet(wallet.id)}
+                        style={({ pressed }) => pressed && styles.pressed}
+                      >
+                        <Ionicons color={theme.colors.white} name="create-outline" size={17} />
+                      </Pressable>
+                      {canDelete ? (
+                        <Pressable
+                          onPress={() => confirmDelete(wallet.id)}
+                          style={({ pressed }) => pressed && styles.pressed}
+                        >
+                          <Ionicons color={theme.colors.grayLight} name="trash-outline" size={17} />
+                        </Pressable>
+                      ) : shouldShowSwitch ? (
+                        <AppSwitch
+                          onValueChange={(next) => handleWalletSwitch(wallet.id, next)}
+                          value={wallet.isActive}
+                        />
+                      ) : (
+                        <ActivityIndicator color={theme.colors.grayLight} size="small" />
+                      )}
+                    </>
+                  );
+                })()}
               </View>
             </View>
           ))}
@@ -269,6 +476,16 @@ export default function WalletSettingsScreen() {
           </Text>
         </Pressable>
       </BottomSheet>
+
+      <AppAlert
+        cancelLabel="Cerrar"
+        confirmLabel={alertState.confirmLabel ?? "Aceptar"}
+        message={alertState.message}
+        onCancel={closeAlert}
+        onConfirm={alertState.onConfirm ? handleConfirmAlert : undefined}
+        title={alertState.title}
+        visible={alertState.visible}
+      />
     </SafeAreaView>
   );
 }
@@ -276,30 +493,29 @@ export default function WalletSettingsScreen() {
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: theme.colors.background },
   content: {
-    paddingHorizontal: theme.spacing.sm + 4,
-    paddingTop: theme.spacing.xs + 2,
-    paddingBottom: 104,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.lg,
     gap: theme.spacing.md,
   },
   section: {
     borderRadius: theme.radii.sm,
     backgroundColor: theme.colors.backgroundCard,
     borderWidth: 1,
-    borderColor: "rgba(88, 104, 149, 0.14)",
+    borderColor: theme.colors.divider,
     overflow: "hidden",
   },
   walletRow: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(88, 104, 149, 0.12)",
+    borderBottomColor: theme.colors.divider,
   },
   walletGlyph: {
-    width: 28,
-    height: 28,
+    width: 32,
+    height: 32,
     borderRadius: 8,
     borderWidth: 1,
     alignItems: "center",
@@ -309,11 +525,16 @@ const styles = StyleSheet.create({
   walletText: { flex: 1, gap: 2 },
   walletName: { color: theme.colors.white, fontSize: 14, fontWeight: "800" },
   walletMeta: { color: theme.colors.grayLight, fontSize: 11, lineHeight: 16 },
+  walletCapability: {
+    color: theme.colors.primary,
+    fontSize: 10,
+    fontWeight: "700",
+  },
   walletActions: { flexDirection: "row", alignItems: "center", gap: 14 },
   sheetTitle: {
     color: theme.colors.white,
     fontSize: 22,
-    fontWeight: "900",
+    fontWeight: "700",
     marginBottom: 8,
   },
   sheetDescription: {
@@ -325,7 +546,7 @@ const styles = StyleSheet.create({
   label: {
     color: theme.colors.white,
     fontSize: 14,
-    fontWeight: "800",
+    fontWeight: "700",
     marginBottom: 8,
     marginTop: 8,
   },
@@ -349,7 +570,7 @@ const styles = StyleSheet.create({
   },
   colorSwatchActive: { borderColor: theme.colors.white },
   errorText: {
-    color: "#FCA5A5",
+    color: theme.colors.red,
     fontSize: 13,
     lineHeight: 20,
     marginTop: 12,
@@ -366,3 +587,4 @@ const styles = StyleSheet.create({
   submitButtonText: { color: theme.colors.white, fontSize: 14, fontWeight: "900" },
   pressed: { opacity: 0.88 },
 });
+
