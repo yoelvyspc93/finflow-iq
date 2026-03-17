@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Animated, Easing, Pressable, StyleSheet, View } from "react-native";
+import { Animated, Easing, Pressable, StyleSheet } from "react-native";
 
 type AppSwitchProps = {
   disabled?: boolean;
