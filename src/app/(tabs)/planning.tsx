@@ -33,10 +33,11 @@ import { createWish } from "@/modules/wishes/service";
 import { createLocalWish } from "@/modules/wishes/types";
 import { useAppStore } from "@/stores/app-store";
 import { useAuthStore } from "@/stores/auth-store";
+import { useCommitmentStore } from "@/stores/commitment-store";
 import { useLedgerStore } from "@/stores/ledger-store";
 import { usePlanningStore } from "@/stores/planning-store";
 
-type PlanningView = "desires" | "insights";
+type PlanningView = "desires" | "commitments" | "insights";
 type DesireFilter = "all" | "bought" | "pending";
 
 function dateLabel(value: string | null, month = false) {
@@ -118,6 +119,10 @@ export default function PlanningScreen() {
   const addLocalWish = usePlanningStore((state) => state.addLocalWish);
   const addLocalEntry = useLedgerStore((state) => state.addLocalEntry);
   const refreshLedger = useLedgerStore((state) => state.refreshLedger);
+  const refreshCommitmentData = useCommitmentStore((state) => state.refreshCommitmentData);
+  const recurringExpenses = useCommitmentStore((state) => state.recurringExpenses);
+  const budgetProvisions = useCommitmentStore((state) => state.budgetProvisions);
+  const currentMonth = `${new Date().toISOString().slice(0, 7)}-01`;
 
   useEffect(() => {
     if (!user?.id || !settings) {
@@ -126,6 +131,25 @@ export default function PlanningScreen() {
 
     void refreshPlanningData({ isDevBypass, settings, userId: user.id, wallets });
   }, [isDevBypass, refreshPlanningData, settings, user?.id, wallets]);
+
+  useEffect(() => {
+    if (!user?.id || !selectedWalletId) {
+      return;
+    }
+
+    void refreshCommitmentData({
+      isDevBypass,
+      month: currentMonth,
+      userId: user.id,
+      walletId: selectedWalletId,
+    });
+  }, [
+    currentMonth,
+    isDevBypass,
+    refreshCommitmentData,
+    selectedWalletId,
+    user?.id,
+  ]);
 
   const activeGoals = goalSnapshots.filter(
     (snapshot) => snapshot.goal.status === "active" || snapshot.status === "at_risk",
@@ -440,6 +464,7 @@ export default function PlanningScreen() {
           onChange={setView}
           options={[
             { label: "Deseos", value: "desires" },
+            { label: "Compromisos", value: "commitments" },
             { label: "Insights", value: "insights" },
           ]}
           value={view}
@@ -532,6 +557,45 @@ export default function PlanningScreen() {
                 <Text style={styles.bodyText}>{actionTip}</Text>
               </View>
             </View>
+          </>
+        ) : view === "commitments" ? (
+          <>
+            <Text style={styles.sectionTitle}>Fijos</Text>
+            {recurringExpenses
+              .filter((item) => item.walletId === selectedWalletId && item.isActive)
+              .map((item) => (
+                <View key={item.id} style={styles.card}>
+                  <View style={styles.rowBetween}>
+                    <Text style={styles.cardTitle}>{item.name}</Text>
+                    <Text style={styles.price}>${item.amount.toFixed(2)}</Text>
+                  </View>
+                  <Text style={styles.softText}>
+                    {item.frequency === "monthly"
+                      ? `Mensual - dia ${String(item.billingDay).padStart(2, "0")}`
+                      : `Anual - ${String(item.billingDay).padStart(2, "0")}/${String(
+                          item.billingMonth ?? 1,
+                        ).padStart(2, "0")}`}
+                  </Text>
+                  {item.notes ? <Text style={styles.bodyText}>{item.notes}</Text> : null}
+                </View>
+              ))}
+
+            <Text style={styles.sectionTitle}>Eventos Especiales</Text>
+            {budgetProvisions
+              .filter((item) => item.walletId === selectedWalletId && item.isActive)
+              .map((item) => (
+                <View key={item.id} style={styles.card}>
+                  <View style={styles.rowBetween}>
+                    <Text style={styles.cardTitle}>{item.name}</Text>
+                    <Text style={styles.price}>${item.amount.toFixed(2)}</Text>
+                  </View>
+                  <Text style={styles.softText}>
+                    {item.recurrence === "yearly" ? "Anual" : "Una vez"} -{" "}
+                    {dateLabel(item.month, true)}
+                  </Text>
+                  {item.notes ? <Text style={styles.bodyText}>{item.notes}</Text> : null}
+                </View>
+              ))}
           </>
         ) : (
           <>
