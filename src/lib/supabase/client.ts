@@ -1,9 +1,14 @@
 import "react-native-url-polyfill/auto";
 
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as SecureStore from "expo-secure-store";
 import { createClient } from "@supabase/supabase-js";
 import { Platform } from "react-native";
 
+import {
+  createSecureStoreAuthStorage,
+  createWebAuthStorage,
+  noopAuthStorage,
+} from "@/lib/auth/auth-storage";
 import type { Database } from "@/types/supabase";
 
 const supabaseUrl =
@@ -18,37 +23,11 @@ export const isSupabaseConfigured =
 const isWeb = Platform.OS === "web";
 const isServer = isWeb && typeof window === "undefined";
 
-const webStorage = {
-  getItem(key: string) {
-    return Promise.resolve(window.localStorage.getItem(key));
-  },
-  setItem(key: string, value: string) {
-    window.localStorage.setItem(key, value);
-    return Promise.resolve();
-  },
-  removeItem(key: string) {
-    window.localStorage.removeItem(key);
-    return Promise.resolve();
-  },
-};
-
-const noopStorage = {
-  getItem() {
-    return Promise.resolve(null);
-  },
-  setItem() {
-    return Promise.resolve();
-  },
-  removeItem() {
-    return Promise.resolve();
-  },
-};
-
 const authStorage = isServer
-  ? noopStorage
+  ? noopAuthStorage
   : isWeb
-    ? webStorage
-    : AsyncStorage;
+    ? createWebAuthStorage(window.localStorage)
+    : createSecureStoreAuthStorage(SecureStore);
 
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {

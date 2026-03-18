@@ -54,7 +54,7 @@ const config: ExpoConfig = {
   ],
   experiments: {
     typedRoutes: true,
-    reactCompiler: true,
+
     baseUrl: "/finflow-iq",
   },
   owner: "yoelvyspc93",
@@ -73,3 +73,4 @@ if (easProjectId) {
 }
 
 export default config;
+

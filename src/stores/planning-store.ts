@@ -1,13 +1,10 @@
 import { create } from "zustand";
 
-import { calculateCommitmentOverview } from "@/modules/commitments/calculations";
 import {
-  listCommitmentPaymentEntries,
   listRecurringExpenses,
+  listCommitmentPaymentEntries,
 } from "@/modules/commitments/service";
 import {
-  calculateAverageGoalContributionPerMonth,
-  calculateGoalSnapshots,
   type GoalProgressSnapshot,
 } from "@/modules/goals/calculations";
 import {
@@ -21,15 +18,17 @@ import {
   type GoalContribution,
 } from "@/modules/goals/types";
 import {
-  calculateFinancialScore,
-  calculateSalaryStabilityScore,
   getCurrentWeekStart,
   listFinancialScores,
   upsertFinancialScore,
   type FinancialScore,
 } from "@/modules/insights/score";
+import {
+  evaluatePlanningState,
+  mergePlanningScores,
+  type PlanningOverview,
+} from "@/modules/planning/orchestrator";
 import { listBudgetProvisions } from "@/modules/provisions/service";
-import { calculateSalaryOverview } from "@/modules/salary/calculations";
 import {
   listSalaryPayments,
   listSalaryPeriods,
@@ -37,7 +36,6 @@ import {
 import type { AppSettings } from "@/modules/settings/types";
 import type { Wallet } from "@/modules/wallets/types";
 import {
-  calculateWishProjections,
   type WishProjection,
 } from "@/modules/wishes/calculations";
 import {
@@ -45,20 +43,6 @@ import {
   syncWishProjections,
 } from "@/modules/wishes/service";
 import { createMockWishes, type Wish } from "@/modules/wishes/types";
-
-type PlanningOverview = {
-  assignableAmount: number;
-  availableBalance: number;
-  committedAmount: number;
-  monthlyCommitmentAverage: number;
-  monthlyGoalContributionAverage: number;
-  monthlyIncome: number;
-  pendingSalaryAmount: number;
-  reserveAmount: number;
-  totalGoalSaved: number;
-  totalGoalTarget: number;
-  totalWishEstimated: number;
-};
 
 type RefreshPlanningDataArgs = {
   isDevBypass: boolean;
@@ -99,98 +83,6 @@ const initialState = {
   wishProjections: [] as WishProjection[],
   wishes: [] as Wish[],
 };
-
-function averageMonthlyCommitments(recurringExpenses: {
-  amount: number;
-  frequency: string;
-  isActive: boolean;
-}[]) {
-  return recurringExpenses.reduce((total, expense) => {
-    if (!expense.isActive) {
-      return total;
-    }
-
-    return total + (expense.frequency === "yearly" ? expense.amount / 12 : expense.amount);
-  }, 0);
-}
-
-function averageMonthlyIncome(args: {
-  fallback: number | null;
-  payments: { grossAmount: number; paymentDate: string }[];
-}) {
-  if (args.fallback && args.fallback > 0) {
-    return args.fallback;
-  }
-
-  if (args.payments.length === 0) {
-    return 0;
-  }
-
-  const recentPayments = [...args.payments]
-    .sort((left, right) => right.paymentDate.localeCompare(left.paymentDate))
-    .slice(0, 6);
-
-  return (
-    recentPayments.reduce((total, payment) => total + payment.grossAmount, 0) /
-    recentPayments.length
-  );
-}
-
-function buildOverview(args: {
-  availableBalance: number;
-  committedAmount: number;
-  goalContributions: GoalContribution[];
-  goalSnapshots: GoalProgressSnapshot[];
-  monthlyCommitmentAverage: number;
-  monthlyIncome: number;
-  pendingSalaryAmount: number;
-  reserveAmount: number;
-  wishProjections: WishProjection[];
-}) {
-  return {
-    assignableAmount:
-      args.availableBalance - args.committedAmount - args.reserveAmount,
-    availableBalance: args.availableBalance,
-    committedAmount: args.committedAmount,
-    monthlyCommitmentAverage: args.monthlyCommitmentAverage,
-    monthlyGoalContributionAverage: calculateAverageGoalContributionPerMonth(
-      args.goalContributions,
-    ),
-    monthlyIncome: args.monthlyIncome,
-    pendingSalaryAmount: args.pendingSalaryAmount,
-    reserveAmount: args.reserveAmount,
-    totalGoalSaved: args.goalSnapshots.reduce(
-      (total, snapshot) => total + snapshot.contributedAmount,
-      0,
-    ),
-    totalGoalTarget: args.goalSnapshots.reduce(
-      (total, snapshot) => total + snapshot.goal.targetAmount,
-      0,
-    ),
-    totalWishEstimated: args.wishProjections
-      .filter((projection) => !projection.wish.isPurchased)
-      .reduce((total, projection) => total + projection.wish.estimatedAmount, 0),
-  };
-}
-
-function mergeScores(
-  currentScore: FinancialScore | null,
-  remoteScores: FinancialScore[],
-) {
-  const byWeek = new Map<string, FinancialScore>();
-
-  for (const score of remoteScores) {
-    byWeek.set(score.weekStart, score);
-  }
-
-  if (currentScore) {
-    byWeek.set(currentScore.weekStart, currentScore);
-  }
-
-  return [...byWeek.values()].sort((left, right) =>
-    right.weekStart.localeCompare(left.weekStart),
-  );
-}
 
 export const usePlanningStore = create<PlanningStore>((set) => ({
   ...initialState,
@@ -249,113 +141,52 @@ export const usePlanningStore = create<PlanningStore>((set) => ({
           : goalContributions;
       const resolvedWishes =
         isDevBypass && wishes.length === 0 ? createMockWishes(userId) : wishes;
-
-      const goalSnapshots = calculateGoalSnapshots({
-        contributions: resolvedContributions,
-        goals: resolvedGoals,
-      });
-      const salaryOverview = calculateSalaryOverview(
-        salaryPeriods,
-        salaryPayments,
-      );
-      const commitmentOverview = calculateCommitmentOverview({
+      const evaluation = evaluatePlanningState({
         budgetProvisions,
-        month: currentMonth,
-        paymentEntries,
-        recurringExpenses,
-        walletId: null,
-      });
-      const availableBalance = wallets.reduce(
-        (total, wallet) => total + (wallet.isActive ? wallet.balance : 0),
-        0,
-      );
-      const monthlyCommitmentAverage = averageMonthlyCommitments(recurringExpenses);
-      const monthlyIncome = averageMonthlyIncome({
-        fallback: settings?.salaryReferenceAmount ?? null,
-        payments: salaryPayments,
-      });
-      const reserveAmount =
-        (settings?.avgMonthsWithoutPayment ?? 0) *
-        monthlyCommitmentAverage *
-        (1 + (settings?.savingsGoalPercent ?? 0) / 100);
-      const assignableAmount =
-        availableBalance - commitmentOverview.totalRemaining - reserveAmount;
-      const salaryStabilityScore = calculateSalaryStabilityScore({
-        monthlyIncome,
-        monthsWithoutPayment: salaryOverview.monthsWithoutPayment,
-        pendingSalaryAmount: salaryOverview.pendingTotal,
-      });
-      const monthlySavingCapacity = Math.max(
-        monthlyIncome * ((settings?.savingsGoalPercent ?? 0) / 100),
-        calculateAverageGoalContributionPerMonth(resolvedContributions),
-      );
-      const wishProjections = calculateWishProjections({
-        assignableAmount,
-        monthlySavingCapacity,
-        salaryStabilityScore,
-        wishes: resolvedWishes,
-      });
-      const breakdown = calculateFinancialScore({
-        assignableAmount,
-        availableBalance,
-        committedAmount: commitmentOverview.totalRemaining,
+        currentMonth,
         goalContributions: resolvedContributions,
-        monthlyCommitmentAverage,
-        monthlyIncome,
-        monthsWithoutPayment: salaryOverview.monthsWithoutPayment,
-        pendingSalaryAmount: salaryOverview.pendingTotal,
-        savingsGoalPercent: settings?.savingsGoalPercent ?? 0,
-        wishProjections,
+        goals: resolvedGoals,
+        paymentEntries,
+        recentScores,
+        recurringExpenses,
+        salaryPayments,
+        salaryPeriods,
+        settings,
+        userId,
+        wallets,
+        wishes: resolvedWishes,
       });
       const currentScore = isDevBypass
         ? {
             aiTip: null,
-            breakdown,
+            breakdown: evaluation.currentScorePayload.breakdown,
             createdAt: new Date().toISOString(),
             id: "dev-financial-score-current",
-            score: breakdown.total_score,
+            score: evaluation.currentScorePayload.breakdown.total_score,
             userId,
             weekStart: getCurrentWeekStart(),
           }
         : await upsertFinancialScore({
-            breakdown,
+            breakdown: evaluation.currentScorePayload.breakdown,
             userId,
             weekStart: getCurrentWeekStart(),
           });
 
       if (!isDevBypass) {
-        await syncWishProjections(
-          wishProjections.map((projection) => ({
-            confidenceLevel: projection.confidenceLevel,
-            confidenceReason: projection.confidenceReason,
-            estimatedPurchaseDate: projection.estimatedPurchaseDate,
-            lastCalculatedAt: new Date().toISOString(),
-            wishId: projection.wish.id,
-          })),
-        );
+        await syncWishProjections(evaluation.wishProjectionSyncInputs);
       }
 
       set({
         currentScore,
         error: null,
         goalContributions: resolvedContributions,
-        goalSnapshots,
+        goalSnapshots: evaluation.goalSnapshots,
         goals: resolvedGoals,
         isLoading: false,
         isReady: true,
-        overview: buildOverview({
-          availableBalance,
-          committedAmount: commitmentOverview.totalRemaining,
-          goalContributions: resolvedContributions,
-          goalSnapshots,
-          monthlyCommitmentAverage,
-          monthlyIncome,
-          pendingSalaryAmount: salaryOverview.pendingTotal,
-          reserveAmount,
-          wishProjections,
-        }),
-        recentScores: mergeScores(currentScore, recentScores),
-        wishProjections,
+        overview: evaluation.overview,
+        recentScores: mergePlanningScores(currentScore, recentScores),
+        wishProjections: evaluation.wishProjections,
         wishes: resolvedWishes,
       });
     } catch (error) {
