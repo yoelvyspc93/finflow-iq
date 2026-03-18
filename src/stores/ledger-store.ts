@@ -1,10 +1,12 @@
 import { create } from "zustand";
 
 import { listLedgerEntries } from "@/modules/ledger/service";
+import { resolveVisibleLedgerEntries } from "@/modules/ledger/view-state";
 import {
   sortLedgerEntries,
   type LedgerEntry,
 } from "@/modules/ledger/types";
+import { useAppStore } from "@/stores/app-store";
 
 type RefreshLedgerArgs = {
   isDevBypass: boolean;
@@ -38,9 +40,10 @@ export const useLedgerStore = create<LedgerStore>((set) => ({
       const devEntries = sortLedgerEntries([entry, ...state.devEntries]);
       return {
         devEntries,
-        entries: entry.walletId
-          ? devEntries.filter((item) => item.walletId === entry.walletId)
-          : devEntries,
+        entries: resolveVisibleLedgerEntries(
+          devEntries,
+          useAppStore.getState().selectedWalletId,
+        ),
       };
     }),
   refreshLedger: async ({ isDevBypass, userId, walletId }) => {
@@ -49,13 +52,10 @@ export const useLedgerStore = create<LedgerStore>((set) => ({
     try {
       if (isDevBypass) {
         set({
-          entries: walletId
-            ? sortLedgerEntries(
-                useLedgerStore
-                  .getState()
-                  .devEntries.filter((entry) => entry.walletId === walletId),
-              )
-            : sortLedgerEntries(useLedgerStore.getState().devEntries),
+          entries: resolveVisibleLedgerEntries(
+            useLedgerStore.getState().devEntries,
+            walletId,
+          ),
           error: null,
           isLoading: false,
           isReady: true,
@@ -80,7 +80,7 @@ export const useLedgerStore = create<LedgerStore>((set) => ({
       });
 
       set({
-        entries: sortLedgerEntries(entries),
+        entries: resolveVisibleLedgerEntries(entries, walletId),
         error: null,
         isLoading: false,
         isReady: true,

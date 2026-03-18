@@ -1,56 +1,138 @@
-# Welcome to your Expo app 👋
+# FinFlow IQ
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Aplicacion Expo + React Native para finanzas personales con soporte para Android, iOS y web/PWA. El proyecto usa Expo Router, Supabase y Zustand. La web se exporta como sitio estatico; mobile usa builds de Expo/EAS.
 
-## Get started
+## Stack
 
-1. Install dependencies
+- Expo SDK 55
+- React 19
+- React Native 0.83
+- Expo Router
+- Supabase
+- Zustand
+- TypeScript estricto
+- Vitest para pruebas unitarias
 
-   ```bash
-   npm install
-   ```
+## Requisitos
 
-2. Start the app
+- Node.js 22 recomendado
+- Yarn 1.x
+- Cuenta y proyecto de Supabase
+- EAS CLI si vas a generar builds o updates
 
-   ```bash
-   npx expo start
-   ```
+## Variables de entorno
 
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+Crea `.env` a partir de `.env.example`.
 
 ```bash
-npm run reset-project
+EXPO_PUBLIC_SUPABASE_URL=
+EXPO_PUBLIC_SUPABASE_ANON_KEY=
+EXPO_PUBLIC_WEB_URL=
+EAS_PROJECT_ID=
+SUPABASE_PROJECT_ID=
+SUPABASE_PASSWORD=
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Variables criticas para arrancar la app:
 
-### Other setup steps
+- `EXPO_PUBLIC_SUPABASE_URL`
+- `EXPO_PUBLIC_SUPABASE_ANON_KEY`
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+Variables de build/update:
 
-## Learn more
+- `EAS_PROJECT_ID`
+- `EXPO_PUBLIC_WEB_URL`
 
-To learn more about developing your project with Expo, look at the following resources:
+Variables operativas de Supabase CLI:
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+- `SUPABASE_PROJECT_ID`
+- `SUPABASE_PASSWORD`
 
-## Join the community
+## Instalacion
 
-Join our community of developers creating universal apps.
+```bash
+yarn install
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Scripts
+
+```bash
+yarn start
+yarn android
+yarn ios
+yarn web
+yarn lint
+yarn typecheck
+yarn test
+yarn test:watch
+yarn web:export
+yarn smoke:android
+```
+
+Scripts EAS:
+
+```bash
+yarn eas:build:development
+yarn eas:build:preview
+yarn eas:build:production
+yarn eas:update:development
+yarn eas:update:preview
+yarn eas:update:production
+```
+
+Scripts Supabase:
+
+```bash
+yarn supabase:login
+yarn supabase:link
+yarn supabase:db:push
+yarn supabase:db:pull
+yarn supabase:config:push
+yarn supabase:types
+```
+
+## Flujo de arranque
+
+1. `AuthBootstrap` restaura la sesion de Supabase.
+2. `SecurityBootstrap` carga MFA y seguridad local.
+3. `AppDataBootstrap` sincroniza settings y wallets.
+4. `LedgerBootstrap` sincroniza movimientos del wallet activo.
+5. Los layouts protegidos aplican guard de autenticacion y onboarding.
+
+Persistencia de sesion:
+
+- Web/PWA: `localStorage`
+- Android/iOS: `expo-secure-store`
+
+## Arquitectura resumida
+
+- `src/app`: rutas Expo Router
+- `src/components`: componentes de UI y flujos por dominio
+- `src/modules`: servicios, calculos y tipos por feature
+- `src/stores`: estado global con Zustand
+- `src/lib`: bootstrap, auth, Supabase y utilidades transversales
+- `supabase/migrations`: esquema SQL, RLS y funciones RPC
+
+## Calidad y CI
+
+El workflow de GitHub Actions ejecuta:
+
+- `yarn typecheck`
+- `yarn lint`
+- `yarn test`
+- `yarn smoke:android`
+- `yarn web:export`
+
+Si vas a abrir un PR, esos comandos deben pasar localmente.
+
+## Targets soportados
+
+- Android: objetivo principal de release
+- iOS: compatible por Expo Router y runtime universal
+- Web/PWA: export estatico y despliegue en GitHub Pages
+
+## Notas operativas
+
+- No existe ya el script template `reset-project`; este repositorio no es un starter.
+- `expo-secure-store` no aplica en web; esa diferencia es intencional.
+- El proyecto depende de configuracion valida de Supabase para login, signup y datos remotos.

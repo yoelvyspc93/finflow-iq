@@ -74,10 +74,12 @@ export default function SettingsScreen() {
     const isDevBypass = useAuthStore.getState().isDevBypass;
     if (isDevBypass) {
       clearAuth();
+      router.replace("/login");
       return;
     }
 
     await supabase.auth.signOut({ scope: "local" });
+    router.replace("/login");
   }
 
   return (

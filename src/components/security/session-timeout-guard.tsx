@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { AppState, Platform } from "react-native";
 
 import { supabase } from "@/lib/supabase/client";
@@ -15,10 +15,9 @@ export function SessionTimeoutGuard() {
   const setLastActivityAt = useSecurityStore((state) => state.setLastActivityAt);
   const isSigningOutRef = useRef(false);
 
-  const timeoutMs = useMemo(() => {
-    const minutes = settings?.sessionTimeoutMinutes ?? 5;
-    return minutes === 0 ? 1_000 : minutes * 60_000;
-  }, [settings?.sessionTimeoutMinutes]);
+  const sessionTimeoutMinutes = settings?.sessionTimeoutMinutes ?? 5;
+  const timeoutMs =
+    sessionTimeoutMinutes === 0 ? 1_000 : sessionTimeoutMinutes * 60_000;
 
   useEffect(() => {
     if (authStatus !== "authenticated") {
@@ -53,7 +52,7 @@ export function SessionTimeoutGuard() {
         setLastActivityAt();
       }
 
-      if (nextState !== "active" && (settings?.sessionTimeoutMinutes ?? 5) === 0) {
+      if (nextState !== "active" && sessionTimeoutMinutes === 0) {
         if (isSigningOutRef.current) {
           return;
         }
@@ -75,14 +74,15 @@ export function SessionTimeoutGuard() {
     return () => {
       subscription.remove();
     };
-  }, [authStatus, clearAuth, isDevBypass, setLastActivityAt, settings?.sessionTimeoutMinutes]);
+  }, [authStatus, clearAuth, isDevBypass, sessionTimeoutMinutes, setLastActivityAt]);
 
   useEffect(() => {
     if (authStatus !== "authenticated") {
       return;
     }
 
-    const timer = setInterval(() => {
+    const remainingMs = Math.max(timeoutMs - (Date.now() - lastActivityAt), 0);
+    const timer = setTimeout(() => {
       if (isSigningOutRef.current) {
         return;
       }
@@ -102,11 +102,10 @@ export function SessionTimeoutGuard() {
         clearAuth();
         isSigningOutRef.current = false;
       });
-    }, 1_000);
+    }, remainingMs);
 
-    return () => clearInterval(timer);
+    return () => clearTimeout(timer);
   }, [authStatus, clearAuth, isDevBypass, lastActivityAt, timeoutMs]);
 
   return null;
 }
-

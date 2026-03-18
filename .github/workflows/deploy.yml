@@ -48,6 +48,8 @@ jobs:
       - run: yarn install --frozen-lockfile
       - run: yarn typecheck
       - run: yarn lint
+      - run: yarn test
+      - run: yarn smoke:android
       - run: yarn web:export
 
   deploy-web:
