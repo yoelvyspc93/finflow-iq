@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest'
 
 import type { PlanningCommitmentDraft } from '@/components/planning/commitment-sheet'
 import type { WishDraft } from '@/components/planning/planning-sheet-stack'
+import type { WishPurchaseDraft } from '@/components/planning/wish-purchase-sheet'
 import {
   validateCommitmentEventMonth,
   validateCommitmentFixedDay,
   validateCommitmentSubmit,
+  validateWishPurchaseSubmit,
   validateWishSubmit,
 } from '@/modules/planning/validators'
 
@@ -25,6 +27,13 @@ const commitmentDraft: PlanningCommitmentDraft = {
   name: 'Rent',
   notes: '',
   walletId: 'wallet-1',
+}
+
+const wishPurchaseDraft: WishPurchaseDraft = {
+  amount: '250',
+  categoryId: null,
+  date: '2026-03-19',
+  description: 'Headphones',
 }
 
 describe('planning validators', () => {
@@ -58,5 +67,24 @@ describe('planning validators', () => {
       'El mes debe tener el formato AAAA-MM.',
     )
     expect(validateCommitmentEventMonth('2026-03')).toBeNull()
+  })
+
+  it('validates wish purchase submit requirements', () => {
+    expect(
+      validateWishPurchaseSubmit({
+        draft: wishPurchaseDraft,
+        userId: undefined,
+        walletId: 'wallet-1',
+        wishId: 'wish-1',
+      }),
+    ).toBe('No hay una sesión activa.')
+    expect(
+      validateWishPurchaseSubmit({
+        draft: { ...wishPurchaseDraft, amount: '0' },
+        userId: 'user-1',
+        walletId: 'wallet-1',
+        wishId: 'wish-1',
+      }),
+    ).toBe('Completa el monto, la descripción y el deseo a comprar.')
   })
 })

@@ -246,6 +246,7 @@ export type Database = {
           type: string
           user_id: string
           wallet_id: string
+          wish_id: string | null
         }
         Insert: {
           amount: number
@@ -260,6 +261,7 @@ export type Database = {
           type: string
           user_id: string
           wallet_id: string
+          wish_id?: string | null
         }
         Update: {
           amount?: number
@@ -274,6 +276,7 @@ export type Database = {
           type?: string
           user_id?: string
           wallet_id?: string
+          wish_id?: string | null
         }
         Relationships: [
           {
@@ -309,6 +312,13 @@ export type Database = {
             columns: ["wallet_id"]
             isOneToOne: false
             referencedRelation: "wallets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ledger_entries_wish_id_fkey"
+            columns: ["wish_id"]
+            isOneToOne: false
+            referencedRelation: "wishes"
             referencedColumns: ["id"]
           },
         ]
@@ -648,6 +658,7 @@ export type Database = {
       }
       wishes: {
         Row: {
+          actual_purchase_amount: number | null
           ai_advice: string | null
           confidence_level: string | null
           confidence_reason: string | null
@@ -661,12 +672,14 @@ export type Database = {
           name: string
           notes: string | null
           priority: number
+          purchase_ledger_entry_id: string | null
           purchased_at: string | null
           updated_at: string
           user_id: string
           wallet_id: string
         }
         Insert: {
+          actual_purchase_amount?: number | null
           ai_advice?: string | null
           confidence_level?: string | null
           confidence_reason?: string | null
@@ -680,12 +693,14 @@ export type Database = {
           name: string
           notes?: string | null
           priority: number
+          purchase_ledger_entry_id?: string | null
           purchased_at?: string | null
           updated_at?: string
           user_id: string
           wallet_id: string
         }
         Update: {
+          actual_purchase_amount?: number | null
           ai_advice?: string | null
           confidence_level?: string | null
           confidence_reason?: string | null
@@ -699,12 +714,20 @@ export type Database = {
           name?: string
           notes?: string | null
           priority?: number
+          purchase_ledger_entry_id?: string | null
           purchased_at?: string | null
           updated_at?: string
           user_id?: string
           wallet_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "wishes_purchase_ledger_entry_id_fkey"
+            columns: ["purchase_ledger_entry_id"]
+            isOneToOne: false
+            referencedRelation: "ledger_entries"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "wishes_wallet_id_fkey"
             columns: ["wallet_id"]
@@ -747,6 +770,7 @@ export type Database = {
           type: string
           user_id: string
           wallet_id: string
+          wish_id: string | null
         }
         SetofOptions: {
           from: "*"
@@ -807,6 +831,7 @@ export type Database = {
           type: string
           user_id: string
           wallet_id: string
+          wish_id: string | null
         }
         SetofOptions: {
           from: "*"
@@ -836,6 +861,7 @@ export type Database = {
           type: string
           user_id: string
           wallet_id: string
+          wish_id: string | null
         }
         SetofOptions: {
           from: "*"
@@ -901,6 +927,37 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "salary_periods"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_wish_purchase_expense: {
+        Args: {
+          entry_date: string
+          entry_description?: string
+          gross_amount: number
+          target_category_id?: string
+          target_wallet_id: string
+          target_wish_id: string
+        }
+        Returns: {
+          amount: number
+          budget_provision_id: string | null
+          category_id: string | null
+          created_at: string
+          date: string
+          description: string | null
+          id: string
+          income_source_id: string | null
+          recurring_expense_id: string | null
+          type: string
+          user_id: string
+          wallet_id: string
+          wish_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "ledger_entries"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -973,6 +1030,7 @@ export type Database = {
           type: string
           user_id: string
           wallet_id: string
+          wish_id: string | null
         }
         SetofOptions: {
           from: "*"
@@ -1001,6 +1059,7 @@ export type Database = {
           type: string
           user_id: string
           wallet_id: string
+          wish_id: string | null
         }
         SetofOptions: {
           from: "*"

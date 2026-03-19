@@ -12,6 +12,7 @@ const config: ExpoConfig = {
   slug: "finflow-iq-dmcp3hamwrbmrhyf9vz6n",
   version: "1.0.0",
   orientation: "portrait",
+  backgroundColor: "#0F1223",
   icon: "./assets/logo.png",
   scheme: "finflowiq",
   userInterfaceStyle: "dark",
@@ -37,6 +38,9 @@ const config: ExpoConfig = {
     favicon: "./assets/logo.png",
     name: "FinFlow IQ",
     shortName: "FinFlow IQ",
+    display: "standalone",
+    backgroundColor: "#0F1223",
+    themeColor: "#0F1223",
   },
   plugins: [
     "expo-router",

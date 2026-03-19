@@ -1,9 +1,10 @@
-import { FlatList, StyleSheet, Text, View } from "react-native";
+import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 
 import { FilterList } from "@/components/ui/filter-list";
 import type { WishProjection } from "@/modules/wishes/calculations";
+import type { Wish } from "@/modules/wishes/types";
 import { theme } from "@/utils/theme";
 
 export type WishFilterMode = "all" | "bought" | "pending";
@@ -13,6 +14,7 @@ type WishProjectionListProps = {
   filter: WishFilterMode;
   items: WishProjection[];
   onFilterChange: (value: string) => void;
+  onPurchaseWish: (wish: Wish) => void;
 };
 
 function dateLabel(value: string | null, month = false) {
@@ -38,6 +40,7 @@ export function WishProjectionList({
   filter,
   items,
   onFilterChange,
+  onPurchaseWish,
 }: WishProjectionListProps) {
   return (
     <FlatList
@@ -87,24 +90,28 @@ export function WishProjectionList({
           </View>
           <Text style={styles.pill}>
             {item.wish.isPurchased
-                ? "COMPRADO"
-                : item.confidenceLevel === "high"
-                  ? "Listo para priorizar"
-                  : item.confidenceLevel === "medium"
-                    ? "Avance estable"
-                    : item.confidenceLevel === "low"
-                      ? "Conviene esperar"
-                      : "Revisar antes de comprar"}
+              ? "COMPRADO"
+              : item.confidenceLevel === "high"
+                ? "Listo para priorizar"
+                : item.confidenceLevel === "medium"
+                  ? "Avance estable"
+                  : item.confidenceLevel === "low"
+                    ? "Conviene esperar"
+                    : "Revisar antes de comprar"}
           </Text>
           <Text style={styles.bodyText}>{item.wish.notes ?? item.confidenceReason}</Text>
           <Text style={styles.softText}>
             {item.wish.isPurchased
               ? "Compra registrada"
-              : `Necesita ${item.monthsUntilPurchase ?? "más"} ${
-                  item.monthsUntilPurchase === 1 ? "mes" : "meses"
-                } de ahorro`}
+              : `Necesita ${item.monthsUntilPurchase ?? "más"} ${item.monthsUntilPurchase === 1 ? "mes" : "meses"
+              } de ahorro`}
           </Text>
-          <View style={styles.rowBetween}>
+          {item.wish.isPurchased && item.wish.actualPurchaseAmount !== null ? (
+            <Text style={styles.softText}>
+              Pagado: ${item.wish.actualPurchaseAmount.toFixed(2)}
+            </Text>
+          ) : null}
+          <View style={styles.footerRow}>
             <View style={styles.inlineRow}>
               <MaterialCommunityIcons
                 color="#7C89A8"
@@ -117,17 +124,18 @@ export function WishProjectionList({
                   : dateLabel(item.estimatedPurchaseDate)}
               </Text>
             </View>
-            {!item.wish.isPurchased ? (
-              <View style={styles.track}>
-                <View
-                  style={[
-                    styles.trackFill,
-                    { width: `${Math.max(item.progressRatio * 100, 18)}%` },
-                  ]}
-                />
-              </View>
-            ) : null}
           </View>
+          {!item.wish.isPurchased ? (
+            <Pressable
+              onPress={() => onPurchaseWish(item.wish)}
+              style={({ pressed }) => [
+                styles.purchaseButton,
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={styles.purchaseButtonText}>Registrar compra</Text>
+            </Pressable>
+          ) : null}
         </View>
       )}
       showsVerticalScrollIndicator={false}
@@ -161,6 +169,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 12,
   },
+  footerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
   cardTitle: { flex: 1, color: theme.colors.white, fontSize: 16, fontWeight: "800" },
   strike: { textDecorationLine: "line-through" },
   price: { color: theme.colors.white, fontSize: 16, fontWeight: "800" },
@@ -168,6 +182,13 @@ const styles = StyleSheet.create({
   bodyText: { color: theme.colors.white, fontSize: 13, lineHeight: 20 },
   softText: { color: theme.colors.grayLight, fontSize: 12, lineHeight: 18 },
   inlineRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  pendingActions: {
+    minWidth: 120,
+    marginLeft: "auto",
+    alignItems: "flex-end",
+    justifyContent: "flex-end",
+    gap: 10,
+  },
   track: {
     width: 84,
     height: 4,
@@ -179,6 +200,21 @@ const styles = StyleSheet.create({
     height: "100%",
     borderRadius: theme.radii.pill,
     backgroundColor: theme.colors.primary,
+  },
+  purchaseButton: {
+    minHeight: 34,
+    borderRadius: theme.radii.pill,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    backgroundColor: theme.colors.blueSoft,
+    paddingHorizontal: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  purchaseButtonText: {
+    color: theme.colors.white,
+    fontSize: 11,
+    fontWeight: "800",
   },
   tipCard: {
     flexDirection: "row",
@@ -200,4 +236,5 @@ const styles = StyleSheet.create({
   },
   tipBody: { flex: 1, gap: 6 },
   tipTitle: { color: theme.colors.primary, fontSize: 11, fontWeight: "800" },
+  pressed: { opacity: 0.88 },
 });

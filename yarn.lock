@@ -7003,10 +7003,10 @@ styleq@^0.1.3:
   resolved "https://registry.npmjs.org/styleq/-/styleq-0.1.3.tgz"
   integrity sha512-3ZUifmCDCQanjeej1f6kyl/BeP/Vae5EYkQ9iJfUm/QwZvlgnZzyflqAsAWYURdtea8Vkvswu2GrC57h3qffcA==
 
-supabase@^2.81.1:
-  version "2.81.1"
-  resolved "https://registry.yarnpkg.com/supabase/-/supabase-2.81.1.tgz#e704d9041920ca5ff28a60815f23b246901db85e"
-  integrity sha512-Vv5AoLyiGxkG8fD7MCFUHssZ0b6wkZvK7CHonNyoFchLYw2f7wJyCkBe/hgfOATSlj9YEyRxi4amCzE51V4EoQ==
+supabase@^2.82.0:
+  version "2.82.0"
+  resolved "https://registry.yarnpkg.com/supabase/-/supabase-2.82.0.tgz#e435ef428200e9d168004299c60539238f62ed7d"
+  integrity sha512-QvdD3DvK+5blmc0ysvhFaOyWeJe1RwIcyaftadaLY4lB43VqBCqYVUL+O8HcL235GArDXDBDQgIczEIp1rLtRg==
   dependencies:
     bin-links "^6.0.0"
     https-proxy-agent "^7.0.2"

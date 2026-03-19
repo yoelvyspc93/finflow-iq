@@ -11,6 +11,7 @@ import { useAuthStore } from '@/stores/auth-store'
 import { useExchangeStore } from '@/stores/exchange-store'
 import { useLedgerStore } from '@/stores/ledger-store'
 import { useSalaryStore } from '@/stores/salary-store'
+import { usePlanningStore } from '@/stores/planning-store'
 import { useFinancesMovements } from '@/hooks/finances/use-finances-movements'
 import { useFinancesQuickActions } from '@/hooks/finances/use-finances-quick-actions'
 import { useFinancesSalary } from '@/hooks/finances/use-finances-salary'
@@ -34,6 +35,10 @@ export function useFinancesScreen() {
   )
   const refreshSalaryData = useSalaryStore((state) => state.refreshSalaryData)
   const salaryPeriods = useSalaryStore((state) => state.periods)
+  const settings = useAppStore((state) => state.settings)
+  const refreshPlanningData = usePlanningStore(
+    (state) => state.refreshPlanningData,
+  )
 
   const quickActions = useFinancesQuickActions({
     activeWalletCurrency: activeWallet?.currency,
@@ -59,6 +64,14 @@ export function useFinancesScreen() {
       refreshExchangeData({ userId: user.id }),
       refreshSalaryData({ userId: user.id }),
     ])
+
+    if (settings) {
+      await refreshPlanningData({
+        settings,
+        userId: user.id,
+        wallets: useAppStore.getState().wallets,
+      })
+    }
   }
 
   const movements = useFinancesMovements({

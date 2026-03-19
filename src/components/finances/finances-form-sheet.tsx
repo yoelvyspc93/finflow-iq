@@ -2,7 +2,6 @@ import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 
 import { Feather } from "@expo/vector-icons";
 
-import { AppSwitch } from "@/components/ui/app-switch";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import type { Category } from "@/modules/categories/types";
 import type { IncomeSource } from "@/modules/income-sources/types";
@@ -26,7 +25,6 @@ export type FinancesDraft = {
   destinationWalletId: string | null;
   incomeSourceId: string | null;
   rate: string;
-  wish: boolean;
 };
 
 type FinancesFormSheetProps = {
@@ -247,20 +245,6 @@ export function FinancesFormSheet({
         style={styles.area}
         value={draft.description}
       />
-      {sheet === "expense" ? (
-        <View style={styles.toggle}>
-          <View style={styles.toggleText}>
-            <Text style={styles.toggleTitle}>Es un deseo de tu wishlist?</Text>
-            <Text style={styles.soft}>Marcar como gasto no esencial</Text>
-          </View>
-          <AppSwitch
-            onValueChange={(value) =>
-              setDraft((current) => ({ ...current, wish: value }))
-            }
-            value={draft.wish}
-          />
-        </View>
-      ) : null}
       {sheet === "salary-payment" ? (
         <Text style={styles.soft}>
           Se asignara automaticamente a los periodos pendientes visibles.
@@ -355,21 +339,6 @@ const styles = StyleSheet.create({
     paddingVertical: theme.spacing.md,
     textAlignVertical: "top",
   },
-  toggle: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 12,
-    borderRadius: theme.radii.sm,
-    backgroundColor: theme.colors.backgroundCard,
-    borderWidth: 1,
-    borderColor: theme.colors.divider,
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.md,
-    marginTop: theme.spacing.md,
-  },
-  toggleText: { flex: 1, gap: 3 },
-  toggleTitle: { color: theme.colors.white, fontSize: 14, fontWeight: "700" },
   soft: { color: theme.colors.grayLight, fontSize: 12, lineHeight: 18 },
   error: { color: theme.colors.red, fontSize: 13, lineHeight: 20, marginTop: 12 },
   button: {

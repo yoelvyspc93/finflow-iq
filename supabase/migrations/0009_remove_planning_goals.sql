@@ -9,6 +9,14 @@ drop trigger if exists goals_validate_integrity on public.goals;
 drop trigger if exists goals_set_updated_at on public.goals;
 
 drop function if exists public.add_goal_contribution(
+  uuid,
+  uuid,
+  numeric,
+  date,
+  text
+);
+
+drop function if exists public.add_goal_contribution(
   numeric,
   text,
   date,
@@ -138,6 +146,12 @@ $$;
 alter table public.ledger_entries
   drop constraint if exists ledger_entries_type_check;
 
+drop trigger if exists ledger_entries_prevent_update_delete on public.ledger_entries;
+
+update public.ledger_entries
+set type = 'adjustment'
+where type in ('goal_deposit', 'goal_withdrawal');
+
 alter table public.ledger_entries
   add constraint ledger_entries_type_check
   check (
@@ -152,6 +166,11 @@ alter table public.ledger_entries
       'budget_provision_payment'
     )
   );
+
+create trigger ledger_entries_prevent_update_delete
+before update or delete on public.ledger_entries
+for each row
+execute function public.prevent_ledger_mutation();
 
 drop table if exists public.goal_contributions;
 drop table if exists public.goals;

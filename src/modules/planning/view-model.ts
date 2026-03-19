@@ -1,6 +1,8 @@
 import type { PlanningCommitmentDraft } from '@/components/planning/commitment-sheet'
+import type { WishPurchaseDraft } from '@/components/planning/wish-purchase-sheet'
 import type { WishDraft } from '@/components/planning/planning-sheet-stack'
 import type { WishProjection } from '@/modules/wishes/calculations'
+import type { Wish } from '@/modules/wishes/types'
 import type { Wallet } from '@/modules/wallets/types'
 
 export function buildPlanningActionTip(args: {
@@ -25,15 +27,31 @@ export function filterWishProjectionItems(args: {
   filter: 'all' | 'pending' | 'bought'
   items: WishProjection[]
 }) {
-  if (args.filter === 'all') {
-    return args.items
-  }
+  const filtered =
+    args.filter === 'all'
+      ? args.items
+      : args.filter === 'bought'
+        ? args.items.filter((item) => item.wish.isPurchased)
+        : args.items.filter((item) => !item.wish.isPurchased)
 
-  if (args.filter === 'bought') {
-    return args.items.filter((item) => item.wish.isPurchased)
-  }
+  return [...filtered].sort((left, right) => {
+    if (left.wish.isPurchased !== right.wish.isPurchased) {
+      return left.wish.isPurchased ? 1 : -1
+    }
 
-  return args.items.filter((item) => !item.wish.isPurchased)
+    const leftDate = left.wish.isPurchased
+      ? left.wish.purchasedAt?.slice(0, 10) ?? '9999-12-31'
+      : left.estimatedPurchaseDate ?? '9999-12-31'
+    const rightDate = right.wish.isPurchased
+      ? right.wish.purchasedAt?.slice(0, 10) ?? '9999-12-31'
+      : right.estimatedPurchaseDate ?? '9999-12-31'
+
+    if (leftDate !== rightDate) {
+      return leftDate.localeCompare(rightDate)
+    }
+
+    return left.wish.priority - right.wish.priority
+  })
 }
 
 export function getNextWishAmount(items: WishProjection[]) {
@@ -78,5 +96,14 @@ export function buildCommitmentDraft(args: {
     notes: '',
     walletId:
       args.selectedWalletId ?? args.wallets.find((wallet) => wallet.isActive)?.id ?? '',
+  }
+}
+
+export function buildWishPurchaseDraft(wish: Wish): WishPurchaseDraft {
+  return {
+    amount: String(wish.estimatedAmount),
+    categoryId: null,
+    date: new Date().toISOString().slice(0, 10),
+    description: wish.name,
   }
 }

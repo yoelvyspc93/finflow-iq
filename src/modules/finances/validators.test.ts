@@ -18,7 +18,6 @@ function createDraft(): FinancesDraft {
     destinationWalletId: 'wallet-usd',
     incomeSourceId: null,
     rate: '24',
-    wish: false,
   }
 }
 
@@ -75,4 +74,5 @@ describe('finances validators', () => {
     )
     expect(validateSalaryPeriodToken('2026-03-18')).toBeNull()
   })
+
 })
