@@ -58,7 +58,7 @@ export default function OnboardingScreen() {
 
   async function handleSubmit(values: OnboardingFormValues) {
     if (!user?.id) {
-      setSubmitError("No hay una sesion activa para completar el onboarding.");
+      setSubmitError("No hay una sesión activa para completar la configuración inicial.");
       return;
     }
 

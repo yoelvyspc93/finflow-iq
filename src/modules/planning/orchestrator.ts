@@ -3,11 +3,6 @@ import {
   type CommitmentOverview,
 } from '@/modules/commitments/calculations'
 import {
-  calculateAverageGoalContributionPerMonth,
-  calculateGoalSnapshots,
-  type GoalProgressSnapshot,
-} from '@/modules/goals/calculations'
-import {
   calculateFinancialScore,
   calculateSalaryStabilityScore,
 } from '@/modules/insights/score-core'
@@ -20,7 +15,6 @@ import {
   calculateWishProjections,
   type WishProjection,
 } from '@/modules/wishes/calculations'
-import type { Goal, GoalContribution } from '@/modules/goals/types'
 import type { LedgerEntry } from '@/modules/ledger/types'
 import type { BudgetProvision } from '@/modules/provisions/types'
 import type { RecurringExpense } from '@/modules/commitments/types'
@@ -31,12 +25,9 @@ export type PlanningOverview = {
   availableBalance: number
   committedAmount: number
   monthlyCommitmentAverage: number
-  monthlyGoalContributionAverage: number
   monthlyIncome: number
   pendingSalaryAmount: number
   reserveAmount: number
-  totalGoalSaved: number
-  totalGoalTarget: number
   totalWishEstimated: number
 }
 
@@ -47,7 +38,6 @@ export type PlanningEvaluationResult = {
     breakdown: ReturnType<typeof calculateFinancialScore>
     userId: string
   }
-  goalSnapshots: GoalProgressSnapshot[]
   overview: PlanningOverview
   salaryStabilityScore: number
   wishProjectionSyncInputs: {
@@ -99,8 +89,6 @@ export function averageMonthlyIncome(args: {
 export function buildPlanningOverview(args: {
   availableBalance: number
   committedAmount: number
-  goalContributions: GoalContribution[]
-  goalSnapshots: GoalProgressSnapshot[]
   monthlyCommitmentAverage: number
   monthlyIncome: number
   pendingSalaryAmount: number
@@ -113,20 +101,9 @@ export function buildPlanningOverview(args: {
     availableBalance: args.availableBalance,
     committedAmount: args.committedAmount,
     monthlyCommitmentAverage: args.monthlyCommitmentAverage,
-    monthlyGoalContributionAverage: calculateAverageGoalContributionPerMonth(
-      args.goalContributions,
-    ),
     monthlyIncome: args.monthlyIncome,
     pendingSalaryAmount: args.pendingSalaryAmount,
     reserveAmount: args.reserveAmount,
-    totalGoalSaved: args.goalSnapshots.reduce(
-      (total, snapshot) => total + snapshot.contributedAmount,
-      0,
-    ),
-    totalGoalTarget: args.goalSnapshots.reduce(
-      (total, snapshot) => total + snapshot.goal.targetAmount,
-      0,
-    ),
     totalWishEstimated: args.wishProjections
       .filter((projection) => !projection.wish.isPurchased)
       .reduce((total, projection) => total + projection.wish.estimatedAmount, 0),
@@ -155,8 +132,6 @@ export function mergePlanningScores(
 export function evaluatePlanningState(args: {
   budgetProvisions: BudgetProvision[]
   currentMonth: string
-  goalContributions: GoalContribution[]
-  goals: Goal[]
   nowIso?: string
   paymentEntries: LedgerEntry[]
   recentScores: FinancialScore[]
@@ -168,10 +143,6 @@ export function evaluatePlanningState(args: {
   wallets: Wallet[]
   wishes: Wish[]
 }) {
-  const goalSnapshots = calculateGoalSnapshots({
-    contributions: args.goalContributions,
-    goals: args.goals,
-  })
   const salaryOverview = calculateSalaryOverview(
     args.salaryPeriods,
     args.salaryPayments,
@@ -205,7 +176,7 @@ export function evaluatePlanningState(args: {
   })
   const monthlySavingCapacity = Math.max(
     monthlyIncome * ((args.settings?.savingsGoalPercent ?? 0) / 100),
-    calculateAverageGoalContributionPerMonth(args.goalContributions),
+    Math.max(assignableAmount, 0),
   )
   const wishProjections = calculateWishProjections({
     assignableAmount,
@@ -217,7 +188,6 @@ export function evaluatePlanningState(args: {
     assignableAmount,
     availableBalance,
     committedAmount: commitmentOverview.totalRemaining,
-    goalContributions: args.goalContributions,
     monthlyCommitmentAverage,
     monthlyIncome,
     monthsWithoutPayment: salaryOverview.monthsWithoutPayment,
@@ -228,8 +198,6 @@ export function evaluatePlanningState(args: {
   const overview = buildPlanningOverview({
     availableBalance,
     committedAmount: commitmentOverview.totalRemaining,
-    goalContributions: args.goalContributions,
-    goalSnapshots,
     monthlyCommitmentAverage,
     monthlyIncome,
     pendingSalaryAmount: salaryOverview.pendingTotal,
@@ -245,7 +213,6 @@ export function evaluatePlanningState(args: {
       breakdown,
       userId: args.userId,
     },
-    goalSnapshots,
     overview,
     salaryStabilityScore,
     wishProjectionSyncInputs: wishProjections.map((projection) => ({
@@ -258,4 +225,3 @@ export function evaluatePlanningState(args: {
     wishProjections,
   } satisfies PlanningEvaluationResult
 }
-

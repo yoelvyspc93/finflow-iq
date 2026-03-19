@@ -68,7 +68,7 @@ export function MovementComposerCard({
     }
 
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      setLocalError("La fecha debe tener formato YYYY-MM-DD.");
+      setLocalError("La fecha debe tener el formato AAAA-MM-DD.");
       return;
     }
 
@@ -90,7 +90,7 @@ export function MovementComposerCard({
   return (
     <View style={styles.card}>
       <View style={styles.headerRow}>
-        <Text style={styles.title}>Movimiento rapido</Text>
+        <Text style={styles.title}>Movimiento rápido</Text>
         <View style={styles.modeRow}>
           <Pressable
             onPress={() => handleModeChange("income")}
@@ -145,7 +145,7 @@ export function MovementComposerCard({
           <TextInput
             autoCapitalize="none"
             onChangeText={setDate}
-            placeholder="YYYY-MM-DD"
+            placeholder="AAAA-MM-DD"
             placeholderTextColor="#64748B"
             style={styles.dateInput}
             value={date}
@@ -154,7 +154,7 @@ export function MovementComposerCard({
       </View>
 
       <View style={styles.fieldBlock}>
-        <Text style={styles.fieldLabel}>Descripcion</Text>
+        <Text style={styles.fieldLabel}>Descripción</Text>
         <TextInput
           onChangeText={setDescription}
           placeholder={
@@ -170,7 +170,7 @@ export function MovementComposerCard({
 
       <View style={styles.fieldBlock}>
         <Text style={styles.fieldLabel}>
-          {mode === "income" ? "Fuente de ingreso" : "Categoria"}
+          {mode === "income" ? "Fuente de ingreso" : "Categoría"}
         </Text>
         <View style={styles.optionGrid}>
           <Pressable

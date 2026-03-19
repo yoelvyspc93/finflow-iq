@@ -30,7 +30,7 @@ describe('finances validators', () => {
         selectedWalletId: null,
         userId: 'user-1',
       }),
-    ).toBe('Selecciona una wallet valida.')
+    ).toBe('Selecciona una billetera válida.')
 
     expect(
       validateFinancesBaseSubmit({
@@ -48,7 +48,7 @@ describe('finances validators', () => {
         draft: { ...createDraft(), destinationWalletId: null },
         wallets: [],
       }),
-    ).toBe('Selecciona una wallet destino.')
+    ).toBe('Selecciona una billetera de destino.')
 
     expect(
       validateTransferDraft({
@@ -64,14 +64,14 @@ describe('finances validators', () => {
         draft: { ...createDraft(), destinationAmount: '0' },
         wallets: [{ currency: 'USD', id: 'wallet-usd', isActive: true }],
       }),
-    ).toBe('Completa monto destino y tasa validos.')
+    ).toBe('Completa un monto de destino y una tasa válidos.')
   })
 
   it('rejects invalid salary configuration', () => {
-    expect(validateSalaryCurrency(null)).toBe('La wallet activa debe ser USD o CUP.')
+    expect(validateSalaryCurrency(null)).toBe('La billetera activa debe ser USD o CUP.')
     expect(validateSalaryCurrency('USD')).toBeNull()
     expect(validateSalaryPeriodToken('2026/03')).toBe(
-      'La fecha del periodo debe tener formato YYYY-MM.',
+      'La fecha del período debe tener el formato AAAA-MM.',
     )
     expect(validateSalaryPeriodToken('2026-03-18')).toBeNull()
   })

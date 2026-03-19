@@ -48,7 +48,7 @@ export function BudgetProvisionComposerCard({
 
   async function handleSubmit() {
     if (!walletId) {
-      setLocalError("Selecciona una wallet valida antes de guardar provisiones.");
+      setLocalError("Selecciona una billetera válida antes de guardar provisiones.");
       return;
     }
 
@@ -65,7 +65,7 @@ export function BudgetProvisionComposerCard({
     }
 
     if (!/^\d{4}-\d{2}-\d{2}$/.test(month)) {
-      setLocalError("El mes debe usar formato YYYY-MM-DD.");
+      setLocalError("El mes debe usar el formato AAAA-MM-DD.");
       return;
     }
 
@@ -124,7 +124,7 @@ export function BudgetProvisionComposerCard({
           <Text style={styles.fieldLabel}>Mes</Text>
           <TextInput
             onChangeText={setMonth}
-            placeholder="YYYY-MM-DD"
+            placeholder="AAAA-MM-DD"
             placeholderTextColor="#64748B"
             style={styles.textInput}
             value={month}
@@ -159,7 +159,7 @@ export function BudgetProvisionComposerCard({
       </View>
 
       <View style={styles.field}>
-        <Text style={styles.fieldLabel}>Categoria</Text>
+        <Text style={styles.fieldLabel}>Categoría</Text>
         <View style={styles.chipRow}>
           <Pressable
             onPress={() => setCategoryId(null)}

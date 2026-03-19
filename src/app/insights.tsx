@@ -47,63 +47,62 @@ export default function InsightsScreen() {
   const coverageDays =
     overview?.monthlyCommitmentAverage && overview.monthlyCommitmentAverage > 0
       ? Math.max(
-        0,
-        Math.round(
-          (Math.max(
-            (overview.availableBalance ?? 0) -
-            (overview.committedAmount ?? 0),
-            0,
-          ) /
-            overview.monthlyCommitmentAverage) *
-          30,
-        ),
-      )
+          0,
+          Math.round(
+            (Math.max(
+              (overview.availableBalance ?? 0) -
+                (overview.committedAmount ?? 0),
+              0,
+            ) /
+              overview.monthlyCommitmentAverage) *
+              30,
+          ),
+        )
       : 0
 
   const savingsRatio =
     overview?.monthlyIncome && overview.monthlyIncome > 0
       ? Math.round(
-        ((overview.monthlyGoalContributionAverage ?? 0) /
-          overview.monthlyIncome) *
-        100,
-      )
+          (Math.max(overview.assignableAmount ?? 0, 0) / overview.monthlyIncome) *
+            100,
+        )
       : 0
 
   const scoreBars = useMemo(
     () =>
       recentScores.slice(0, 6).reverse().length
         ? recentScores
-          .slice(0, 6)
-          .reverse()
-          .map((item) => ({
-            label: new Date(`${item.weekStart}T00:00:00.000Z`)
-              .toLocaleDateString('en-US', { month: 'short' })
-              .toUpperCase(),
-            value: item.score,
-          }))
+            .slice(0, 6)
+            .reverse()
+            .map((item) => ({
+              label: new Date(`${item.weekStart}T00:00:00.000Z`)
+                .toLocaleDateString('es-ES', { month: 'short' })
+                .toUpperCase(),
+              value: item.score,
+            }))
         : [
-          {
-            label: 'ENE',
-            value: currentScore?.breakdown.liquidity_score ?? 42,
-          },
-          {
-            label: 'FEB',
-            value: currentScore?.breakdown.commitment_score ?? 56,
-          },
-          {
-            label: 'MAR',
-            value: currentScore?.breakdown.savings_score ?? 48,
-          },
-          {
-            label: 'ABR',
-            value: currentScore?.breakdown.salary_stability_score ?? 62,
-          },
-          {
-            label: 'MAY',
-            value: currentScore?.breakdown.wishlist_pressure_score ?? 58,
-          },
-          { label: 'JUN', value: currentScore?.score ?? 64 },
-        ],
+            {
+              label: 'ENE',
+              value: currentScore?.breakdown.liquidity_score ?? 42,
+            },
+            {
+              label: 'FEB',
+              value: currentScore?.breakdown.commitment_score ?? 56,
+            },
+            {
+              label: 'MAR',
+              value: currentScore?.breakdown.savings_score ?? 48,
+            },
+            {
+              label: 'ABR',
+              value: currentScore?.breakdown.salary_stability_score ?? 62,
+            },
+            {
+              label: 'MAY',
+              value: currentScore?.breakdown.wishlist_pressure_score ?? 58,
+            },
+            { label: 'JUN', value: currentScore?.score ?? 64 },
+          ],
     [currentScore, recentScores],
   )
 
@@ -112,7 +111,7 @@ export default function InsightsScreen() {
       <DecorativeBackground />
       <ScreenHeader
         leftAction={{ icon: 'back', onPress: () => router.back() }}
-        title="Insights"
+        title="Análisis"
       />
 
       <ScrollView
@@ -120,7 +119,7 @@ export default function InsightsScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.rowBetween}>
-          <Text style={styles.sectionTitle}>AI Score Semanal</Text>
+          <Text style={styles.sectionTitle}>Puntaje semanal</Text>
           <Text style={styles.softText}>Actualizado hoy</Text>
         </View>
 
@@ -170,12 +169,12 @@ export default function InsightsScreen() {
 
         <View style={styles.card}>
           <Text style={styles.softText}>Tu dinero dura</Text>
-          <Text style={styles.days}>{coverageDays} dias</Text>
+          <Text style={styles.days}>{coverageDays} días</Text>
         </View>
 
         <View style={styles.rowBetween}>
           <Text style={styles.sectionTitle}>Ingresos vs Gastos</Text>
-          <Text style={styles.softText}>Ultimos 6 meses</Text>
+          <Text style={styles.softText}>Últimos 6 meses</Text>
         </View>
 
         <View style={styles.card}>
@@ -203,16 +202,16 @@ export default function InsightsScreen() {
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>Reporte Narrativo IA</Text>
+        <Text style={styles.sectionTitle}>Resumen automático</Text>
         <View style={styles.card}>
           <Text style={styles.bodyText}>
             {savingsRatio > 0
-              ? `Este mes lograste mejorar tu ahorro en ${Math.min(savingsRatio, 14)}%.`
-              : 'Tu estructura mantiene liquidez, pero aun depende de convertir dinero libre en ahorro.'}
+              ? `Este mes tienes capacidad de ahorro equivalente a ${Math.min(savingsRatio, 100)}% de tus ingresos de referencia.`
+              : 'Tu situación mantiene liquidez, pero aún depende de convertir dinero libre en ahorro.'}
           </Text>
           <Text style={styles.bodyText}>
-            Si mantienes este ritmo, alcanzaras estabilidad operativa en al
-            menos {Math.max(coverageDays, 30)} dias.
+            Si mantienes este ritmo, podrías sostener tus compromisos por al
+            menos {Math.max(coverageDays, 30)} días.
           </Text>
         </View>
 
@@ -223,7 +222,7 @@ export default function InsightsScreen() {
             pressed && styles.pressed,
           ]}
         >
-          <Text style={styles.backPlanningText}>Volver a Planificacion</Text>
+          <Text style={styles.backPlanningText}>Volver a Planificación</Text>
         </Pressable>
       </ScrollView>
     </SafeAreaView>

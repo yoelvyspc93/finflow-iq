@@ -111,14 +111,14 @@ export default function SettingsScreen() {
             title="Wallets"
           />
           <Row
-            hint="Sesion, MFA y proteccion de acceso"
+            hint="Sesión, verificación en dos pasos y protección de acceso"
             onPress={() => router.push("/settings/security")}
             title="Seguridad"
           />
           <Row
             hint="Gestion de categorias personales"
             onPress={() => router.push("/settings/categories")}
-            title="Categorias"
+            title="Categorías"
           />
           <Row
             hint="Gestion de fuentes de ingreso personales"
@@ -133,7 +133,7 @@ export default function SettingsScreen() {
           }}
           style={({ pressed }) => [styles.signOutButton, pressed && styles.pressed]}
         >
-          <Text style={styles.signOutText}>Cerrar sesion</Text>
+          <Text style={styles.signOutText}>Cerrar sesión</Text>
         </Pressable>
       </ScrollView>
     </SafeAreaView>

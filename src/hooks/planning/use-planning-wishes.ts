@@ -19,7 +19,6 @@ import type {
 export function usePlanningWishes(args: {
   addLocalWish: (wish: ReturnType<typeof createLocalWish>) => void
   assignableAmount: number
-  goalShortfall: number
   isDevBypass: boolean
   refreshAll: () => Promise<void>
   setIsSubmitting: React.Dispatch<React.SetStateAction<boolean>>
@@ -44,10 +43,9 @@ export function usePlanningWishes(args: {
     () =>
       buildPlanningActionTip({
         assignableAmount: args.assignableAmount,
-        goalShortfall: args.goalShortfall,
         nextWishAmount: getNextWishAmount(args.wishProjections),
       }),
-    [args.assignableAmount, args.goalShortfall, args.wishProjections],
+    [args.assignableAmount, args.wishProjections],
   )
 
   function openWishSheet() {

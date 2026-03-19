@@ -105,7 +105,7 @@ function ChipButton({
 
 function formatAiFrequency(value: AiAnalysisFrequency) {
   if (value === "each_transaction") {
-    return "Cada transaccion";
+    return "Después de cada movimiento";
   }
 
   if (value === "daily") {
@@ -136,7 +136,7 @@ export function SettingsSheetStack({
       <BottomSheet onClose={onClose} visible={sheet === "preferences"}>
         <Text style={styles.sheetTitle}>Preferencias base</Text>
         <Text style={styles.sheetDescription}>
-          Estos valores alimentan score, proyecciones y dashboard.
+          Ajusta estas preferencias para personalizar tus cálculos, proyecciones y alertas.
         </Text>
 
         <FieldLabel hint="0 a 100" label="Meta de ahorro mensual" />
@@ -154,7 +154,7 @@ export function SettingsSheetStack({
           value={settingsDraft.savingsGoalPercent}
         />
 
-        <FieldLabel hint="Dia que reinicia el ciclo" label="Inicio del mes financiero" />
+        <FieldLabel hint="Día en que reinicia el ciclo" label="Inicio del mes financiero" />
         <TextInput
           keyboardType="number-pad"
           onChangeText={(value) =>
@@ -169,7 +169,7 @@ export function SettingsSheetStack({
           value={settingsDraft.financialMonthStartDay}
         />
 
-        <FieldLabel hint="Promedio historico" label="Meses sin cobrar" />
+        <FieldLabel hint="Promedio histórico" label="Meses sin cobrar" />
         <TextInput
           keyboardType="number-pad"
           onChangeText={(value) =>
@@ -218,7 +218,7 @@ export function SettingsSheetStack({
           ))}
         </View>
 
-        <FieldLabel label="Frecuencia de analisis" />
+        <FieldLabel label="Frecuencia de análisis" />
         <View style={styles.chipRow}>
           {aiFrequencies.map((option) => (
             <ChipButton
@@ -256,10 +256,10 @@ export function SettingsSheetStack({
 
       <BottomSheet onClose={onClose} visible={sheet === "wallet"}>
         <Text style={styles.sheetTitle}>
-          {walletDraft.id ? "Editar wallet" : "Nueva wallet"}
+          {walletDraft.id ? "Editar billetera" : "Nueva billetera"}
         </Text>
         <Text style={styles.sheetDescription}>
-          Puedes usar varias wallets activas y mover dinero entre ellas.
+          Usa varias billeteras para separar tu efectivo, tus cuentas o tu ahorro.
         </Text>
 
         <FieldLabel label="Nombre" />
@@ -329,7 +329,7 @@ export function SettingsSheetStack({
             <ActivityIndicator color="#08111F" />
           ) : (
             <Text style={styles.submitButtonText}>
-              {walletDraft.id ? "Guardar wallet" : "Crear wallet"}
+              {walletDraft.id ? "Guardar billetera" : "Crear billetera"}
             </Text>
           )}
         </Pressable>
@@ -338,11 +338,10 @@ export function SettingsSheetStack({
       <BottomSheet onClose={onClose} visible={sheet === "libraries"}>
         <Text style={styles.sheetTitle}>Bibliotecas base</Text>
         <Text style={styles.sheetDescription}>
-          En esta fase quedan visibles y listas para usar; el CRUD completo puede
-          entrar despues sin tocar el resto de la app.
+          Aquí ves las categorías y fuentes de ingreso disponibles para registrar tus movimientos.
         </Text>
 
-        <FieldLabel label={`Categorias (${categories.length})`} />
+        <FieldLabel label={`Categorías (${categories.length})`} />
         <View style={styles.libraryGroup}>
           {categories.map((category) => (
             <View key={category.id} style={styles.libraryRow}>
@@ -368,7 +367,7 @@ export function SettingsSheetStack({
         </View>
 
         <Text style={styles.helperText}>
-          Formato actual: {settings?.dateFormat ?? "DD/MM/YYYY"} - Moneda principal:{" "}
+          Formato actual: {settings?.dateFormat ?? "DD/MM/YYYY"} · Moneda principal:{" "}
           {settings?.primaryCurrency ?? "USD"}
         </Text>
       </BottomSheet>
@@ -513,4 +512,3 @@ const styles = StyleSheet.create({
     opacity: 0.88,
   },
 });
-

@@ -1,22 +1,12 @@
 import type { PlanningCommitmentDraft } from '@/components/planning/commitment-sheet'
-import type {
-  ContributionDraft,
-  GoalDraft,
-  WishDraft,
-} from '@/components/planning/planning-sheet-stack'
-import type { GoalProgressSnapshot } from '@/modules/goals/calculations'
+import type { WishDraft } from '@/components/planning/planning-sheet-stack'
 import type { WishProjection } from '@/modules/wishes/calculations'
 import type { Wallet } from '@/modules/wallets/types'
 
 export function buildPlanningActionTip(args: {
   assignableAmount: number
-  goalShortfall: number
   nextWishAmount: number | null
 }) {
-  if (args.assignableAmount > 0 && args.goalShortfall > 0) {
-    return `Tienes margen para mover ${args.assignableAmount.toFixed(0)} a metas sin tocar tu reserva.`
-  }
-
   if (
     args.nextWishAmount !== null &&
     args.assignableAmount >= args.nextWishAmount
@@ -24,14 +14,11 @@ export function buildPlanningActionTip(args: {
     return 'Tu primera prioridad ya cabe en el dinero asignable actual.'
   }
 
-  return 'Conviene mantener el foco en ahorro estable antes de subir nuevas prioridades.'
-}
+  if (args.assignableAmount > 0) {
+    return `Tienes ${args.assignableAmount.toFixed(0)} disponibles para adelantar deseos sin comprometer tu reserva.`
+  }
 
-export function getActiveGoalSnapshots(goalSnapshots: GoalProgressSnapshot[]) {
-  return goalSnapshots.filter(
-    (snapshot) =>
-      snapshot.goal.status === 'active' || snapshot.status === 'at_risk',
-  )
+  return 'Conviene mantener el foco en ahorro estable antes de subir nuevas prioridades.'
 }
 
 export function filterWishProjectionItems(args: {
@@ -63,24 +50,6 @@ export function getNextWishPriority(items: WishProjection[]) {
       0,
     ) + 1 || 1,
   )
-}
-
-export function buildGoalDraft(wallets: Wallet[]): GoalDraft {
-  return {
-    deadline: '',
-    name: '',
-    targetAmount: '',
-    walletId: wallets.find((wallet) => wallet.isActive)?.id ?? '',
-  }
-}
-
-export function buildContributionDraft(activeGoals: GoalProgressSnapshot[]): ContributionDraft {
-  return {
-    amount: '',
-    date: new Date().toISOString().slice(0, 10),
-    goalId: activeGoals[0]?.goal.id ?? '',
-    note: '',
-  }
 }
 
 export function buildWishDraft(args: {

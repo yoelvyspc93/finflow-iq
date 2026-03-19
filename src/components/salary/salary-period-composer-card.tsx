@@ -40,7 +40,7 @@ export function SalaryPeriodComposerCard({
     const amount = Number(expectedAmount);
 
     if (!/^\d{4}-\d{2}-01$/.test(periodMonth)) {
-      setLocalError("El periodo debe usar formato YYYY-MM-01.");
+      setLocalError("El período debe usar el formato AAAA-MM-01.");
       return;
     }
 
@@ -65,15 +65,15 @@ export function SalaryPeriodComposerCard({
 
   return (
     <View style={styles.card}>
-      <Text style={styles.title}>Nuevo periodo de nomina</Text>
-      <Text style={styles.helper}>Moneda activa: {currency}</Text>
+      <Text style={styles.title}>Nuevo período de nómina</Text>
+      <Text style={styles.helper}>Moneda seleccionada: {currency}</Text>
 
       <View style={styles.fieldBlock}>
-        <Text style={styles.fieldLabel}>Periodo</Text>
+        <Text style={styles.fieldLabel}>Mes a cubrir</Text>
         <TextInput
           autoCapitalize="none"
           onChangeText={setPeriodMonth}
-          placeholder="YYYY-MM-01"
+          placeholder="AAAA-MM-01"
           placeholderTextColor="#64748B"
           style={styles.input}
           value={periodMonth}

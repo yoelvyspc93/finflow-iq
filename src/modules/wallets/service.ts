@@ -168,7 +168,7 @@ export async function getWalletReferenceSummary({
   userId,
   walletId,
 }: DeleteWalletArgs): Promise<WalletReferenceSummary> {
-  const [ledgerEntries, salaryPayments, recurringExpenses, budgetProvisions, goals, goalContributions, wishes, exchangesFrom, exchangesTo] =
+  const [ledgerEntries, salaryPayments, recurringExpenses, budgetProvisions, wishes, exchangesFrom, exchangesTo] =
     await Promise.all([
       countRows(
         supabase
@@ -194,20 +194,6 @@ export async function getWalletReferenceSummary({
       countRows(
         supabase
           .from("budget_provisions")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", userId)
-          .eq("wallet_id", walletId),
-      ),
-      countRows(
-        supabase
-          .from("goals")
-          .select("id", { count: "exact", head: true })
-          .eq("user_id", userId)
-          .eq("wallet_id", walletId),
-      ),
-      countRows(
-        supabase
-          .from("goal_contributions")
           .select("id", { count: "exact", head: true })
           .eq("user_id", userId)
           .eq("wallet_id", walletId),
@@ -241,8 +227,6 @@ export async function getWalletReferenceSummary({
     salaryPayments +
     recurringExpenses +
     budgetProvisions +
-    goals +
-    goalContributions +
     wishes +
     exchangesFrom +
     exchangesTo;

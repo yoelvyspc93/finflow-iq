@@ -59,7 +59,7 @@ function formatRelativeDate(value: string) {
   }
 
   const days = Math.max(1, Math.round(absMs / day));
-  return deltaMs >= 0 ? `En ${days} dias` : `Hace ${days} dias`;
+  return deltaMs >= 0 ? `En ${days} días` : `Hace ${days} días`;
 }
 
 function formatCommitmentDue(value: string) {
@@ -194,13 +194,13 @@ export default function NotificationsScreen() {
     const securityItems: NotificationItem[] = user?.last_sign_in_at
       ? [
         {
-          body: "Revisa tus factores de seguridad y sesiones activas.",
+          body: "Revisa tu verificación en dos pasos y tus sesiones activas.",
           date: user.last_sign_in_at,
           icon: "shield",
           id: "security-last-sign-in",
           kind: "security",
           targetRoute: "/settings/security",
-          title: "Ultimo inicio de sesion detectado",
+          title: "Último inicio de sesión detectado",
           tone: "#8A96B3",
         },
       ]

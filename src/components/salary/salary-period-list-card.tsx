@@ -30,7 +30,7 @@ export function SalaryPeriodListCard({
         ))
       ) : (
         <Text style={styles.emptyText}>
-          No hay periodos de nomina para esta moneda todavia.
+          No hay períodos de nómina para esta moneda todavía.
         </Text>
       )}
     </View>

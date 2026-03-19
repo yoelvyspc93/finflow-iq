@@ -34,9 +34,9 @@ export function SalaryHistoryList({
       keyExtractor={(item) => item.id}
       ListEmptyComponent={
         <View style={styles.emptyCard}>
-          <Text style={styles.sectionTitle}>Sin historial de nomina</Text>
+          <Text style={styles.sectionTitle}>Sin historial de nómina</Text>
           <Text style={styles.softText}>
-            Registra un periodo o un pago para construir el historial salarial.
+            Registra un período o un pago para construir tu historial salarial.
           </Text>
         </View>
       }
@@ -46,15 +46,15 @@ export function SalaryHistoryList({
             <View style={styles.statCard}>
               <Text style={styles.statLabel}>PENDIENTE</Text>
               <Text style={styles.statValue}>${pendingSalary.toFixed(2)}</Text>
-              <Text style={styles.statMeta}>Saldo aun no cubierto</Text>
+              <Text style={styles.statMeta}>Saldo aún no cubierto</Text>
             </View>
             <View style={styles.statCard}>
               <Text style={styles.statLabel}>SIN PAGAR</Text>
               <Text style={styles.statValue}>{pendingMonths} meses</Text>
-              <Text style={styles.statMeta}>Periodos abiertos</Text>
+              <Text style={styles.statMeta}>Períodos abiertos</Text>
             </View>
           </View>
-          <Text style={styles.sectionTitle}>Historial de nomina</Text>
+          <Text style={styles.sectionTitle}>Historial de nómina</Text>
         </View>
       }
       renderItem={({ item: period }) => (

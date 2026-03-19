@@ -106,7 +106,7 @@ export function ExchangeComposerCard({
     }
 
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      setLocalError("La fecha debe tener formato YYYY-MM-DD.");
+      setLocalError("La fecha debe tener el formato AAAA-MM-DD.");
       return;
     }
 
@@ -238,7 +238,7 @@ export function ExchangeComposerCard({
               <TextInput
                 autoCapitalize="none"
                 onChangeText={setDate}
-                placeholder="YYYY-MM-DD"
+                placeholder="AAAA-MM-DD"
                 placeholderTextColor="#64748B"
                 style={styles.textInput}
                 value={date}
@@ -247,7 +247,7 @@ export function ExchangeComposerCard({
           </View>
 
           <View style={styles.field}>
-            <Text style={styles.fieldLabel}>Descripcion</Text>
+            <Text style={styles.fieldLabel}>Descripción</Text>
             <TextInput
               onChangeText={setDescription}
               placeholder="Ej: cambio de USD a CUP"

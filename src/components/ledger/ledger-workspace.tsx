@@ -165,7 +165,7 @@ export function LedgerWorkspace({
         setReferenceError(
           error instanceof Error
             ? error.message
-            : "No se pudieron cargar categorias y fuentes.",
+            : "No se pudieron cargar las categorías y las fuentes de ingreso.",
         );
       }
     }
@@ -217,7 +217,7 @@ export function LedgerWorkspace({
 
   async function handleSubmit(values: SubmitMovementValues) {
     if (!user?.id || !selectedWalletId) {
-      setSubmitError("Selecciona una wallet valida antes de registrar movimientos.");
+      setSubmitError("Selecciona una billetera válida antes de registrar movimientos.");
       return false;
     }
 
@@ -296,7 +296,7 @@ export function LedgerWorkspace({
     sourceAmount: number;
   }) {
     if (!user?.id || !selectedWalletId) {
-      setExchangeError("Selecciona una wallet valida antes de transferir.");
+      setExchangeError("Selecciona una billetera válida antes de transferir.");
       return false;
     }
 
@@ -413,12 +413,12 @@ export function LedgerWorkspace({
                   : "--"}
               </Text>
               <Text style={styles.panelMeta}>
-                Wallet: {activeWallet?.name ?? "sin seleccionar"}
+                Billetera: {activeWallet?.name ?? "sin seleccionar"}
               </Text>
             </View>
 
             <View style={styles.balancePanel}>
-              <Text style={styles.panelLabel}>Configuracion</Text>
+              <Text style={styles.panelLabel}>Configuración</Text>
               <Text style={styles.smallValue}>
                 Ahorro {settings?.savingsGoalPercent ?? "--"}%
               </Text>

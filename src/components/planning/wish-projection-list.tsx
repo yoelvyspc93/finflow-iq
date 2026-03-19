@@ -25,7 +25,7 @@ function dateLabel(value: string | null, month = false) {
   const day = Number(rawDay || "1");
   const safeDate = new Date(Date.UTC(Number(year), monthIndex, day));
 
-  return safeDate.toLocaleDateString("en-US", {
+  return safeDate.toLocaleDateString("es-ES", {
     day: month ? undefined : "2-digit",
     month: "short",
     year: month ? "numeric" : undefined,
@@ -58,7 +58,7 @@ export function WishProjectionList({
             <Ionicons color="#6C83FF" name="bulb-outline" size={18} />
           </View>
           <View style={styles.tipBody}>
-            <Text style={styles.tipTitle}>TIP DE IA</Text>
+            <Text style={styles.tipTitle}>SUGERENCIA</Text>
             <Text style={styles.bodyText}>{actionTip}</Text>
           </View>
         </View>
@@ -69,7 +69,7 @@ export function WishProjectionList({
             onChange={onFilterChange}
             options={[
               { label: "Todos", value: "all" },
-              { label: "Pendientes", value: "pending" },
+              { label: "Por comprar", value: "pending" },
               { label: "Comprados", value: "bought" },
             ]}
             value={filter}
@@ -87,20 +87,20 @@ export function WishProjectionList({
           </View>
           <Text style={styles.pill}>
             {item.wish.isPurchased
-              ? "COMPRADO"
-              : item.confidenceLevel === "high"
-                ? "IA: Alta confianza"
-                : item.confidenceLevel === "medium"
-                  ? "IA: Media"
-                  : item.confidenceLevel === "low"
-                    ? "IA: Baja"
-                    : "IA: Riesgo"}
+                ? "COMPRADO"
+                : item.confidenceLevel === "high"
+                  ? "Listo para priorizar"
+                  : item.confidenceLevel === "medium"
+                    ? "Avance estable"
+                    : item.confidenceLevel === "low"
+                      ? "Conviene esperar"
+                      : "Revisar antes de comprar"}
           </Text>
           <Text style={styles.bodyText}>{item.wish.notes ?? item.confidenceReason}</Text>
           <Text style={styles.softText}>
             {item.wish.isPurchased
-              ? "Presupuestado correctamente"
-              : `Requiere ${item.monthsUntilPurchase ?? "mas"} ${
+              ? "Compra registrada"
+              : `Necesita ${item.monthsUntilPurchase ?? "más"} ${
                   item.monthsUntilPurchase === 1 ? "mes" : "meses"
                 } de ahorro`}
           </Text>

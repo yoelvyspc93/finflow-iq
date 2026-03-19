@@ -1,53 +1,12 @@
 import type { PlanningCommitmentDraft } from '@/components/planning/commitment-sheet'
-import type {
-  ContributionDraft,
-  GoalDraft,
-  WishDraft,
-} from '@/components/planning/planning-sheet-stack'
-
-export function validateGoalSubmit(args: {
-  draft: GoalDraft
-  userId: string | undefined
-}) {
-  if (!args.userId) {
-    return 'No hay sesion activa.'
-  }
-
-  if (!args.draft.name.trim()) {
-    return 'Escribe un nombre para la meta.'
-  }
-
-  const targetAmount = Number(args.draft.targetAmount)
-  if (Number.isNaN(targetAmount) || targetAmount <= 0 || !args.draft.walletId) {
-    return 'Completa nombre, monto y wallet.'
-  }
-
-  return null
-}
-
-export function validateContributionSubmit(args: {
-  draft: ContributionDraft
-  hasSelectedGoal: boolean
-  userId: string | undefined
-}) {
-  if (!args.userId) {
-    return 'No hay sesion activa.'
-  }
-
-  const amount = Number(args.draft.amount)
-  if (!args.hasSelectedGoal || Number.isNaN(amount) || amount <= 0) {
-    return 'Selecciona una meta valida y un monto mayor que cero.'
-  }
-
-  return null
-}
+import type { WishDraft } from '@/components/planning/planning-sheet-stack'
 
 export function validateWishSubmit(args: {
   draft: WishDraft
   userId: string | undefined
 }) {
   if (!args.userId) {
-    return 'No hay sesion activa.'
+    return 'No hay una sesión activa.'
   }
 
   const estimatedAmount = Number(args.draft.amount)
@@ -60,7 +19,7 @@ export function validateWishSubmit(args: {
     priority <= 0 ||
     !args.draft.walletId
   ) {
-    return 'Completa nombre, monto, prioridad y wallet.'
+    return 'Completa el nombre, el monto, la prioridad y la billetera.'
   }
 
   return null
@@ -71,7 +30,7 @@ export function validateCommitmentSubmit(args: {
   userId: string | undefined
 }) {
   if (!args.userId) {
-    return 'No hay sesion activa.'
+    return 'No hay una sesión activa.'
   }
 
   const amount = Number(args.draft.amount)
@@ -81,7 +40,7 @@ export function validateCommitmentSubmit(args: {
     amount <= 0 ||
     !args.draft.walletId
   ) {
-    return 'Completa nombre, monto y wallet.'
+    return 'Completa el nombre, el monto y la billetera.'
   }
 
   return null
@@ -90,12 +49,12 @@ export function validateCommitmentSubmit(args: {
 export function validateCommitmentFixedDay(day: string) {
   const billingDay = Number(day)
   return Number.isNaN(billingDay) || billingDay < 1 || billingDay > 31
-    ? 'El dia de cobro debe ser entre 1 y 31.'
+    ? 'El día de pago debe estar entre 1 y 31.'
     : null
 }
 
 export function validateCommitmentEventMonth(month: string) {
   return /^\d{4}-\d{2}-01$/.test(`${month.slice(0, 7)}-01`)
     ? null
-    : 'El mes debe tener formato YYYY-MM.'
+    : 'El mes debe tener el formato AAAA-MM.'
 }

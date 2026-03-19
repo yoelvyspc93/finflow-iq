@@ -17,7 +17,7 @@ export function WalletSwitcher({
 
   return (
     <View style={styles.wrapper}>
-      <Text style={styles.label}>Wallets</Text>
+      <Text style={styles.label}>Billeteras</Text>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}

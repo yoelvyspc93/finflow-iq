@@ -98,7 +98,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="planning"
         options={{
-          tabBarLabel: "Planificacion",
+          tabBarLabel: "Planificación",
           tabBarIcon: ({ focused }) => <TabGlyph focused={focused} icon="planning" />,
         }}
       />

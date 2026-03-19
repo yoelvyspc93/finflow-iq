@@ -18,13 +18,13 @@ export default function CallbackScreen() {
     <SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
       <DecorativeBackground />
       <View style={styles.container}>
-        <Text style={styles.title}>Redireccion no soportada</Text>
+        <Text style={styles.title}>Redirección no disponible</Text>
         <Text style={styles.subtitle}>
-          Este proyecto ya no usa enlaces magicos. Entra con email y contrasena.
+          Esta opción ya no usa enlaces mágicos. Entra con tu correo y tu contraseña.
         </Text>
 
         <Link href="/login" style={styles.link}>
-          Volver al login
+          Ir al inicio de sesión
         </Link>
       </View>
     </SafeAreaView>

@@ -175,14 +175,14 @@ export default function WalletSettingsScreen() {
 
   async function handleSaveWallet() {
     if (!user?.id) {
-      setError("No hay sesion activa.");
+      setError("No hay una sesión activa.");
       return;
     }
 
     const normalizedName = name.trim();
     const normalizedCurrency = currency.trim().toUpperCase();
     if (!normalizedName || !normalizedCurrency) {
-      setError("Escribe nombre y moneda para la wallet.");
+      setError("Escribe un nombre y una moneda para la billetera.");
       return;
     }
 
@@ -237,7 +237,7 @@ export default function WalletSettingsScreen() {
       closeSheet();
     } catch (caughtError) {
       setError(
-        caughtError instanceof Error ? caughtError.message : "No se pudo guardar la wallet.",
+        caughtError instanceof Error ? caughtError.message : "No se pudo guardar la billetera.",
       );
       setIsSubmitting(false);
     }
@@ -245,7 +245,7 @@ export default function WalletSettingsScreen() {
 
   async function handleDeactivateWallet(walletId: string) {
     if (!user?.id || activeWallets.length <= 1) {
-      openInfoAlert("No disponible", "Debe existir al menos una wallet activa.");
+      openInfoAlert("No disponible", "Debe quedar al menos una billetera activa.");
       return;
     }
 
@@ -270,7 +270,7 @@ export default function WalletSettingsScreen() {
         "No se pudo desactivar",
         caughtError instanceof Error
           ? caughtError.message
-          : "Ocurrio un error desactivando la wallet.",
+          : "Ocurrió un error al desactivar la billetera.",
       );
     }
   }
@@ -302,7 +302,7 @@ export default function WalletSettingsScreen() {
         "No se pudo activar",
         caughtError instanceof Error
           ? caughtError.message
-          : "Ocurrio un error activando la wallet.",
+          : "Ocurrió un error al activar la billetera.",
       );
     }
   }
@@ -325,7 +325,7 @@ export default function WalletSettingsScreen() {
         "No se pudo eliminar",
         caughtError instanceof Error
           ? caughtError.message
-          : "Ocurrio un error eliminando la wallet.",
+          : "Ocurrió un error al eliminar la billetera.",
       );
     }
   }
@@ -342,11 +342,11 @@ export default function WalletSettingsScreen() {
   function confirmDelete(walletId: string) {
     setAlertState({
       confirmLabel: "Eliminar",
-      message: "Esta wallet se eliminara por completo. Deseas continuar?",
+      message: "Esta billetera se eliminará por completo. ¿Deseas continuar?",
       onConfirm: () => {
         void handleDeleteWallet(walletId);
       },
-      title: "Eliminar wallet",
+      title: "Eliminar billetera",
       visible: true,
     });
   }
@@ -357,7 +357,7 @@ export default function WalletSettingsScreen() {
       <ScreenHeader
         leftAction={{ icon: "back", onPress: () => router.back() }}
         primaryAction={{ icon: "plus", onPress: openCreateSheet }}
-        title="Wallets"
+        title="Billeteras"
       />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -375,8 +375,8 @@ export default function WalletSettingsScreen() {
                 </Text>
                 <Text style={styles.walletCapability}>
                   {(referenceMap[wallet.id]?.totalReferences ?? 1) === 0
-                    ? "Se puede eliminar"
-                    : "No se puede eliminar tiene movimientos"}
+                    ? "Se puede eliminar sin afectar datos"
+                    : "Tiene movimientos guardados y no se puede eliminar"}
                 </Text>
               </View>
               <View style={styles.walletActions}>
@@ -419,15 +419,15 @@ export default function WalletSettingsScreen() {
       </ScrollView>
 
       <BottomSheet onClose={closeSheet} visible={sheetOpen}>
-        <Text style={styles.sheetTitle}>{editingWallet ? "Editar wallet" : "Nueva wallet"}</Text>
+        <Text style={styles.sheetTitle}>{editingWallet ? "Editar billetera" : "Nueva billetera"}</Text>
         <Text style={styles.sheetDescription}>
-          Puedes usar varias wallets activas y mover dinero entre ellas.
+          Usa varias billeteras para separar efectivo, banco o ahorro.
         </Text>
 
         <Text style={styles.label}>Nombre</Text>
         <TextInput
           onChangeText={setName}
-          placeholder="Ej: Banco USD"
+          placeholder="Ej: Banco principal"
           placeholderTextColor={theme.colors.grayLight}
           style={styles.input}
           value={name}
@@ -472,7 +472,7 @@ export default function WalletSettingsScreen() {
           ]}
         >
           <Text style={styles.submitButtonText}>
-            {isSubmitting ? "Guardando..." : editingWallet ? "Guardar wallet" : "Crear wallet"}
+            {isSubmitting ? "Guardando..." : editingWallet ? "Guardar billetera" : "Crear billetera"}
           </Text>
         </Pressable>
       </BottomSheet>
