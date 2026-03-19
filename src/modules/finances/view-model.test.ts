@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 
 import type { FinancesDraft } from '@/components/finances/finances-form-sheet'
 import type { SalaryPeriod } from '@/modules/salary/types'
-import { createMockWallet } from '@/modules/wallets/types'
 import {
   asSalaryCurrency,
   buildFinancesDraftForSheet,
@@ -12,6 +11,28 @@ import {
   resolveActiveFinancesFormSheet,
   summarizeSalaryPeriods,
 } from '@/modules/finances/view-model'
+
+function createWallet(args: {
+  currency: string
+  id: string
+  name: string
+  position?: number
+  userId: string
+}) {
+  return {
+    balance: 0,
+    color: null,
+    createdAt: '2026-03-01T00:00:00.000Z',
+    currency: args.currency,
+    icon: null,
+    id: args.id,
+    isActive: true,
+    name: args.name,
+    position: args.position ?? 0,
+    updatedAt: '2026-03-01T00:00:00.000Z',
+    userId: args.userId,
+  }
+}
 
 function createDraft(): FinancesDraft {
   return {
@@ -46,8 +67,8 @@ function createSalaryPeriod(input: Partial<SalaryPeriod>): SalaryPeriod {
 describe('finances view model', () => {
   it('resolves transfer defaults and resets volatile fields', () => {
     const wallets = [
-      createMockWallet({ currency: 'CUP', id: 'wallet-cup', name: 'CUP', userId: 'user-1' }),
-      createMockWallet({ currency: 'USD', id: 'wallet-usd', name: 'USD', position: 1, userId: 'user-1' }),
+      createWallet({ currency: 'CUP', id: 'wallet-cup', name: 'CUP', userId: 'user-1' }),
+      createWallet({ currency: 'USD', id: 'wallet-usd', name: 'USD', position: 1, userId: 'user-1' }),
     ]
 
     const next = buildFinancesDraftForSheet({

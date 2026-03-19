@@ -111,7 +111,6 @@ export default function NotificationsScreen() {
   const router = useRouter();
   const [filter, setFilter] = useState<NotificationFilter>("all");
 
-  const isDevBypass = useAuthStore((state) => state.isDevBypass);
   const user = useAuthStore((state) => state.user);
   const wallets = useAppStore((state) => state.wallets);
   const recurringExpenses = useCommitmentStore((state) => state.recurringExpenses);
@@ -131,12 +130,11 @@ export default function NotificationsScreen() {
 
     const month = `${new Date().toISOString().slice(0, 7)}-01`;
     void refreshCommitmentData({
-      isDevBypass,
       month,
       userId: user.id,
       walletId: null,
     });
-  }, [isDevBypass, refreshCommitmentData, user?.id]);
+  }, [refreshCommitmentData, user?.id]);
 
   const items = useMemo<NotificationItem[]>(() => {
     const currentMonth = new Date().getUTCMonth() + 1;

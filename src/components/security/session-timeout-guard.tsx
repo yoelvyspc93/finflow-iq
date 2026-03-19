@@ -8,7 +8,6 @@ import { useSecurityStore } from "@/stores/security-store";
 
 export function SessionTimeoutGuard() {
   const authStatus = useAuthStore((state) => state.status);
-  const isDevBypass = useAuthStore((state) => state.isDevBypass);
   const clearAuth = useAuthStore((state) => state.clearAuth);
   const settings = useAppStore((state) => state.settings);
   const lastActivityAt = useSecurityStore((state) => state.lastActivityAt);
@@ -58,12 +57,6 @@ export function SessionTimeoutGuard() {
         }
 
         isSigningOutRef.current = true;
-        if (isDevBypass) {
-          clearAuth();
-          isSigningOutRef.current = false;
-          return;
-        }
-
         void supabase.auth.signOut({ scope: "local" }).finally(() => {
           clearAuth();
           isSigningOutRef.current = false;
@@ -74,7 +67,7 @@ export function SessionTimeoutGuard() {
     return () => {
       subscription.remove();
     };
-  }, [authStatus, clearAuth, isDevBypass, sessionTimeoutMinutes, setLastActivityAt]);
+  }, [authStatus, clearAuth, sessionTimeoutMinutes, setLastActivityAt]);
 
   useEffect(() => {
     if (authStatus !== "authenticated") {
@@ -92,12 +85,6 @@ export function SessionTimeoutGuard() {
       }
 
       isSigningOutRef.current = true;
-      if (isDevBypass) {
-        clearAuth();
-        isSigningOutRef.current = false;
-        return;
-      }
-
       void supabase.auth.signOut({ scope: "local" }).finally(() => {
         clearAuth();
         isSigningOutRef.current = false;
@@ -105,7 +92,7 @@ export function SessionTimeoutGuard() {
     }, remainingMs);
 
     return () => clearTimeout(timer);
-  }, [authStatus, clearAuth, isDevBypass, lastActivityAt, timeoutMs]);
+  }, [authStatus, clearAuth, lastActivityAt, timeoutMs]);
 
   return null;
 }

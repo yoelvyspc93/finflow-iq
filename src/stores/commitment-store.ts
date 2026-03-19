@@ -8,38 +8,24 @@ import {
   listCommitmentPaymentEntries,
   listRecurringExpenses,
 } from "@/modules/commitments/service";
-import {
-  createMockRecurringExpenses,
-  type RecurringExpense,
-} from "@/modules/commitments/types";
+import type { RecurringExpense } from "@/modules/commitments/types";
 import type { LedgerEntry } from "@/modules/ledger/types";
 import { listBudgetProvisions } from "@/modules/provisions/service";
-import {
-  createMockBudgetProvisions,
-  type BudgetProvision,
-} from "@/modules/provisions/types";
+import type { BudgetProvision } from "@/modules/provisions/types";
 
-type RecalculateOverviewArgs = {
+type RefreshCommitmentDataArgs = {
   month: string;
+  userId: string;
   walletId: string | null;
 };
 
-type RefreshCommitmentDataArgs = RecalculateOverviewArgs & {
-  isDevBypass: boolean;
-  userId: string;
-};
-
 type CommitmentStore = {
-  addLocalBudgetProvision: (provision: BudgetProvision) => void;
-  addLocalPaymentEntry: (entry: LedgerEntry, args: RecalculateOverviewArgs) => void;
-  addLocalRecurringExpense: (expense: RecurringExpense) => void;
   budgetProvisions: BudgetProvision[];
   error: string | null;
   isLoading: boolean;
   isReady: boolean;
   overview: CommitmentOverview | null;
   paymentEntries: LedgerEntry[];
-  recalculateOverview: (args: RecalculateOverviewArgs) => void;
   recurringExpenses: RecurringExpense[];
   refreshCommitmentData: (args: RefreshCommitmentDataArgs) => Promise<void>;
   reset: () => void;
@@ -97,80 +83,17 @@ function sortPaymentEntries(entries: LedgerEntry[]) {
   });
 }
 
-export const useCommitmentStore = create<CommitmentStore>((set, get) => ({
+export const useCommitmentStore = create<CommitmentStore>((set) => ({
   ...initialState,
-  addLocalBudgetProvision: (provision) =>
-    set((state) => ({
-      budgetProvisions: sortBudgetProvisions([provision, ...state.budgetProvisions]),
-    })),
-  addLocalPaymentEntry: (entry, args) =>
-    set((state) => {
-      const paymentEntries = sortPaymentEntries([entry, ...state.paymentEntries]);
-
-      return {
-        overview: buildOverview({
-          budgetProvisions: state.budgetProvisions,
-          month: args.month,
-          paymentEntries,
-          recurringExpenses: state.recurringExpenses,
-          walletId: args.walletId,
-        }),
-        paymentEntries,
-      };
-    }),
-  addLocalRecurringExpense: (expense) =>
-    set((state) => ({
-      recurringExpenses: sortRecurringExpenses([expense, ...state.recurringExpenses]),
-    })),
-  recalculateOverview: ({ month, walletId }) =>
-    set((state) => ({
-      overview: buildOverview({
-        budgetProvisions: state.budgetProvisions,
-        month,
-        paymentEntries: state.paymentEntries,
-        recurringExpenses: state.recurringExpenses,
-        walletId,
-      }),
-    })),
-  refreshCommitmentData: async ({ isDevBypass, month, userId, walletId }) => {
+  refreshCommitmentData: async ({ month, userId, walletId }) => {
     set({ error: null, isLoading: true });
 
     try {
-      if (isDevBypass) {
-        const currentState = get();
-        const recurringExpenses =
-          currentState.recurringExpenses.length > 0
-            ? currentState.recurringExpenses
-            : createMockRecurringExpenses(userId);
-        const budgetProvisions =
-          currentState.budgetProvisions.length > 0
-            ? currentState.budgetProvisions
-            : createMockBudgetProvisions(userId);
-        const paymentEntries = currentState.paymentEntries;
-
-        set({
-          budgetProvisions,
-          error: null,
-          isLoading: false,
-          isReady: true,
-          overview: buildOverview({
-            budgetProvisions,
-            month,
-            paymentEntries,
-            recurringExpenses,
-            walletId,
-          }),
-          paymentEntries,
-          recurringExpenses,
-        });
-        return;
-      }
-
       const [recurringExpenses, budgetProvisions, paymentEntries] =
         await Promise.all([
-          listRecurringExpenses({ isDevBypass, userId }),
-          listBudgetProvisions({ isDevBypass, userId }),
-          listCommitmentPaymentEntries({ isDevBypass, month, userId, walletId }),
+          listRecurringExpenses({ userId }),
+          listBudgetProvisions({ userId }),
+          listCommitmentPaymentEntries({ month, userId, walletId }),
         ]);
 
       set({

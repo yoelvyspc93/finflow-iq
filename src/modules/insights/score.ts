@@ -34,13 +34,8 @@ export function mapFinancialScore(row: FinancialScoreRow): FinancialScore {
 }
 
 export async function listFinancialScores(args: {
-  isDevBypass: boolean;
   userId: string;
 }) {
-  if (args.isDevBypass) {
-    return [] as FinancialScore[];
-  }
-
   const { data, error } = await supabase
     .from("financial_scores")
     .select("*")

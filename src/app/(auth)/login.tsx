@@ -13,10 +13,10 @@ import { Image } from "expo-image";
 import { Link, Redirect, router } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { DecorativeBackground } from "@/components/ui/decorative-background";
 import { getPendingMfaFactorId } from "@/lib/auth/mfa";
 import { signInWithPassword } from "@/lib/auth/session";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
-import { DecorativeBackground } from "@/components/ui/decorative-background";
 import { useAuthStore } from "@/stores/auth-store";
 
 function isValidEmail(email: string) {
@@ -30,7 +30,6 @@ export default function LoginScreen() {
   const [feedback, setFeedback] = useState<string | null>(null);
 
   const authError = useAuthStore((state) => state.error);
-  const enableDevBypass = useAuthStore((state) => state.enableDevBypass);
   const isReady = useAuthStore((state) => state.isReady);
   const pendingMfaFactorId = useAuthStore((state) => state.pendingMfaFactorId);
   const setError = useAuthStore((state) => state.setError);
@@ -54,12 +53,12 @@ export default function LoginScreen() {
     const normalizedEmail = email.trim().toLowerCase();
 
     if (!isValidEmail(normalizedEmail)) {
-      setFeedback("Escribe un correo valido.");
+      setFeedback("Escribe un correo válido.");
       return;
     }
 
     if (password.length < 8) {
-      setFeedback("La contrasena debe tener al menos 8 caracteres.");
+      setFeedback("La contraseña debe tener al menos 8 caracteres.");
       return;
     }
 
@@ -93,16 +92,6 @@ export default function LoginScreen() {
     }
   }
 
-  function handleDevBypass() {
-    const normalizedEmail = email.trim().toLowerCase();
-    const safeEmail = isValidEmail(normalizedEmail)
-      ? normalizedEmail
-      : "dev@finflow.local";
-
-    setPendingMfaFactorId(null);
-    enableDevBypass(safeEmail);
-  }
-
   return (
     <SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
       <DecorativeBackground />
@@ -124,7 +113,7 @@ export default function LoginScreen() {
           </View>
 
           <View style={styles.fieldGroup}>
-            <Text style={styles.label}>Correo electronico</Text>
+            <Text style={styles.label}>Correo electrónico</Text>
             <View style={styles.inputShell}>
               <Feather color="#95A1BD" name="mail" size={17} />
               <TextInput
@@ -141,14 +130,14 @@ export default function LoginScreen() {
           </View>
 
           <View style={styles.fieldGroup}>
-            <Text style={styles.label}>Contrasena</Text>
+            <Text style={styles.label}>Contraseña</Text>
             <View style={styles.inputShell}>
               <Feather color="#95A1BD" name="lock" size={17} />
               <TextInput
                 autoCapitalize="none"
                 autoComplete="password"
                 onChangeText={setPassword}
-                placeholder="Minimo 8 caracteres"
+                placeholder="Mínimo 8 caracteres"
                 placeholderTextColor="#65728E"
                 secureTextEntry
                 style={styles.input}
@@ -191,18 +180,6 @@ export default function LoginScreen() {
           <Link href="/signup" style={styles.signUpLink}>
             Crear cuenta nueva
           </Link>
-
-          {__DEV__ ? (
-            <Pressable
-              onPress={handleDevBypass}
-              style={({ pressed }) => [
-                styles.secondaryButton,
-                pressed && styles.buttonPressed,
-              ]}
-            >
-              <Text style={styles.secondaryButtonText}>Entrar en modo desarrollo</Text>
-            </Pressable>
-          ) : null}
         </View>
       </View>
     </SafeAreaView>
@@ -324,20 +301,9 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "700",
     textAlign: "center",
-  },
-  secondaryButton: {
-    minHeight: 42,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: "rgba(74, 102, 255, 0.26)",
-    backgroundColor: "rgba(18, 24, 42, 0.90)",
-    alignItems: "center",
+    height: 44,
+    display: "flex",
     justifyContent: "center",
-    paddingHorizontal: 18,
-  },
-  secondaryButtonText: {
-    color: "#CBD6F7",
-    fontSize: 13,
-    fontWeight: "700",
+    alignItems: "center",
   },
 });

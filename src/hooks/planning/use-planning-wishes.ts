@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react'
 
 import type { WishProjection } from '@/modules/wishes/calculations'
 import { createWish } from '@/modules/wishes/service'
-import { createLocalWish } from '@/modules/wishes/types'
 import {
   buildPlanningActionTip,
   buildWishDraft,
@@ -17,9 +16,7 @@ import type {
 } from '@/components/planning/planning-sheet-stack'
 
 export function usePlanningWishes(args: {
-  addLocalWish: (wish: ReturnType<typeof createLocalWish>) => void
   assignableAmount: number
-  isDevBypass: boolean
   refreshAll: () => Promise<void>
   setIsSubmitting: React.Dispatch<React.SetStateAction<boolean>>
   setPickerOpen: React.Dispatch<React.SetStateAction<boolean>>
@@ -76,27 +73,14 @@ export function usePlanningWishes(args: {
     args.setSheetError(null)
 
     try {
-      if (args.isDevBypass) {
-        args.addLocalWish(
-          createLocalWish({
-            estimatedAmount,
-            name: wishDraft.name,
-            notes: wishDraft.notes || null,
-            priority,
-            userId,
-            walletId: wishDraft.walletId,
-          }),
-        )
-      } else {
-        await createWish({
-          estimatedAmount,
-          name: wishDraft.name,
-          notes: wishDraft.notes || null,
-          priority,
-          userId,
-          walletId: wishDraft.walletId,
-        })
-      }
+      await createWish({
+        estimatedAmount,
+        name: wishDraft.name,
+        notes: wishDraft.notes || null,
+        priority,
+        userId,
+        walletId: wishDraft.walletId,
+      })
 
       await args.refreshAll()
       args.setSheet(null)

@@ -1,8 +1,5 @@
 import { supabase } from "@/lib/supabase/client";
 import {
-  createMockSalaryAllocations,
-  createMockSalaryPayments,
-  createMockSalaryPeriods,
   mapSalaryAllocation,
   mapSalaryPayment,
   mapSalaryPeriod,
@@ -14,18 +11,12 @@ import {
 } from "@/modules/salary/types";
 
 type SalaryListArgs = {
-  isDevBypass: boolean;
   userId: string;
 };
 
 export async function listSalaryPeriods({
-  isDevBypass,
   userId,
 }: SalaryListArgs): Promise<SalaryPeriod[]> {
-  if (isDevBypass) {
-    return createMockSalaryPeriods(userId);
-  }
-
   const { data, error } = await supabase
     .from("salary_periods")
     .select("*")
@@ -40,13 +31,8 @@ export async function listSalaryPeriods({
 }
 
 export async function listSalaryPayments({
-  isDevBypass,
   userId,
 }: SalaryListArgs): Promise<SalaryPayment[]> {
-  if (isDevBypass) {
-    return createMockSalaryPayments(userId);
-  }
-
   const { data, error } = await supabase
     .from("salary_payments")
     .select("*")
@@ -62,13 +48,8 @@ export async function listSalaryPayments({
 }
 
 export async function listSalaryAllocations({
-  isDevBypass,
   userId,
 }: SalaryListArgs): Promise<SalaryAllocation[]> {
-  if (isDevBypass) {
-    return createMockSalaryAllocations(userId);
-  }
-
   const { data, error } = await supabase
     .from("salary_allocations")
     .select("*")

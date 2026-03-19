@@ -1,7 +1,6 @@
 import { supabase } from "@/lib/supabase/client";
 import {
   createLocalWish,
-  createMockWishes,
   mapWish,
   type CreateWishInput,
   type Wish,
@@ -9,7 +8,6 @@ import {
 } from "@/modules/wishes/types";
 
 type WishListArgs = {
-  isDevBypass: boolean;
   userId: string;
 };
 
@@ -22,13 +20,8 @@ export type SyncWishProjectionInput = {
 };
 
 export async function listWishes({
-  isDevBypass,
   userId,
 }: WishListArgs): Promise<Wish[]> {
-  if (isDevBypass) {
-    return createMockWishes(userId);
-  }
-
   const { data, error } = await supabase
     .from("wishes")
     .select("*")

@@ -71,14 +71,8 @@ export default function SettingsScreen() {
     `${firstName} ${lastName}`.trim() || email.split("@")[0] || "Usuario";
 
   async function handleSignOut() {
-    const isDevBypass = useAuthStore.getState().isDevBypass;
-    if (isDevBypass) {
-      clearAuth();
-      router.replace("/login");
-      return;
-    }
-
     await supabase.auth.signOut({ scope: "local" });
+    clearAuth();
     router.replace("/login");
   }
 
@@ -108,7 +102,7 @@ export default function SettingsScreen() {
           <Row
             hint="Crear, editar y administrar carteras"
             onPress={() => router.push("/settings/wallets")}
-            title="Wallets"
+            title="Billeteras"
           />
           <Row
             hint="Sesión, verificación en dos pasos y protección de acceso"

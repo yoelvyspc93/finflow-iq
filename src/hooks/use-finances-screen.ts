@@ -22,30 +22,18 @@ export function useFinancesScreen() {
   const [view, setView] = useState<FinancesViewMode>('movements')
   const [filter, setFilter] = useState<FinancesFilterMode>('all')
 
-  const isDevBypass = useAuthStore((state) => state.isDevBypass)
   const user = useAuthStore((state) => state.user)
   const wallets = useAppStore((state) => state.wallets)
   const selectedWalletId = useAppStore((state) => state.selectedWalletId)
   const refreshAppData = useAppStore((state) => state.refreshAppData)
-  const applyWalletBalanceDelta = useAppStore(
-    (state) => state.applyWalletBalanceDelta,
-  )
   const activeWallet = selectActiveWallet(wallets, selectedWalletId)
   const ledgerEntries = useLedgerStore((state) => state.entries)
   const refreshLedger = useLedgerStore((state) => state.refreshLedger)
-  const addLocalEntry = useLedgerStore((state) => state.addLocalEntry)
   const refreshExchangeData = useExchangeStore(
     (state) => state.refreshExchangeData,
   )
-  const addLocalExchange = useExchangeStore((state) => state.addLocalExchange)
   const refreshSalaryData = useSalaryStore((state) => state.refreshSalaryData)
   const salaryPeriods = useSalaryStore((state) => state.periods)
-  const addLocalSalaryPeriod = useSalaryStore(
-    (state) => state.addLocalSalaryPeriod,
-  )
-  const addLocalSalaryPayment = useSalaryStore(
-    (state) => state.applyLocalSalaryPayment,
-  )
 
   const quickActions = useFinancesQuickActions({
     activeWalletCurrency: activeWallet?.currency,
@@ -63,26 +51,19 @@ export function useFinancesScreen() {
     if (!user?.id || !selectedWalletId) return
 
     await Promise.all([
-      refreshAppData({ isDevBypass, userId: user.id }),
+      refreshAppData({ userId: user.id }),
       refreshLedger({
-        isDevBypass,
         userId: user.id,
         walletId: selectedWalletId,
       }),
-      refreshExchangeData({ isDevBypass, userId: user.id }),
-      refreshSalaryData({ isDevBypass, userId: user.id }),
+      refreshExchangeData({ userId: user.id }),
+      refreshSalaryData({ userId: user.id }),
     ])
   }
 
   const movements = useFinancesMovements({
     activeWalletCurrency: activeWallet?.currency,
-    addLocalEntry,
-    addLocalExchange,
-    addLocalSalaryPayment,
-    addLocalSalaryPeriod,
-    applyWalletBalanceDelta,
     draft: quickActions.draft,
-    isDevBypass,
     selectedWalletId,
     setDraft: quickActions.setDraft,
     setError: quickActions.setError,
@@ -97,15 +78,13 @@ export function useFinancesScreen() {
     if (!user?.id || !selectedWalletId) return
     void Promise.all([
       refreshLedger({
-        isDevBypass,
         userId: user.id,
         walletId: selectedWalletId,
       }),
-      refreshExchangeData({ isDevBypass, userId: user.id }),
-      refreshSalaryData({ isDevBypass, userId: user.id }),
+      refreshExchangeData({ userId: user.id }),
+      refreshSalaryData({ userId: user.id }),
     ])
   }, [
-    isDevBypass,
     refreshExchangeData,
     refreshLedger,
     refreshSalaryData,

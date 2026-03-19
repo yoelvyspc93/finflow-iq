@@ -47,7 +47,6 @@ export default function IncomeSourceSettingsScreen() {
     visible: false,
   });
 
-  const isDevBypass = useAuthStore((state) => state.isDevBypass);
   const user = useAuthStore((state) => state.user);
   const editing = useMemo(
     () => incomeSources.find((item) => item.id === editingId) ?? null,
@@ -59,8 +58,8 @@ export default function IncomeSourceSettingsScreen() {
       return;
     }
 
-    void listIncomeSources({ isDevBypass, userId: user.id }).then(setIncomeSources);
-  }, [isDevBypass, user?.id]);
+    void listIncomeSources({ userId: user.id }).then(setIncomeSources);
+  }, [user?.id]);
 
   function openCreate() {
     setEditingId(null);
@@ -115,25 +114,7 @@ export default function IncomeSourceSettingsScreen() {
     }
 
     try {
-      if (isDevBypass) {
-        if (editing) {
-          setIncomeSources((current) =>
-            current.map((item) => (item.id === editing.id ? { ...item, name: normalizedName } : item)),
-          );
-        } else {
-          const now = new Date().toISOString();
-          setIncomeSources((current) => [
-            ...current,
-            {
-              createdAt: now,
-              id: `local-income-source-${Date.now()}`,
-              isDefault: false,
-              name: normalizedName,
-              userId: user.id,
-            },
-          ]);
-        }
-      } else if (editing) {
+      if (editing) {
         const updated = await updateIncomeSource({
           incomeSourceId: editing.id,
           patch: { name: normalizedName },
@@ -163,12 +144,8 @@ export default function IncomeSourceSettingsScreen() {
     }
 
     try {
-      if (isDevBypass) {
-        setIncomeSources((current) => current.filter((item) => item.id !== id));
-      } else {
-        await deleteIncomeSource({ incomeSourceId: id, userId: user.id });
-        setIncomeSources((current) => current.filter((item) => item.id !== id));
-      }
+      await deleteIncomeSource({ incomeSourceId: id, userId: user.id });
+      setIncomeSources((current) => current.filter((item) => item.id !== id));
     } catch (caughtError) {
       showInfo(
         "No se pudo eliminar",

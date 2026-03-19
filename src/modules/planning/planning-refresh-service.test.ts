@@ -77,7 +77,6 @@ describe('planning refresh service', () => {
         wishes: [],
       },
       refreshArgs: {
-        isDevBypass: false,
         settings: null,
         userId: 'user-1',
         wallets: [],

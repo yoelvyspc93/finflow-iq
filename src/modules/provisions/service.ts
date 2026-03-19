@@ -1,7 +1,6 @@
 import { supabase } from "@/lib/supabase/client";
 import { mapLedgerEntry, type LedgerEntry } from "@/modules/ledger/types";
 import {
-  createMockBudgetProvisions,
   mapBudgetProvision,
   type BudgetProvision,
   type CreateBudgetProvisionInput,
@@ -9,18 +8,12 @@ import {
 } from "@/modules/provisions/types";
 
 type ListBudgetProvisionsArgs = {
-  isDevBypass: boolean;
   userId: string;
 };
 
 export async function listBudgetProvisions({
-  isDevBypass,
   userId,
 }: ListBudgetProvisionsArgs): Promise<BudgetProvision[]> {
-  if (isDevBypass) {
-    return createMockBudgetProvisions(userId);
-  }
-
   const { data, error } = await supabase
     .from("budget_provisions")
     .select("*")

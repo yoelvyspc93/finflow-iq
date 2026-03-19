@@ -35,16 +35,10 @@ export function createPlanningRefreshService() {
           listSalaryPeriods,
           listWishes,
         },
-        existingState: args.existingState,
         refreshArgs: args.refreshArgs,
       })
 
-      const resolvedData = resolvePlanningData({
-        existingState: args.existingState,
-        fetchedData,
-        isDevBypass: args.refreshArgs.isDevBypass,
-        userId: args.refreshArgs.userId,
-      })
+      const resolvedData = resolvePlanningData({ fetchedData })
 
       const evaluation = evaluatePlanningState({
         budgetProvisions: fetchedData.budgetProvisions,
@@ -67,7 +61,6 @@ export function createPlanningRefreshService() {
           upsertFinancialScore,
         },
         evaluation,
-        isDevBypass: args.refreshArgs.isDevBypass,
         userId: args.refreshArgs.userId,
       })
 

@@ -20,7 +20,6 @@ import { theme } from '@/utils/theme'
 
 export default function InsightsScreen() {
   const router = useRouter()
-  const isDevBypass = useAuthStore((state) => state.isDevBypass)
   const user = useAuthStore((state) => state.user)
   const settings = useAppStore((state) => state.settings)
   const wallets = useAppStore((state) => state.wallets)
@@ -37,12 +36,11 @@ export default function InsightsScreen() {
     }
 
     void refreshPlanningData({
-      isDevBypass,
       settings,
       userId: user.id,
       wallets,
     })
-  }, [isDevBypass, refreshPlanningData, settings, user?.id, wallets])
+  }, [refreshPlanningData, settings, user?.id, wallets])
 
   const coverageDays =
     overview?.monthlyCommitmentAverage && overview.monthlyCommitmentAverage > 0

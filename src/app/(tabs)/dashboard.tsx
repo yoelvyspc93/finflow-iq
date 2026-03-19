@@ -19,11 +19,6 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { DecorativeBackground } from "@/components/ui/decorative-background";
 import { ScreenHeader } from "@/components/ui/screen-header";
 import { selectActiveWallet } from "@/modules/ledger/selectors";
-import { calculateSalaryOverview } from "@/modules/salary/calculations";
-import {
-  createMockSalaryPayments,
-  createMockSalaryPeriods,
-} from "@/modules/salary/types";
 import { useAppStore } from "@/stores/app-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { useCommitmentStore } from "@/stores/commitment-store";
@@ -86,7 +81,6 @@ export default function DashboardScreen() {
   const router = useRouter();
   const { width: viewportWidth } = useWindowDimensions();
   const currentMonth = `${new Date().toISOString().slice(0, 7)}-01`;
-  const isDevBypass = useAuthStore((state) => state.isDevBypass);
   const user = useAuthStore((state) => state.user);
   const settings = useAppStore((state) => state.settings);
   const wallets = useAppStore((state) => state.wallets);
@@ -109,39 +103,22 @@ export default function DashboardScreen() {
 
     void Promise.all([
       refreshCommitmentData({
-        isDevBypass,
         month: currentMonth,
         userId: user.id,
         walletId: selectedWalletId,
       }),
       refreshSalaryData({
-        isDevBypass,
         userId: user.id,
       }),
     ]);
   }, [
     currentMonth,
-    isDevBypass,
     refreshCommitmentData,
     refreshSalaryData,
     selectedWalletId,
     user?.id,
   ]);
-
-  const effectiveSalaryOverview = useMemo(() => {
-    if (salaryOverview) {
-      return salaryOverview;
-    }
-
-    if (!isDevBypass || !user?.id) {
-      return null;
-    }
-
-    return calculateSalaryOverview(
-      createMockSalaryPeriods(user.id),
-      createMockSalaryPayments(user.id),
-    );
-  }, [isDevBypass, salaryOverview, user?.id]);
+  const effectiveSalaryOverview = salaryOverview;
 
   const committedAmount = commitmentOverview?.totalRemaining ?? 0;
   const freeAmount = Math.max(0, (activeWallet?.balance ?? 0) - committedAmount);

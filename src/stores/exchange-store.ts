@@ -1,18 +1,13 @@
 import { create } from "zustand";
 
 import { listCurrencyExchanges } from "@/modules/exchanges/service";
-import {
-  createMockCurrencyExchanges,
-  type CurrencyExchange,
-} from "@/modules/exchanges/types";
+import { type CurrencyExchange } from "@/modules/exchanges/types";
 
 type RefreshExchangeDataArgs = {
-  isDevBypass: boolean;
   userId: string;
 };
 
 type ExchangeStore = {
-  addLocalExchange: (exchange: CurrencyExchange) => void;
   error: string | null;
   exchanges: CurrencyExchange[];
   isLoading: boolean;
@@ -36,32 +31,13 @@ function sortExchanges(exchanges: CurrencyExchange[]) {
   });
 }
 
-export const useExchangeStore = create<ExchangeStore>((set, get) => ({
+export const useExchangeStore = create<ExchangeStore>((set) => ({
   ...initialState,
-  addLocalExchange: (exchange) =>
-    set((state) => ({
-      exchanges: sortExchanges([exchange, ...state.exchanges]),
-    })),
-  refreshExchangeData: async ({ isDevBypass, userId }) => {
+  refreshExchangeData: async ({ userId }) => {
     set({ error: null, isLoading: true });
 
     try {
-      if (isDevBypass) {
-        const exchanges =
-          get().exchanges.length > 0
-            ? get().exchanges
-            : createMockCurrencyExchanges(userId);
-
-        set({
-          error: null,
-          exchanges: sortExchanges(exchanges),
-          isLoading: false,
-          isReady: true,
-        });
-        return;
-      }
-
-      const exchanges = await listCurrencyExchanges({ isDevBypass, userId });
+      const exchanges = await listCurrencyExchanges({ userId });
 
       set({
         error: null,

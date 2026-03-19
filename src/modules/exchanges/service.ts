@@ -1,24 +1,17 @@
 import { supabase } from "@/lib/supabase/client";
 import {
-  createMockCurrencyExchanges,
   mapCurrencyExchange,
   type CurrencyExchange,
   type TransferBetweenWalletsInput,
 } from "@/modules/exchanges/types";
 
 type ListCurrencyExchangesArgs = {
-  isDevBypass: boolean;
   userId: string;
 };
 
 export async function listCurrencyExchanges({
-  isDevBypass,
   userId,
 }: ListCurrencyExchangesArgs): Promise<CurrencyExchange[]> {
-  if (isDevBypass) {
-    return createMockCurrencyExchanges(userId);
-  }
-
   const { data, error } = await supabase
     .from("currency_exchanges")
     .select("*")

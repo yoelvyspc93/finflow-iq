@@ -14,9 +14,7 @@ import {
   createExpense,
   createManualIncome,
 } from "@/modules/ledger/service";
-import { createLocalLedgerEntry } from "@/modules/ledger/types";
 import { selectActiveWallet, selectRecentLedgerEntries } from "@/modules/ledger/selectors";
-import { createMockSalaryPeriods, createMockSalaryPayments } from "@/modules/salary/types";
 import {
   MovementComposerCard,
   type MovementMode,
@@ -30,7 +28,6 @@ import { useCommitmentStore } from "@/stores/commitment-store";
 import { useExchangeStore } from "@/stores/exchange-store";
 import { useLedgerStore } from "@/stores/ledger-store";
 import { useSalaryStore } from "@/stores/salary-store";
-import { calculateSalaryOverview } from "@/modules/salary/calculations";
 
 type LedgerWorkspaceProps = {
   accentColor: string;
@@ -75,11 +72,7 @@ export function LedgerWorkspace({
   const [incomeSources, setIncomeSources] = useState<IncomeSource[]>([]);
   const currentMonth = `${new Date().toISOString().slice(0, 7)}-01`;
 
-  const isDevBypass = useAuthStore((state) => state.isDevBypass);
   const user = useAuthStore((state) => state.user);
-  const applyWalletBalanceDelta = useAppStore(
-    (state) => state.applyWalletBalanceDelta,
-  );
   const refreshAppData = useAppStore((state) => state.refreshAppData);
   const selectedWalletId = useAppStore((state) => state.selectedWalletId);
   const setSelectedWalletId = useAppStore((state) => state.setSelectedWalletId);
@@ -93,8 +86,6 @@ export function LedgerWorkspace({
   const exchanges = useExchangeStore((state) => state.exchanges);
   const exchangeLoading = useExchangeStore((state) => state.isLoading);
   const refreshExchangeData = useExchangeStore((state) => state.refreshExchangeData);
-  const addLocalExchange = useExchangeStore((state) => state.addLocalExchange);
-  const addLocalEntry = useLedgerStore((state) => state.addLocalEntry);
   const entries = useLedgerStore((state) => state.entries);
   const isLedgerLoading = useLedgerStore((state) => state.isLoading);
   const ledgerError = useLedgerStore((state) => state.error);
@@ -114,19 +105,8 @@ export function LedgerWorkspace({
     [exchanges, selectedWalletId],
   );
   const effectiveSalaryOverview = useMemo(() => {
-    if (salaryOverview) {
-      return salaryOverview;
-    }
-
-    if (!isDevBypass || !user?.id) {
-      return null;
-    }
-
-    return calculateSalaryOverview(
-      createMockSalaryPeriods(user.id),
-      createMockSalaryPayments(user.id),
-    );
-  }, [isDevBypass, salaryOverview, user?.id]);
+    return salaryOverview;
+  }, [salaryOverview]);
   const committedAmount = commitmentOverview?.totalRemaining ?? 0;
   const freeAmount = (activeWallet?.balance ?? 0) - committedAmount;
   const reserveAmount =
@@ -146,8 +126,8 @@ export function LedgerWorkspace({
     async function loadReferenceData() {
       try {
         const [nextCategories, nextIncomeSources] = await Promise.all([
-          listCategories({ isDevBypass, userId }),
-          listIncomeSources({ isDevBypass, userId }),
+          listCategories({ userId }),
+          listIncomeSources({ userId }),
         ]);
 
         if (!isMounted) {
@@ -175,7 +155,7 @@ export function LedgerWorkspace({
     return () => {
       isMounted = false;
     };
-  }, [isDevBypass, user?.id]);
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user?.id || !selectedWalletId) {
@@ -184,7 +164,6 @@ export function LedgerWorkspace({
 
     if (showExchangeTools) {
       void refreshExchangeData({
-        isDevBypass,
         userId: user.id,
       });
     }
@@ -192,20 +171,17 @@ export function LedgerWorkspace({
     if (showFinancialCards) {
       void Promise.all([
         refreshCommitmentData({
-          isDevBypass,
           month: currentMonth,
           userId: user.id,
           walletId: selectedWalletId,
         }),
         refreshSalaryData({
-          isDevBypass,
           userId: user.id,
         }),
       ]);
     }
   }, [
     currentMonth,
-    isDevBypass,
     refreshCommitmentData,
     refreshExchangeData,
     refreshSalaryData,
@@ -226,53 +202,31 @@ export function LedgerWorkspace({
     setSubmitError(null);
 
     try {
-      if (isDevBypass) {
-        const signedAmount = mode === "income" ? values.amount : values.amount * -1;
-
-        addLocalEntry(
-          createLocalLedgerEntry({
-            amount: signedAmount,
-            categoryId: mode === "expense" ? values.referenceId : null,
-            date: values.date,
-            description: values.description,
-            incomeSourceId: mode === "income" ? values.referenceId : null,
-            type: mode,
-            userId,
-            walletId: selectedWalletId,
-          }),
-        );
-        applyWalletBalanceDelta({
-          amount: signedAmount,
+      if (mode === "income") {
+        await createManualIncome({
+          amount: values.amount,
+          date: values.date,
+          description: values.description,
+          incomeSourceId: values.referenceId,
           walletId: selectedWalletId,
         });
       } else {
-        if (mode === "income") {
-          await createManualIncome({
-            amount: values.amount,
-            date: values.date,
-            description: values.description,
-            incomeSourceId: values.referenceId,
-            walletId: selectedWalletId,
-          });
-        } else {
-          await createExpense({
-            amount: values.amount,
-            categoryId: values.referenceId,
-            date: values.date,
-            description: values.description,
-            walletId: selectedWalletId,
-          });
-        }
-
-        await Promise.all([
-          refreshAppData({ isDevBypass: false, userId }),
-          refreshLedger({
-            isDevBypass: false,
-            userId,
-            walletId: selectedWalletId,
-          }),
-        ]);
+        await createExpense({
+          amount: values.amount,
+          categoryId: values.referenceId,
+          date: values.date,
+          description: values.description,
+          walletId: selectedWalletId,
+        });
       }
+
+      await Promise.all([
+        refreshAppData({ userId }),
+        refreshLedger({
+          userId,
+          walletId: selectedWalletId,
+        }),
+      ]);
 
       return true;
     } catch (error) {
@@ -304,81 +258,28 @@ export function LedgerWorkspace({
     setExchangeError(null);
 
     try {
-      if (isDevBypass) {
-        const exchange = createLocalCurrencyExchange({
-          description: values.description,
-          destinationAmount: values.destinationAmount,
-          destinationWalletId: values.destinationWalletId,
-          exchangeInEntryId: `local-ledger-in-${Date.now()}`,
-          exchangeOutEntryId: `local-ledger-out-${Date.now()}`,
-          exchangeRate: values.exchangeRate,
-          sourceAmount: values.sourceAmount,
-          sourceWalletId: selectedWalletId,
-          transferDate: values.date,
-          userId: user.id,
-        });
+      await transferBetweenWallets({
+        description: values.description,
+        destinationAmount: values.destinationAmount,
+        destinationWalletId: values.destinationWalletId,
+        exchangeRate: values.exchangeRate,
+        sourceAmount: values.sourceAmount,
+        sourceWalletId: selectedWalletId,
+        transferDate: values.date,
+      });
 
-        addLocalExchange(exchange);
-        addLocalEntry(
-          createLocalLedgerEntry({
-            amount: values.sourceAmount * -1,
-            date: values.date,
-            description: values.description,
-            type: "exchange_out",
-            userId: user.id,
-            walletId: selectedWalletId,
-          }),
-        );
-        addLocalEntry(
-          createLocalLedgerEntry({
-            amount: values.destinationAmount,
-            date: values.date,
-            description: values.description,
-            type: "exchange_in",
-            userId: user.id,
-            walletId: values.destinationWalletId,
-          }),
-        );
-        applyWalletBalanceDelta({
-          amount: values.sourceAmount * -1,
-          walletId: selectedWalletId,
-        });
-        applyWalletBalanceDelta({
-          amount: values.destinationAmount,
-          walletId: values.destinationWalletId,
-        });
-        await refreshLedger({
-          isDevBypass: true,
+      await Promise.all([
+        refreshAppData({
+          userId: user.id,
+        }),
+        refreshLedger({
           userId: user.id,
           walletId: selectedWalletId,
-        });
-      } else {
-        await transferBetweenWallets({
-          description: values.description,
-          destinationAmount: values.destinationAmount,
-          destinationWalletId: values.destinationWalletId,
-          exchangeRate: values.exchangeRate,
-          sourceAmount: values.sourceAmount,
-          sourceWalletId: selectedWalletId,
-          transferDate: values.date,
-        });
-
-        await Promise.all([
-          refreshAppData({
-            isDevBypass: false,
-            userId: user.id,
-          }),
-          refreshLedger({
-            isDevBypass: false,
-            userId: user.id,
-            walletId: selectedWalletId,
-          }),
-          refreshExchangeData({
-            isDevBypass: false,
-            userId: user.id,
-          }),
-        ]);
-      }
+        }),
+        refreshExchangeData({
+          userId: user.id,
+        }),
+      ]);
 
       return true;
     } catch (error) {

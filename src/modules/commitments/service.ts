@@ -1,7 +1,6 @@
 import { supabase } from "@/lib/supabase/client";
 import { mapLedgerEntry, type LedgerEntry } from "@/modules/ledger/types";
 import {
-  createMockRecurringExpenses,
   mapRecurringExpense,
   type CreateRecurringExpenseInput,
   type RecurringExpense,
@@ -9,12 +8,10 @@ import {
 } from "@/modules/commitments/types";
 
 type ListRecurringExpensesArgs = {
-  isDevBypass: boolean;
   userId: string;
 };
 
 type ListCommitmentPaymentEntriesArgs = {
-  isDevBypass: boolean;
   month: string;
   userId: string;
   walletId?: string | null;
@@ -31,13 +28,8 @@ function getMonthRange(month: string) {
 }
 
 export async function listRecurringExpenses({
-  isDevBypass,
   userId,
 }: ListRecurringExpensesArgs): Promise<RecurringExpense[]> {
-  if (isDevBypass) {
-    return createMockRecurringExpenses(userId);
-  }
-
   const { data, error } = await supabase
     .from("recurring_expenses")
     .select("*")
@@ -54,15 +46,10 @@ export async function listRecurringExpenses({
 }
 
 export async function listCommitmentPaymentEntries({
-  isDevBypass,
   month,
   userId,
   walletId,
 }: ListCommitmentPaymentEntriesArgs): Promise<LedgerEntry[]> {
-  if (isDevBypass) {
-    return [];
-  }
-
   const { monthEnd } = getMonthRange(month);
 
   let query = supabase

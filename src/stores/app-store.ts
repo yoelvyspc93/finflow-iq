@@ -1,12 +1,12 @@
 import { create } from "zustand";
 
 import { getSettings } from "@/modules/settings/service";
-import { createMockSettings, type AppSettings } from "@/modules/settings/types";
+import type { AppSettings } from "@/modules/settings/types";
 import { listWallets } from "@/modules/wallets/service";
 import type { Wallet } from "@/modules/wallets/types";
 
 type LocalAppDataInput = {
-  settings: AppSettings;
+  settings: AppSettings | null;
   wallets: Wallet[];
 };
 
@@ -21,8 +21,8 @@ type AppStore = {
   isLoading: boolean;
   isReady: boolean;
   removeLocalWallet: (walletId: string) => void;
-  replaceLocalSettings: (settings: AppSettings) => void;
-  refreshAppData: (args: { isDevBypass: boolean; userId: string }) => Promise<void>;
+  replaceLocalSettings: (settings: AppSettings | null) => void;
+  refreshAppData: (args: { userId: string }) => Promise<void>;
   reset: () => void;
   selectedWalletId: string | null;
   setSelectedWalletId: (walletId: string | null) => void;
@@ -71,7 +71,7 @@ function buildStateFromData(
   };
 }
 
-export const useAppStore = create<AppStore>((set, get) => ({
+export const useAppStore = create<AppStore>((set) => ({
   ...initialState,
   applyLocalAppData: (input) =>
     set((state) => buildStateFromData(input, state.selectedWalletId)),
@@ -91,29 +91,17 @@ export const useAppStore = create<AppStore>((set, get) => ({
     set((state) =>
       buildStateFromData(
         {
-          settings:
-            state.settings ??
-            createMockSettings(state.wallets[0]?.userId ?? "dev-user-id"),
+          settings: state.settings,
           wallets: state.wallets.filter((wallet) => wallet.id !== walletId),
         },
         state.selectedWalletId,
       ),
     ),
   replaceLocalSettings: (settings) => set({ settings }),
-  refreshAppData: async ({ isDevBypass, userId }) => {
+  refreshAppData: async ({ userId }) => {
     set({ error: null, isLoading: true });
 
     try {
-      if (isDevBypass) {
-        const wallets = get().wallets;
-        const settings = get().settings ?? createMockSettings(userId);
-
-        set((state) =>
-          buildStateFromData({ settings, wallets }, state.selectedWalletId),
-        );
-        return;
-      }
-
       const [settings, wallets] = await Promise.all([
         getSettings({ userId }),
         listWallets({ userId }),
@@ -122,7 +110,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       set((state) =>
         buildStateFromData(
           {
-            settings: settings ?? createMockSettings(userId),
+            settings,
             wallets,
           },
           state.selectedWalletId,
@@ -133,7 +121,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
         error:
           error instanceof Error
             ? error.message
-            : "No se pudieron cargar wallets y settings.",
+            : "No se pudieron cargar las billeteras y la configuración.",
         hasCompletedOnboarding: false,
         isLoading: false,
         isReady: true,
@@ -154,7 +142,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
 
       return buildStateFromData(
         {
-          settings: state.settings ?? createMockSettings(wallet.userId),
+          settings: state.settings,
           wallets,
         },
         state.selectedWalletId,

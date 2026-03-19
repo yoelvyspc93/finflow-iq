@@ -50,7 +50,6 @@ export default function CategorySettingsScreen() {
     visible: false,
   });
 
-  const isDevBypass = useAuthStore((state) => state.isDevBypass);
   const user = useAuthStore((state) => state.user);
   const editing = useMemo(
     () => categories.find((item) => item.id === editingId) ?? null,
@@ -62,8 +61,8 @@ export default function CategorySettingsScreen() {
       return;
     }
 
-    void listCategories({ isDevBypass, userId: user.id }).then(setCategories);
-  }, [isDevBypass, user?.id]);
+    void listCategories({ userId: user.id }).then(setCategories);
+  }, [user?.id]);
 
   function openCreate() {
     setEditingId(null);
@@ -120,29 +119,7 @@ export default function CategorySettingsScreen() {
     }
 
     try {
-      if (isDevBypass) {
-        if (editing) {
-          setCategories((current) =>
-            current.map((item) =>
-              item.id === editing.id ? { ...item, color, name: normalizedName } : item,
-            ),
-          );
-        } else {
-          const now = new Date().toISOString();
-          setCategories((current) => [
-            ...current,
-            {
-              color,
-              createdAt: now,
-              icon: "shapes",
-              id: `local-category-${Date.now()}`,
-              isDefault: false,
-              name: normalizedName,
-              userId: user.id,
-            },
-          ]);
-        }
-      } else if (editing) {
+      if (editing) {
         const updated = await updateCategory({
           categoryId: editing.id,
           patch: { color, name: normalizedName },
@@ -175,12 +152,8 @@ export default function CategorySettingsScreen() {
     }
 
     try {
-      if (isDevBypass) {
-        setCategories((current) => current.filter((item) => item.id !== id));
-      } else {
-        await deleteCategory({ categoryId: id, userId: user.id });
-        setCategories((current) => current.filter((item) => item.id !== id));
-      }
+      await deleteCategory({ categoryId: id, userId: user.id });
+      setCategories((current) => current.filter((item) => item.id !== id));
     } catch (caughtError) {
       showInfo(
         "No se pudo eliminar",
