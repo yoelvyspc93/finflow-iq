@@ -120,7 +120,7 @@ export default function TabsLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    maxHeight: 74,
+    height: 74,
     paddingTop: theme.spacing.xs,
     paddingBottom: theme.spacing.xs,
     backgroundColor: theme.colors.background,

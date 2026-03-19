@@ -7,6 +7,7 @@ export default function Html({ children }: { children: ReactNode }) {
       lang="es"
       style={{
         backgroundColor: "#0F1223",
+        colorScheme: "dark",
         height: "100%",
         width: "100%",
         overflowX: "hidden",
@@ -31,10 +32,12 @@ export default function Html({ children }: { children: ReactNode }) {
           html, body, #root {
             width: 100%;
             min-height: 100%;
+            background-color: #0F1223;
           }
 
           html, body {
             overflow-x: hidden;
+            color-scheme: dark;
           }
 
           body {
