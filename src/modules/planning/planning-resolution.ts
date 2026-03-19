@@ -1,4 +1,3 @@
-import { createMockGoalContributions, createMockGoals } from '@/modules/goals/types'
 import type {
   PlanningExistingState,
   PlanningFetchedData,
@@ -13,18 +12,9 @@ export function resolvePlanningData(args: {
   userId: string
 }): PlanningResolvedData {
   const { existingState, fetchedData, isDevBypass, userId } = args
-
-  const goals = fetchedData.goals ?? existingState.goals
-  const goalContributions =
-    fetchedData.goalContributions ?? existingState.goalContributions
   const wishes = fetchedData.wishes ?? existingState.wishes
 
   return {
-    goalContributions:
-      isDevBypass && goalContributions.length === 0
-        ? createMockGoalContributions(userId)
-        : goalContributions,
-    goals: isDevBypass && goals.length === 0 ? createMockGoals(userId) : goals,
     wishes: isDevBypass && wishes.length === 0 ? createMockWishes(userId) : wishes,
   }
 }

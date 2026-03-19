@@ -37,12 +37,12 @@ export function CommitmentSheet({
 }: CommitmentSheetProps) {
   return (
     <BottomSheet onClose={onClose} visible={visible}>
-      <Text style={styles.sheetTitle}>Adicionar compromiso</Text>
+      <Text style={styles.sheetTitle}>Agregar compromiso</Text>
       <Text style={styles.softText}>
-        Puedes crear un fijo mensual o un evento especial futuro.
+        Registra un pago fijo o un gasto puntual para reservar dinero con tiempo.
       </Text>
 
-      <Text style={styles.label}>TIPO</Text>
+      <Text style={styles.label}>TIPO DE COMPROMISO</Text>
       <View style={styles.chipRow}>
         <Pressable
           onPress={() => setDraft((current) => ({ ...current, kind: "fixed" }))}
@@ -65,7 +65,7 @@ export function CommitmentSheet({
       <Text style={styles.label}>NOMBRE</Text>
       <TextInput
         onChangeText={(value) => setDraft((current) => ({ ...current, name: value }))}
-        placeholder="Ej: Renta casa"
+        placeholder="Ej: Alquiler"
         placeholderTextColor="#7C89A8"
         style={styles.input}
         value={draft.name}
@@ -81,7 +81,7 @@ export function CommitmentSheet({
         value={draft.amount}
       />
 
-      <Text style={styles.label}>WALLET</Text>
+      <Text style={styles.label}>BILLETERA</Text>
       <View style={styles.chipRow}>
         {wallets
           .filter((wallet) => wallet.isActive)
@@ -110,7 +110,7 @@ export function CommitmentSheet({
 
       {draft.kind === "fixed" ? (
         <>
-          <Text style={styles.label}>DIA DE COBRO (1-31)</Text>
+          <Text style={styles.label}>DÍA DE PAGO (1-31)</Text>
           <TextInput
             keyboardType="number-pad"
             onChangeText={(value) => setDraft((current) => ({ ...current, day: value }))}
@@ -122,7 +122,7 @@ export function CommitmentSheet({
         </>
       ) : (
         <>
-          <Text style={styles.label}>MES (YYYY-MM)</Text>
+          <Text style={styles.label}>MES PREVISTO (AAAA-MM)</Text>
           <TextInput
             onChangeText={(value) => setDraft((current) => ({ ...current, month: value }))}
             placeholder="2026-08"
@@ -133,7 +133,7 @@ export function CommitmentSheet({
         </>
       )}
 
-      <Text style={styles.label}>NOTA</Text>
+      <Text style={styles.label}>DETALLE</Text>
       <TextInput
         multiline
         onChangeText={(value) => setDraft((current) => ({ ...current, notes: value }))}

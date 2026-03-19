@@ -208,101 +208,6 @@ export type Database = {
         }
         Relationships: []
       }
-      goal_contributions: {
-        Row: {
-          amount: number
-          created_at: string
-          date: string
-          goal_id: string
-          id: string
-          note: string | null
-          user_id: string
-          wallet_id: string
-        }
-        Insert: {
-          amount: number
-          created_at?: string
-          date: string
-          goal_id: string
-          id?: string
-          note?: string | null
-          user_id: string
-          wallet_id: string
-        }
-        Update: {
-          amount?: number
-          created_at?: string
-          date?: string
-          goal_id?: string
-          id?: string
-          note?: string | null
-          user_id?: string
-          wallet_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "goal_contributions_goal_id_fkey"
-            columns: ["goal_id"]
-            isOneToOne: false
-            referencedRelation: "goals"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "goal_contributions_wallet_id_fkey"
-            columns: ["wallet_id"]
-            isOneToOne: false
-            referencedRelation: "wallets"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      goals: {
-        Row: {
-          created_at: string
-          deadline: string | null
-          icon: string | null
-          id: string
-          name: string
-          status: string
-          target_amount: number
-          updated_at: string
-          user_id: string
-          wallet_id: string
-        }
-        Insert: {
-          created_at?: string
-          deadline?: string | null
-          icon?: string | null
-          id?: string
-          name: string
-          status?: string
-          target_amount: number
-          updated_at?: string
-          user_id: string
-          wallet_id: string
-        }
-        Update: {
-          created_at?: string
-          deadline?: string | null
-          icon?: string | null
-          id?: string
-          name?: string
-          status?: string
-          target_amount?: number
-          updated_at?: string
-          user_id?: string
-          wallet_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "goals_wallet_id_fkey"
-            columns: ["wallet_id"]
-            isOneToOne: false
-            referencedRelation: "wallets"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       income_sources: {
         Row: {
           created_at: string
@@ -335,7 +240,6 @@ export type Database = {
           created_at: string
           date: string
           description: string | null
-          goal_contribution_id: string | null
           id: string
           income_source_id: string | null
           recurring_expense_id: string | null
@@ -350,7 +254,6 @@ export type Database = {
           created_at?: string
           date: string
           description?: string | null
-          goal_contribution_id?: string | null
           id?: string
           income_source_id?: string | null
           recurring_expense_id?: string | null
@@ -365,7 +268,6 @@ export type Database = {
           created_at?: string
           date?: string
           description?: string | null
-          goal_contribution_id?: string | null
           id?: string
           income_source_id?: string | null
           recurring_expense_id?: string | null
@@ -386,13 +288,6 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ledger_entries_goal_contribution_id_fkey"
-            columns: ["goal_contribution_id"]
-            isOneToOne: false
-            referencedRelation: "goal_contributions"
             referencedColumns: ["id"]
           },
           {
@@ -824,31 +719,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      add_goal_contribution: {
-        Args: {
-          contribution_amount: number
-          contribution_note?: string
-          target_date: string
-          target_goal_id: string
-          target_wallet_id: string
-        }
-        Returns: {
-          amount: number
-          created_at: string
-          date: string
-          goal_id: string
-          id: string
-          note: string | null
-          user_id: string
-          wallet_id: string
-        }
-        SetofOptions: {
-          from: "*"
-          to: "goal_contributions"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
       bootstrap_user_defaults: {
         Args: { target_user_id: string }
         Returns: undefined
@@ -871,7 +741,6 @@ export type Database = {
           created_at: string
           date: string
           description: string | null
-          goal_contribution_id: string | null
           id: string
           income_source_id: string | null
           recurring_expense_id: string | null
@@ -932,7 +801,6 @@ export type Database = {
           created_at: string
           date: string
           description: string | null
-          goal_contribution_id: string | null
           id: string
           income_source_id: string | null
           recurring_expense_id: string | null
@@ -962,7 +830,6 @@ export type Database = {
           created_at: string
           date: string
           description: string | null
-          goal_contribution_id: string | null
           id: string
           income_source_id: string | null
           recurring_expense_id: string | null
@@ -1100,7 +967,6 @@ export type Database = {
           created_at: string
           date: string
           description: string | null
-          goal_contribution_id: string | null
           id: string
           income_source_id: string | null
           recurring_expense_id: string | null
@@ -1129,7 +995,6 @@ export type Database = {
           created_at: string
           date: string
           description: string | null
-          goal_contribution_id: string | null
           id: string
           income_source_id: string | null
           recurring_expense_id: string | null

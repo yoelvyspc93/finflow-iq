@@ -64,7 +64,7 @@ export function SalaryPaymentComposerCard({
     }
 
     if (!/^\d{4}-\d{2}-\d{2}$/.test(paymentDate)) {
-      setLocalError("La fecha debe usar formato YYYY-MM-DD.");
+      setLocalError("La fecha debe usar el formato AAAA-MM-DD.");
       return;
     }
 
@@ -81,7 +81,7 @@ export function SalaryPaymentComposerCard({
     );
 
     if (allocatedTotal > numericAmount) {
-      setLocalError("La distribucion no puede exceder el cobro registrado.");
+      setLocalError("La distribución no puede exceder el cobro registrado.");
       return;
     }
 
@@ -105,7 +105,7 @@ export function SalaryPaymentComposerCard({
     <View style={styles.card}>
       <Text style={styles.title}>Registrar cobro</Text>
       <Text style={styles.helper}>
-        Wallet activa: {walletName} | moneda {currency}
+        Billetera activa: {walletName} · moneda {currency}
       </Text>
 
       <View style={styles.row}>
@@ -126,7 +126,7 @@ export function SalaryPaymentComposerCard({
           <TextInput
             autoCapitalize="none"
             onChangeText={setPaymentDate}
-            placeholder="YYYY-MM-DD"
+            placeholder="AAAA-MM-DD"
             placeholderTextColor="#64748B"
             style={styles.input}
             value={paymentDate}
@@ -135,7 +135,7 @@ export function SalaryPaymentComposerCard({
       </View>
 
       <View style={styles.fieldBlock}>
-        <Text style={styles.fieldLabel}>Descripcion</Text>
+        <Text style={styles.fieldLabel}>Descripción</Text>
         <TextInput
           onChangeText={setDescription}
           placeholder="Opcional"
@@ -146,7 +146,7 @@ export function SalaryPaymentComposerCard({
       </View>
 
       <View style={styles.allocationsCard}>
-        <Text style={styles.allocationsTitle}>Distribucion por periodo</Text>
+        <Text style={styles.allocationsTitle}>Distribución por período</Text>
         {pendingPeriods.length ? (
           pendingPeriods.map((period) => (
             <View key={period.id} style={styles.allocationRow}>
@@ -173,7 +173,7 @@ export function SalaryPaymentComposerCard({
           ))
         ) : (
           <Text style={styles.noPendingText}>
-            No hay periodos pendientes para esta moneda.
+            No hay períodos pendientes para esta moneda.
           </Text>
         )}
       </View>

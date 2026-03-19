@@ -46,7 +46,7 @@ export function RecurringExpenseComposerCard({
 
   async function handleSubmit() {
     if (!walletId) {
-      setLocalError("Selecciona una wallet valida antes de guardar compromisos.");
+      setLocalError("Selecciona una billetera válida antes de guardar compromisos.");
       return;
     }
 
@@ -222,7 +222,7 @@ export function RecurringExpenseComposerCard({
       </View>
 
       <View style={styles.field}>
-        <Text style={styles.fieldLabel}>Categoria</Text>
+        <Text style={styles.fieldLabel}>Categoría</Text>
         <View style={styles.chipRow}>
           <Pressable
             onPress={() => setCategoryId(null)}

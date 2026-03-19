@@ -118,7 +118,7 @@ export default function SecuritySettingsScreen() {
 
   async function handleOpenMfaEnable() {
     if (isDevBypass) {
-      setMfaError("MFA no aplica en modo desarrollo.");
+      setMfaError("La verificación en dos pasos no está disponible en modo desarrollo.");
       return;
     }
 
@@ -134,7 +134,12 @@ export default function SecuritySettingsScreen() {
       });
       setMfaSheet("enable");
     } catch (error) {
-      setMfaError(toUserFriendlyMfaError(error, "No se pudo iniciar el setup MFA."));
+      setMfaError(
+        toUserFriendlyMfaError(
+          error,
+          "No se pudo iniciar la configuración de verificación en dos pasos.",
+        ),
+      );
     } finally {
       setIsMfaSubmitting(false);
     }
@@ -142,11 +147,11 @@ export default function SecuritySettingsScreen() {
 
   async function handleVerifyMfaEnable() {
     if (!enrollment) {
-      setMfaError("No hay un factor MFA pendiente.");
+      setMfaError("No hay una verificación pendiente.");
       return;
     }
     if (!/^\d{6}$/.test(mfaCode.trim())) {
-      setMfaError("Escribe un codigo de 6 digitos.");
+      setMfaError("Escribe un código de 6 dígitos.");
       return;
     }
 
@@ -167,18 +172,18 @@ export default function SecuritySettingsScreen() {
       });
       closeMfaSheet();
     } catch (error) {
-      setMfaError(toUserFriendlyMfaError(error, "Codigo MFA invalido o vencido."));
+      setMfaError(toUserFriendlyMfaError(error, "El código es inválido o ya venció."));
       setIsMfaSubmitting(false);
     }
   }
 
   async function handleDisableMfa() {
     if (!mfaFactorId) {
-      setMfaError("No hay un factor MFA activo.");
+      setMfaError("No hay una verificación activa.");
       return;
     }
     if (!/^\d{6}$/.test(mfaCode.trim())) {
-      setMfaError("Escribe un codigo de 6 digitos.");
+      setMfaError("Escribe un código de 6 dígitos.");
       return;
     }
 
@@ -197,7 +202,12 @@ export default function SecuritySettingsScreen() {
       });
       closeMfaSheet();
     } catch (error) {
-      setMfaError(toUserFriendlyMfaError(error, "No se pudo desactivar MFA."));
+      setMfaError(
+        toUserFriendlyMfaError(
+          error,
+          "No se pudo desactivar la verificación en dos pasos.",
+        ),
+      );
       setIsMfaSubmitting(false);
     }
   }
@@ -251,9 +261,9 @@ export default function SecuritySettingsScreen() {
         <View style={styles.section}>
           <View style={styles.securityRow}>
             <View style={styles.rowText}>
-              <Text style={styles.rowTitle}>MFA (Authenticator)</Text>
+              <Text style={styles.rowTitle}>Verificación en dos pasos</Text>
               <Text style={styles.rowHint}>
-                Toggle unico para activar/desactivar MFA TOTP.
+                Protege tu cuenta con códigos temporales desde una app de autenticación.
               </Text>
             </View>
             <AppSwitch
@@ -263,7 +273,7 @@ export default function SecuritySettingsScreen() {
             />
           </View>
           <Row
-            hint="Cierra sesion automaticamente cuando no uses la app."
+            hint="Cierra la sesión automáticamente cuando no uses la app."
             onPress={() => setTimeoutSheetOpen(true)}
             title="Tiempo por inactividad"
             value={timeoutLabel}
@@ -273,13 +283,13 @@ export default function SecuritySettingsScreen() {
       </ScrollView>
 
       <BottomSheet onClose={closeMfaSheet} visible={mfaSheet === "enable"}>
-        <Text style={styles.sheetTitle}>Activar MFA TOTP</Text>
-        <Text style={styles.sheetDescription}>1) Agrega este secreto en tu autenticador.</Text>
+        <Text style={styles.sheetTitle}>Activar verificación en dos pasos</Text>
+        <Text style={styles.sheetDescription}>1) Agrega este secreto en tu app de autenticación.</Text>
         <Text style={styles.mfaSecret}>{enrollment?.secret ?? "--"}</Text>
-        <Text style={styles.sheetDescription}>2) Usa este codigo URI si tu app lo soporta.</Text>
+        <Text style={styles.sheetDescription}>2) Usa este código URI si tu app lo permite.</Text>
         <Text style={styles.mfaUri}>{enrollment?.uri ?? "--"}</Text>
         <Text style={styles.sheetDescription}>
-          3) Ingresa un codigo de 6 digitos para verificar.
+          3) Escribe un código de 6 dígitos para confirmar.
         </Text>
         <TextInput
           keyboardType="number-pad"
@@ -308,9 +318,9 @@ export default function SecuritySettingsScreen() {
       </BottomSheet>
 
       <BottomSheet onClose={closeMfaSheet} visible={mfaSheet === "disable"}>
-        <Text style={styles.sheetTitle}>Desactivar MFA</Text>
+        <Text style={styles.sheetTitle}>Desactivar verificación en dos pasos</Text>
         <Text style={styles.sheetDescription}>
-          Confirma con un codigo actual de tu autenticador.
+          Confirma con un código actual de tu app de autenticación.
         </Text>
         <TextInput
           keyboardType="number-pad"
@@ -341,7 +351,7 @@ export default function SecuritySettingsScreen() {
       <BottomSheet onClose={() => setTimeoutSheetOpen(false)} visible={timeoutSheetOpen}>
         <Text style={styles.sheetTitle}>Tiempo por inactividad</Text>
         <Text style={styles.sheetDescription}>
-          Selecciona cuando cerrar sesion automaticamente.
+          Elige cuándo cerrar la sesión automáticamente.
         </Text>
         <View style={styles.timeoutList}>
           {timeoutOptions.map((option) => (

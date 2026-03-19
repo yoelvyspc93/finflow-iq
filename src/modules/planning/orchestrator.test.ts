@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { FinancialScore } from '@/modules/insights/score'
-import { createMockGoals, createMockGoalContributions } from '@/modules/goals/types'
 import {
   averageMonthlyIncome,
   buildPlanningOverview,
@@ -57,7 +56,7 @@ describe('planning orchestrator', () => {
     expect(merged.map((item) => item.weekStart)).toEqual(['2026-03-17', '2026-03-10'])
   })
 
-  it('evaluates overview, score payload and wish sync data', () => {
+  it('evaluates overview, score payload and wish sync data without goals', () => {
     const userId = 'user-1'
     const settings = {
       ...createMockSettings(userId),
@@ -72,8 +71,6 @@ describe('planning orchestrator', () => {
     const result = evaluatePlanningState({
       budgetProvisions: [],
       currentMonth: '2026-03-01',
-      goalContributions: createMockGoalContributions(userId),
-      goals: createMockGoals(userId),
       nowIso: '2026-03-18T12:00:00.000Z',
       paymentEntries: [],
       recentScores: [],
@@ -86,7 +83,6 @@ describe('planning orchestrator', () => {
       wishes: createMockWishes(userId),
     })
 
-    expect(result.goalSnapshots.length).toBeGreaterThan(0)
     expect(result.overview.availableBalance).toBe(1500)
     expect(result.currentScorePayload.breakdown.total_score).toBeGreaterThanOrEqual(0)
     expect(result.wishProjectionSyncInputs[0]?.lastCalculatedAt).toBe(
@@ -98,8 +94,6 @@ describe('planning orchestrator', () => {
     const overview = buildPlanningOverview({
       availableBalance: 1000,
       committedAmount: 200,
-      goalContributions: [],
-      goalSnapshots: [],
       monthlyCommitmentAverage: 100,
       monthlyIncome: 900,
       pendingSalaryAmount: 50,
@@ -108,7 +102,6 @@ describe('planning orchestrator', () => {
     })
 
     expect(overview.assignableAmount).toBe(650)
-    expect(overview.totalGoalTarget).toBe(0)
     expect(overview.totalWishEstimated).toBe(0)
   })
 })

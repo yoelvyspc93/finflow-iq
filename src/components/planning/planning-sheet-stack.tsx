@@ -9,24 +9,9 @@ import {
 } from "react-native";
 
 import { BottomSheet } from "@/components/ui/bottom-sheet";
-import type { GoalProgressSnapshot } from "@/modules/goals/calculations";
 import type { Wallet } from "@/modules/wallets/types";
 
-export type PlanningSheetKind = "goal" | "contribution" | "wish" | null;
-
-export type GoalDraft = {
-  deadline: string;
-  name: string;
-  targetAmount: string;
-  walletId: string;
-};
-
-export type ContributionDraft = {
-  amount: string;
-  date: string;
-  goalId: string;
-  note: string;
-};
+export type PlanningSheetKind = "wish" | null;
 
 export type WishDraft = {
   amount: string;
@@ -37,16 +22,9 @@ export type WishDraft = {
 };
 
 type PlanningSheetStackProps = {
-  activeGoals: GoalProgressSnapshot[];
-  contributionDraft: ContributionDraft;
-  goalDraft: GoalDraft;
   isSubmitting: boolean;
   onClose: () => void;
-  onSubmitContribution: () => void;
-  onSubmitGoal: () => void;
   onSubmitWish: () => void;
-  setContributionDraft: Dispatch<SetStateAction<ContributionDraft>>;
-  setGoalDraft: Dispatch<SetStateAction<GoalDraft>>;
   setWishDraft: Dispatch<SetStateAction<WishDraft>>;
   sheet: PlanningSheetKind;
   sheetError: string | null;
@@ -95,16 +73,9 @@ function ChipButton({
 }
 
 export function PlanningSheetStack({
-  activeGoals,
-  contributionDraft,
-  goalDraft,
   isSubmitting,
   onClose,
-  onSubmitContribution,
-  onSubmitGoal,
   onSubmitWish,
-  setContributionDraft,
-  setGoalDraft,
   setWishDraft,
   sheet,
   sheetError,
@@ -114,243 +85,91 @@ export function PlanningSheetStack({
   const activeWallets = wallets.filter((wallet) => wallet.isActive);
 
   return (
-    <>
-      <BottomSheet onClose={onClose} visible={sheet === "goal"}>
-        <Text style={styles.sheetTitle}>Nueva meta</Text>
-        <Text style={styles.sheetDescription}>
-          Define un objetivo de ahorro con wallet, monto y fecha limite opcional.
-        </Text>
+    <BottomSheet onClose={onClose} visible={sheet === "wish"}>
+      <Text style={styles.sheetTitle}>Nuevo deseo</Text>
+      <Text style={styles.sheetDescription}>
+        La prioridad define el orden de compra y afecta la fecha estimada.
+      </Text>
 
-        <FieldLabel label="Nombre" />
-        <TextInput
-          onChangeText={(value) =>
-            setGoalDraft((current) => ({ ...current, name: value }))
-          }
-          placeholder="Ej: Fondo de emergencia"
-          placeholderTextColor="#64748B"
-          style={styles.sheetInput}
-          value={goalDraft.name}
-        />
+      <FieldLabel label="Nombre" />
+      <TextInput
+        onChangeText={(value) =>
+          setWishDraft((current) => ({ ...current, name: value }))
+        }
+        placeholder="Ej: Monitor ultrawide"
+        placeholderTextColor="#64748B"
+        style={styles.sheetInput}
+        value={wishDraft.name}
+      />
 
-        <FieldLabel label="Monto objetivo" />
-        <TextInput
-          keyboardType="decimal-pad"
-          onChangeText={(value) =>
-            setGoalDraft((current) => ({ ...current, targetAmount: value }))
-          }
-          placeholder="2500"
-          placeholderTextColor="#64748B"
-          style={styles.sheetInput}
-          value={goalDraft.targetAmount}
-        />
+      <FieldLabel label="Monto estimado" />
+      <TextInput
+        keyboardType="decimal-pad"
+        onChangeText={(value) =>
+          setWishDraft((current) => ({ ...current, amount: value }))
+        }
+        placeholder="600"
+        placeholderTextColor="#64748B"
+        style={styles.sheetInput}
+        value={wishDraft.amount}
+      />
 
-        <FieldLabel hint="Formato YYYY-MM-DD" label="Deadline opcional" />
-        <TextInput
-          onChangeText={(value) =>
-            setGoalDraft((current) => ({ ...current, deadline: value }))
-          }
-          placeholder="2026-12-31"
-          placeholderTextColor="#64748B"
-          style={styles.sheetInput}
-          value={goalDraft.deadline}
-        />
+      <FieldLabel hint="1 es la máxima prioridad" label="Prioridad" />
+      <TextInput
+        keyboardType="number-pad"
+        onChangeText={(value) =>
+          setWishDraft((current) => ({ ...current, priority: value }))
+        }
+        placeholder="1"
+        placeholderTextColor="#64748B"
+        style={styles.sheetInput}
+        value={wishDraft.priority}
+      />
 
-        <FieldLabel label="Wallet" />
-        <View style={styles.chipRow}>
-          {activeWallets.map((wallet) => (
-            <ChipButton
-              key={wallet.id}
-              active={goalDraft.walletId === wallet.id}
-              label={`${wallet.name} · ${wallet.currency}`}
-              onPress={() =>
-                setGoalDraft((current) => ({ ...current, walletId: wallet.id }))
-              }
-            />
-          ))}
-        </View>
+      <FieldLabel label="Billetera" />
+      <View style={styles.chipRow}>
+        {activeWallets.map((wallet) => (
+          <ChipButton
+            key={wallet.id}
+            active={wishDraft.walletId === wallet.id}
+            label={`${wallet.name} - ${wallet.currency}`}
+            onPress={() =>
+              setWishDraft((current) => ({ ...current, walletId: wallet.id }))
+            }
+          />
+        ))}
+      </View>
 
-        {sheetError ? <Text style={styles.errorText}>{sheetError}</Text> : null}
+      <FieldLabel hint="Opcional" label="Notas" />
+      <TextInput
+        multiline
+        onChangeText={(value) =>
+          setWishDraft((current) => ({ ...current, notes: value }))
+        }
+        placeholder="Esperar oferta o dividir en 2 meses"
+        placeholderTextColor="#64748B"
+        style={[styles.sheetInput, styles.sheetTextArea]}
+        value={wishDraft.notes}
+      />
 
-        <Pressable
-          disabled={isSubmitting}
-          onPress={onSubmitGoal}
-          style={({ pressed }) => [
-            styles.submitButton,
-            pressed && !isSubmitting && styles.pressed,
-            isSubmitting && styles.submitButtonDisabled,
-          ]}
-        >
-          {isSubmitting ? (
-            <ActivityIndicator color="#08111F" />
-          ) : (
-            <Text style={styles.submitButtonText}>Guardar meta</Text>
-          )}
-        </Pressable>
-      </BottomSheet>
+      {sheetError ? <Text style={styles.errorText}>{sheetError}</Text> : null}
 
-      <BottomSheet onClose={onClose} visible={sheet === "contribution"}>
-        <Text style={styles.sheetTitle}>Registrar aporte</Text>
-        <Text style={styles.sheetDescription}>
-          Cada aporte crea una contribucion y un movimiento `goal_deposit`.
-        </Text>
-
-        <FieldLabel label="Meta" />
-        <View style={styles.chipRow}>
-          {activeGoals.map((snapshot) => (
-            <ChipButton
-              key={snapshot.goal.id}
-              active={contributionDraft.goalId === snapshot.goal.id}
-              label={snapshot.goal.name}
-              onPress={() =>
-                setContributionDraft((current) => ({
-                  ...current,
-                  goalId: snapshot.goal.id,
-                }))
-              }
-            />
-          ))}
-        </View>
-
-        <FieldLabel label="Monto" />
-        <TextInput
-          keyboardType="decimal-pad"
-          onChangeText={(value) =>
-            setContributionDraft((current) => ({ ...current, amount: value }))
-          }
-          placeholder="100"
-          placeholderTextColor="#64748B"
-          style={styles.sheetInput}
-          value={contributionDraft.amount}
-        />
-
-        <FieldLabel hint="Formato YYYY-MM-DD" label="Fecha" />
-        <TextInput
-          onChangeText={(value) =>
-            setContributionDraft((current) => ({ ...current, date: value }))
-          }
-          placeholder="2026-03-15"
-          placeholderTextColor="#64748B"
-          style={styles.sheetInput}
-          value={contributionDraft.date}
-        />
-
-        <FieldLabel hint="Opcional" label="Nota" />
-        <TextInput
-          multiline
-          onChangeText={(value) =>
-            setContributionDraft((current) => ({ ...current, note: value }))
-          }
-          placeholder="Aporte del cierre quincenal"
-          placeholderTextColor="#64748B"
-          style={[styles.sheetInput, styles.sheetTextArea]}
-          value={contributionDraft.note}
-        />
-
-        {sheetError ? <Text style={styles.errorText}>{sheetError}</Text> : null}
-
-        <Pressable
-          disabled={isSubmitting}
-          onPress={onSubmitContribution}
-          style={({ pressed }) => [
-            styles.submitButton,
-            pressed && !isSubmitting && styles.pressed,
-            isSubmitting && styles.submitButtonDisabled,
-          ]}
-        >
-          {isSubmitting ? (
-            <ActivityIndicator color="#08111F" />
-          ) : (
-            <Text style={styles.submitButtonText}>Registrar aporte</Text>
-          )}
-        </Pressable>
-      </BottomSheet>
-
-      <BottomSheet onClose={onClose} visible={sheet === "wish"}>
-        <Text style={styles.sheetTitle}>Nuevo deseo</Text>
-        <Text style={styles.sheetDescription}>
-          La prioridad define el orden de compra y afecta la fecha estimada.
-        </Text>
-
-        <FieldLabel label="Nombre" />
-        <TextInput
-          onChangeText={(value) =>
-            setWishDraft((current) => ({ ...current, name: value }))
-          }
-          placeholder="Ej: Monitor ultrawide"
-          placeholderTextColor="#64748B"
-          style={styles.sheetInput}
-          value={wishDraft.name}
-        />
-
-        <FieldLabel label="Monto estimado" />
-        <TextInput
-          keyboardType="decimal-pad"
-          onChangeText={(value) =>
-            setWishDraft((current) => ({ ...current, amount: value }))
-          }
-          placeholder="600"
-          placeholderTextColor="#64748B"
-          style={styles.sheetInput}
-          value={wishDraft.amount}
-        />
-
-        <FieldLabel hint="1 es la maxima prioridad" label="Prioridad" />
-        <TextInput
-          keyboardType="number-pad"
-          onChangeText={(value) =>
-            setWishDraft((current) => ({ ...current, priority: value }))
-          }
-          placeholder="1"
-          placeholderTextColor="#64748B"
-          style={styles.sheetInput}
-          value={wishDraft.priority}
-        />
-
-        <FieldLabel label="Wallet" />
-        <View style={styles.chipRow}>
-          {activeWallets.map((wallet) => (
-            <ChipButton
-              key={wallet.id}
-              active={wishDraft.walletId === wallet.id}
-              label={`${wallet.name} · ${wallet.currency}`}
-              onPress={() =>
-                setWishDraft((current) => ({ ...current, walletId: wallet.id }))
-              }
-            />
-          ))}
-        </View>
-
-        <FieldLabel hint="Opcional" label="Notas" />
-        <TextInput
-          multiline
-          onChangeText={(value) =>
-            setWishDraft((current) => ({ ...current, notes: value }))
-          }
-          placeholder="Esperar oferta o dividir en 2 meses"
-          placeholderTextColor="#64748B"
-          style={[styles.sheetInput, styles.sheetTextArea]}
-          value={wishDraft.notes}
-        />
-
-        {sheetError ? <Text style={styles.errorText}>{sheetError}</Text> : null}
-
-        <Pressable
-          disabled={isSubmitting}
-          onPress={onSubmitWish}
-          style={({ pressed }) => [
-            styles.submitButton,
-            pressed && !isSubmitting && styles.pressed,
-            isSubmitting && styles.submitButtonDisabled,
-          ]}
-        >
-          {isSubmitting ? (
-            <ActivityIndicator color="#08111F" />
-          ) : (
-            <Text style={styles.submitButtonText}>Guardar deseo</Text>
-          )}
-        </Pressable>
-      </BottomSheet>
-    </>
+      <Pressable
+        disabled={isSubmitting}
+        onPress={onSubmitWish}
+        style={({ pressed }) => [
+          styles.submitButton,
+          pressed && !isSubmitting && styles.pressed,
+          isSubmitting && styles.submitButtonDisabled,
+        ]}
+      >
+        {isSubmitting ? (
+          <ActivityIndicator color="#08111F" />
+        ) : (
+          <Text style={styles.submitButtonText}>Guardar deseo</Text>
+        )}
+      </Pressable>
+    </BottomSheet>
   );
 }
 

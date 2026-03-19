@@ -41,7 +41,7 @@ export function AuthBootstrap() {
           setError(
             error instanceof Error
               ? error.message
-              : "No se pudo verificar el estado de MFA.",
+              : "No se pudo verificar el estado de la verificación en dos pasos.",
           );
         }
       }

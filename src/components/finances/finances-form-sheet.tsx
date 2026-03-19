@@ -95,7 +95,7 @@ export function FinancesFormSheet({
         </View>
         <View style={styles.col}>
           <Text style={styles.label}>
-            {sheet === "salary-period" ? "PERIODO (YYYY-MM)" : "FECHA"}
+            {sheet === "salary-period" ? "PERÍODO (AAAA-MM)" : "FECHA"}
           </Text>
           <View style={styles.field}>
             <TextInput
@@ -242,7 +242,7 @@ export function FinancesFormSheet({
         onChangeText={(value) =>
           setDraft((current) => ({ ...current, description: value }))
         }
-        placeholder="Descripcion"
+        placeholder="Descripción"
         placeholderTextColor="#57627F"
         style={styles.area}
         value={draft.description}
@@ -268,7 +268,7 @@ export function FinancesFormSheet({
       ) : null}
       {sheet === "salary-period" ? (
         <Text style={styles.soft}>
-          Crea un periodo de nomina para que los cobros de salario se asignen
+          Crea un período de nómina para que los cobros de salario se asignen
           automaticamente.
         </Text>
       ) : null}

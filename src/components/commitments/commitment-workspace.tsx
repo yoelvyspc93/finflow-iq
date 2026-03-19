@@ -163,7 +163,7 @@ export function CommitmentWorkspace({
     typeof createRecurringExpense
   >[0]) {
     if (!user?.id || !selectedWalletId) {
-      setRecurringError("Selecciona una wallet valida antes de guardar compromisos.");
+      setRecurringError("Selecciona una billetera válida antes de guardar compromisos.");
       return false;
     }
 
@@ -209,7 +209,7 @@ export function CommitmentWorkspace({
     typeof createBudgetProvision
   >[0]) {
     if (!user?.id || !selectedWalletId) {
-      setProvisionError("Selecciona una wallet valida antes de guardar provisiones.");
+      setProvisionError("Selecciona una billetera válida antes de guardar provisiones.");
       return false;
     }
 
@@ -255,7 +255,7 @@ export function CommitmentWorkspace({
     values: SubmitCommitmentSettlementValues,
   ) {
     if (!user?.id || !selectedWalletId) {
-      setSettlementError("Selecciona una wallet valida antes de registrar pagos.");
+      setSettlementError("Selecciona una billetera válida antes de registrar pagos.");
       return false;
     }
 

@@ -33,7 +33,7 @@ export function SalaryOverviewCard({
 
       <View style={styles.metaRow}>
         <Text style={styles.metaText}>
-          Periodos cubiertos: {overview?.coveredPeriods ?? 0}
+          Períodos cubiertos: {overview?.coveredPeriods ?? 0}
         </Text>
         <Text style={styles.metaText}>
           Meses sin cobrar: {overview?.monthsWithoutPayment ?? 0}
@@ -41,7 +41,7 @@ export function SalaryOverviewCard({
       </View>
 
       <Text style={styles.metaText}>
-        Ultimo cobro: {overview?.lastPaymentDate ?? "sin registros"}
+        Último cobro: {overview?.lastPaymentDate ?? "sin registros"}
       </Text>
     </View>
   );

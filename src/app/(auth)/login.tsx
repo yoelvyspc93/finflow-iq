@@ -84,7 +84,9 @@ export default function LoginScreen() {
       router.replace(factorId ? "/mfa" : "/");
     } catch (mfaError) {
       setFeedback(
-        mfaError instanceof Error ? mfaError.message : "No se pudo validar MFA.",
+        mfaError instanceof Error
+          ? mfaError.message
+          : "No se pudo validar la verificación en dos pasos.",
       );
     } finally {
       setIsSubmitting(false);

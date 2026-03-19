@@ -41,12 +41,12 @@ export default function MfaScreen() {
   async function handleVerify() {
     const factorId = pendingMfaFactorId;
     if (!factorId) {
-      setError("No hay factor MFA pendiente.");
+      setError("No hay una verificación pendiente.");
       return;
     }
 
     if (!/^\d{6}$/.test(code.trim())) {
-      setError("Escribe un codigo de 6 digitos.");
+      setError("Escribe un código de 6 dígitos.");
       return;
     }
 
@@ -68,7 +68,7 @@ export default function MfaScreen() {
       setPendingMfaFactorId(null);
       router.replace("/");
     } catch (caughtError) {
-      setError(toUserFriendlyMfaError(caughtError, "No se pudo validar el codigo MFA."));
+      setError(toUserFriendlyMfaError(caughtError, "No se pudo validar el código de seguridad."));
     } finally {
       setIsSubmitting(false);
     }
@@ -79,9 +79,9 @@ export default function MfaScreen() {
       <DecorativeBackground />
       <View style={styles.container}>
         <View style={styles.card}>
-          <Text style={styles.title}>Verificacion MFA</Text>
+          <Text style={styles.title}>Verificación en dos pasos</Text>
           <Text style={styles.subtitle}>
-            Ingresa el codigo de 6 digitos de tu app autenticadora.
+            Escribe el código de 6 dígitos de tu aplicación de autenticación.
           </Text>
 
           <TextInput
@@ -110,7 +110,7 @@ export default function MfaScreen() {
             {isSubmitting ? (
               <ActivityIndicator color="#F8FAFC" />
             ) : (
-              <Text style={styles.buttonText}>Verificar codigo</Text>
+              <Text style={styles.buttonText}>Verificar código</Text>
             )}
           </Pressable>
         </View>

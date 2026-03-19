@@ -209,7 +209,7 @@ export default function CategorySettingsScreen() {
       <ScreenHeader
         leftAction={{ icon: "back", onPress: () => router.back() }}
         primaryAction={{ icon: "plus", onPress: openCreate }}
-        title="Categorias"
+        title="Categorías"
       />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>

@@ -19,9 +19,6 @@ describe('usePlanningStore', () => {
   it('delegates refresh to the planning refresh service and only applies state', async () => {
     refreshMock.mockResolvedValue({
       currentScore: null,
-      goalContributions: [{ id: 'gc-1' }],
-      goalSnapshots: [{ id: 'gs-1' }],
-      goals: [{ id: 'g-1' }],
       overview: { assignableAmount: 10 },
       recentScores: [],
       wishProjections: [{ id: 'wp-1' }],
@@ -37,8 +34,6 @@ describe('usePlanningStore', () => {
 
     const state = usePlanningStore.getState()
     expect(refreshMock).toHaveBeenCalledOnce()
-    expect(state.goals).toEqual([{ id: 'g-1' }])
-    expect(state.goalContributions).toEqual([{ id: 'gc-1' }])
     expect(state.wishes).toEqual([{ id: 'w-1' }])
     expect(state.error).toBeNull()
     expect(state.isReady).toBe(true)
@@ -57,9 +52,8 @@ describe('usePlanningStore', () => {
 
     const state = usePlanningStore.getState()
     expect(state.error).toBe('refresh failed')
-    expect(state.goals).toEqual([])
-    expect(state.goalSnapshots).toEqual([])
     expect(state.wishProjections).toEqual([])
+    expect(state.wishes).toEqual([])
     expect(state.isReady).toBe(true)
     expect(state.isLoading).toBe(false)
   })

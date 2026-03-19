@@ -39,7 +39,7 @@ export function SecurityBootstrap() {
         setError(
           error instanceof Error
             ? error.message
-            : "No se pudo cargar el estado de MFA.",
+            : "No se pudo cargar el estado de la verificación en dos pasos.",
         );
       } finally {
         if (isMounted) {

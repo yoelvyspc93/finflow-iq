@@ -186,7 +186,7 @@ export default function DashboardScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.sectionTitle}>Tus wallets</Text>
+        <Text style={styles.sectionTitle}>Tus billeteras</Text>
 
         <ScrollView
           horizontal
@@ -231,14 +231,14 @@ export default function DashboardScreen() {
             })
           ) : (
             <View style={[styles.walletCard, styles.walletCardMuted]}>
-              <Text style={styles.walletName}>Sin wallets</Text>
+              <Text style={styles.walletName}>Sin billeteras</Text>
               <Text style={styles.walletAmount}>USD 0.00</Text>
-              <Text style={styles.walletMeta}>Completa el onboarding inicial</Text>
+              <Text style={styles.walletMeta}>Completa la configuración inicial</Text>
             </View>
           )}
         </ScrollView>
 
-        <Text style={styles.sectionTitle}>Detalle de wallet activa</Text>
+        <Text style={styles.sectionTitle}>Detalle de la billetera activa</Text>
 
         <View style={styles.metricStack}>
           <MetricCard
@@ -315,16 +315,16 @@ export default function DashboardScreen() {
             <Ionicons color="#5E7BFF" name="sparkles-outline" size={15} />
           </View>
           <View style={styles.tipBody}>
-            <Text style={styles.tipEyebrow}>TIP IA</Text>
-            <Text style={styles.tipText}>
-              Reducir 10% los gastos de comida este mes puede mejorar tu
-              puntaje en 4 puntos. Prueba automatizar tu presupuesto.
-            </Text>
+          <Text style={styles.tipEyebrow}>SUGERENCIA</Text>
+          <Text style={styles.tipText}>
+              Si reduces un poco los gastos variables este mes, tendrás más margen
+              para cubrir compromisos y planificar compras.
+          </Text>
           </View>
         </View>
 
         <View style={styles.sectionRow}>
-          <Text style={styles.sectionTitle}>Insights rapidos</Text>
+          <Text style={styles.sectionTitle}>Resumen rápido</Text>
           <Pressable onPress={() => router.push("/insights")} style={({ pressed }) => [styles.insightLink, pressed && styles.pressed]}>
             <Text style={styles.insightLinkText}>Ver todos</Text>
           </Pressable>
@@ -348,7 +348,7 @@ export default function DashboardScreen() {
             </View>
             <Text style={styles.insightLabel}>Alerta de presupuesto</Text>
             <Text style={styles.insightValue}>{budgetAlert}%</Text>
-            <Text style={styles.insightMetaNegative}>Limite de ocio</Text>
+            <Text style={styles.insightMetaNegative}>Límite de ocio</Text>
           </View>
         </View>
       </ScrollView>

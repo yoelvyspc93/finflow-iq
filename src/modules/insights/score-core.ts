@@ -1,4 +1,3 @@
-import type { GoalContribution } from '@/modules/goals/types'
 import type { WishProjection } from '@/modules/wishes/calculations'
 
 export type FinancialScoreBreakdown = {
@@ -14,7 +13,6 @@ export type FinancialScoreInput = {
   assignableAmount: number
   availableBalance: number
   committedAmount: number
-  goalContributions: GoalContribution[]
   monthlyCommitmentAverage: number
   monthlyIncome: number
   monthsWithoutPayment: number
@@ -25,29 +23,6 @@ export type FinancialScoreInput = {
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value))
-}
-
-function averageGoalContributionsPerMonth(contributions: GoalContribution[]) {
-  if (contributions.length === 0) {
-    return 0
-  }
-
-  const ordered = [...contributions].sort((left, right) =>
-    left.date.localeCompare(right.date),
-  )
-  const first = new Date(`${ordered[0].date}T00:00:00.000Z`)
-  const last = new Date(`${ordered[ordered.length - 1].date}T00:00:00.000Z`)
-  const monthSpan = Math.max(
-    1,
-    (last.getUTCFullYear() - first.getUTCFullYear()) * 12 +
-      (last.getUTCMonth() - first.getUTCMonth()) +
-      1,
-  )
-
-  return (
-    contributions.reduce((total, contribution) => total + contribution.amount, 0) /
-    monthSpan
-  )
 }
 
 export function calculateSalaryStabilityScore(args: {
@@ -85,9 +60,7 @@ export function calculateFinancialScore(
     input.monthlyIncome > 0
       ? input.monthlyIncome * (input.savingsGoalPercent / 100)
       : 0
-  const actualMonthlySavings = averageGoalContributionsPerMonth(
-    input.goalContributions,
-  )
+  const actualMonthlySavings = Math.max(input.assignableAmount, 0)
   const topWishPressure = input.wishProjections
     .filter((projection) => !projection.wish.isPurchased)
     .slice(0, 3)
@@ -112,7 +85,7 @@ export function calculateFinancialScore(
   const wishlistCoverage =
     topWishPressure > 0
       ? clamp(
-          (Math.max(input.assignableAmount, 0) + actualMonthlySavings * 6) /
+          (Math.max(input.assignableAmount, 0) + targetMonthlySavings * 6) /
             topWishPressure,
           0,
           1,

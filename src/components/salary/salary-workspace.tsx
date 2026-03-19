@@ -114,7 +114,7 @@ export function SalaryWorkspace({
     periodMonth: string;
   }) {
     if (!user?.id || !salaryCurrency) {
-      setPeriodError("Selecciona una wallet salarial valida antes de crear periodos.");
+      setPeriodError("Selecciona una billetera válida en USD o CUP antes de crear períodos.");
       return false;
     }
 
@@ -166,7 +166,7 @@ export function SalaryWorkspace({
     paymentDate: string;
   }) {
     if (!user?.id || !selectedWalletId || !salaryCurrency) {
-      setPaymentError("Selecciona una wallet salarial valida antes de registrar cobros.");
+      setPaymentError("Selecciona una billetera válida en USD o CUP antes de registrar cobros.");
       return false;
     }
 
@@ -287,7 +287,7 @@ export function SalaryWorkspace({
             onSubmit={handleRegisterPayment}
             periods={filteredPeriods}
             submitError={paymentError}
-            walletName={activeWallet?.name ?? "sin wallet"}
+            walletName={activeWallet?.name ?? "sin billetera"}
           />
           <SalaryPeriodListCard
             currency={salaryCurrency}
@@ -302,7 +302,7 @@ export function SalaryWorkspace({
         <View style={styles.infoCard}>
           <Text style={styles.infoTitle}>Moneda salarial no soportada</Text>
           <Text style={styles.infoText}>
-            El modulo salarial de esta fase solo opera con wallets en USD o CUP.
+            El módulo salarial solo funciona con billeteras en USD o CUP.
           </Text>
         </View>
       )}

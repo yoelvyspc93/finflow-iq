@@ -1,5 +1,4 @@
 import { listCommitmentPaymentEntries, listRecurringExpenses } from '@/modules/commitments/service'
-import { listGoalContributions, listGoals } from '@/modules/goals/service'
 import { listFinancialScores } from '@/modules/insights/score'
 import { listBudgetProvisions } from '@/modules/provisions/service'
 import { listSalaryPayments, listSalaryPeriods } from '@/modules/salary/service'
@@ -14,8 +13,6 @@ export type PlanningQueryDependencies = {
   listBudgetProvisions: typeof listBudgetProvisions
   listCommitmentPaymentEntries: typeof listCommitmentPaymentEntries
   listFinancialScores: typeof listFinancialScores
-  listGoalContributions: typeof listGoalContributions
-  listGoals: typeof listGoals
   listRecurringExpenses: typeof listRecurringExpenses
   listSalaryPayments: typeof listSalaryPayments
   listSalaryPeriods: typeof listSalaryPeriods
@@ -52,14 +49,6 @@ export async function queryPlanningData(args: {
   ])
 
   const shouldReuseExistingDevState = isDevBypass
-  const goals =
-    shouldReuseExistingDevState && existingState.goals.length > 0
-      ? null
-      : await dependencies.listGoals({ isDevBypass, userId })
-  const goalContributions =
-    shouldReuseExistingDevState && existingState.goalContributions.length > 0
-      ? null
-      : await dependencies.listGoalContributions({ isDevBypass, userId })
   const wishes =
     shouldReuseExistingDevState && existingState.wishes.length > 0
       ? null
@@ -67,8 +56,6 @@ export async function queryPlanningData(args: {
 
   return {
     budgetProvisions,
-    goalContributions,
-    goals,
     paymentEntries,
     recentScores,
     recurringExpenses,

@@ -1,5 +1,4 @@
 import { listCommitmentPaymentEntries, listRecurringExpenses } from '@/modules/commitments/service'
-import { listGoalContributions, listGoals } from '@/modules/goals/service'
 import {
   getCurrentWeekStart,
   listFinancialScores,
@@ -31,8 +30,6 @@ export function createPlanningRefreshService() {
           listBudgetProvisions,
           listCommitmentPaymentEntries,
           listFinancialScores,
-          listGoalContributions,
-          listGoals,
           listRecurringExpenses,
           listSalaryPayments,
           listSalaryPeriods,
@@ -52,8 +49,6 @@ export function createPlanningRefreshService() {
       const evaluation = evaluatePlanningState({
         budgetProvisions: fetchedData.budgetProvisions,
         currentMonth,
-        goalContributions: resolvedData.goalContributions,
-        goals: resolvedData.goals,
         paymentEntries: fetchedData.paymentEntries,
         recentScores: fetchedData.recentScores,
         recurringExpenses: fetchedData.recurringExpenses,
@@ -78,9 +73,6 @@ export function createPlanningRefreshService() {
 
       return {
         currentScore,
-        goalContributions: resolvedData.goalContributions,
-        goalSnapshots: evaluation.goalSnapshots,
-        goals: resolvedData.goals,
         overview: evaluation.overview,
         recentScores: mergePlanningScores(currentScore, fetchedData.recentScores),
         wishProjections: evaluation.wishProjections,

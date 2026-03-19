@@ -29,10 +29,6 @@ vi.mock('@/modules/commitments/service', () => ({
   listCommitmentPaymentEntries: vi.fn(),
   listRecurringExpenses: vi.fn(),
 }))
-vi.mock('@/modules/goals/service', () => ({
-  listGoalContributions: vi.fn(),
-  listGoals: vi.fn(),
-}))
 vi.mock('@/modules/provisions/service', () => ({
   listBudgetProvisions: vi.fn(),
 }))
@@ -52,8 +48,6 @@ describe('planning refresh service', () => {
     vi.clearAllMocks()
     queryPlanningData.mockResolvedValue({
       budgetProvisions: [],
-      goalContributions: [],
-      goals: [],
       paymentEntries: [],
       recentScores: [{ id: 'score-old' }],
       recurringExpenses: [],
@@ -62,13 +56,10 @@ describe('planning refresh service', () => {
       wishes: [],
     })
     resolvePlanningData.mockReturnValue({
-      goalContributions: [{ id: 'gc-1' }],
-      goals: [{ id: 'g-1' }],
       wishes: [{ id: 'w-1' }],
     })
     evaluatePlanningState.mockReturnValue({
       currentScorePayload: { breakdown: { total_score: 80 } },
-      goalSnapshots: [{ id: 'gs-1' }],
       overview: { assignableAmount: 50 },
       wishProjectionSyncInputs: [],
       wishProjections: [{ id: 'wp-1' }],
@@ -83,8 +74,6 @@ describe('planning refresh service', () => {
 
     const result = await service.refresh({
       existingState: {
-        goalContributions: [],
-        goals: [],
         wishes: [],
       },
       refreshArgs: {
@@ -101,9 +90,6 @@ describe('planning refresh service', () => {
     expect(persistPlanningSideEffects).toHaveBeenCalledOnce()
     expect(result).toEqual({
       currentScore: { id: 'score-new' },
-      goalContributions: [{ id: 'gc-1' }],
-      goalSnapshots: [{ id: 'gs-1' }],
-      goals: [{ id: 'g-1' }],
       overview: { assignableAmount: 50 },
       recentScores: [{ id: 'score-new' }, { id: 'score-old' }],
       wishProjections: [{ id: 'wp-1' }],

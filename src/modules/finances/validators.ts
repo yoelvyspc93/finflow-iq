@@ -6,7 +6,7 @@ export function validateFinancesBaseSubmit(args: {
   userId: string | undefined
 }) {
   if (!args.userId || !args.selectedWalletId) {
-    return 'Selecciona una wallet valida.'
+    return 'Selecciona una billetera válida.'
   }
 
   const amount = Number(args.amountText)
@@ -23,7 +23,7 @@ export function validateTransferDraft(args: {
   wallets: { currency: string; id: string; isActive: boolean }[]
 }) {
   if (!args.draft.destinationWalletId) {
-    return 'Selecciona una wallet destino.'
+    return 'Selecciona una billetera de destino.'
   }
 
   const destinationWallet = args.wallets.find(
@@ -45,18 +45,18 @@ export function validateTransferDraft(args: {
     Number.isNaN(rate) ||
     rate <= 0
   ) {
-    return 'Completa monto destino y tasa validos.'
+    return 'Completa un monto de destino y una tasa válidos.'
   }
 
   return null
 }
 
 export function validateSalaryCurrency(currency: string | null) {
-  return currency ? null : 'La wallet activa debe ser USD o CUP.'
+  return currency ? null : 'La billetera activa debe ser USD o CUP.'
 }
 
 export function validateSalaryPeriodToken(date: string) {
   return /^\d{4}-\d{2}$/.test(date.slice(0, 7))
     ? null
-    : 'La fecha del periodo debe tener formato YYYY-MM.'
+    : 'La fecha del período debe tener el formato AAAA-MM.'
 }
