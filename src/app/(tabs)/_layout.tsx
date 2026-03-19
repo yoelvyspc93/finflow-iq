@@ -78,7 +78,6 @@ export default function TabsLayout() {
         ],
         tabBarLabelStyle: styles.tabBarLabel,
         tabBarItemStyle: styles.tabItem,
-        sceneStyle: styles.scene,
       }}
     >
       <Tabs.Screen
@@ -120,14 +119,11 @@ export default function TabsLayout() {
 }
 
 const styles = StyleSheet.create({
-  scene: {
-    backgroundColor: theme.colors.background,
-  },
   tabBar: {
-    height: 74,
+    maxHeight: 74,
     paddingTop: theme.spacing.xs,
     paddingBottom: theme.spacing.xs,
-    backgroundColor: theme.colors.background,
+    backgroundColor: 'red',
     borderTopWidth: 0,
   },
   tabBarLabel: {
