@@ -19,31 +19,3 @@ export function mapIncomeSource(row: IncomeSourceRow): IncomeSource {
     userId: row.user_id,
   };
 }
-
-export function createMockIncomeSources(userId: string): IncomeSource[] {
-  const now = new Date().toISOString();
-
-  return [
-    {
-      createdAt: now,
-      id: "mock-income-freelance",
-      isDefault: true,
-      name: "Freelance",
-      userId,
-    },
-    {
-      createdAt: now,
-      id: "mock-income-salary",
-      isDefault: true,
-      name: "Salario",
-      userId,
-    },
-    {
-      createdAt: now,
-      id: "mock-income-transfer",
-      isDefault: true,
-      name: "Transferencia",
-      userId,
-    },
-  ];
-}

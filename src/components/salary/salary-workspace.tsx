@@ -7,7 +7,6 @@ import { SalaryPaymentComposerCard } from "@/components/salary/salary-payment-co
 import { SalaryPaymentListCard } from "@/components/salary/salary-payment-list-card";
 import { SalaryPeriodComposerCard } from "@/components/salary/salary-period-composer-card";
 import { SalaryPeriodListCard } from "@/components/salary/salary-period-list-card";
-import { createLocalLedgerEntry } from "@/modules/ledger/types";
 import { selectActiveWallet } from "@/modules/ledger/selectors";
 import { calculateSalaryOverview } from "@/modules/salary/calculations";
 import {
@@ -15,9 +14,6 @@ import {
   registerSalaryPayment,
 } from "@/modules/salary/service";
 import {
-  createLocalSalaryAllocation,
-  createLocalSalaryPayment,
-  createLocalSalaryPeriod,
   type SalaryAllocationInput,
   type SalaryCurrency,
 } from "@/modules/salary/types";
@@ -50,22 +46,13 @@ export function SalaryWorkspace({
   const [isCreatingPeriod, setIsCreatingPeriod] = useState(false);
   const [isCreatingPayment, setIsCreatingPayment] = useState(false);
 
-  const isDevBypass = useAuthStore((state) => state.isDevBypass);
   const user = useAuthStore((state) => state.user);
-  const applyWalletBalanceDelta = useAppStore(
-    (state) => state.applyWalletBalanceDelta,
-  );
   const refreshAppData = useAppStore((state) => state.refreshAppData);
   const selectedWalletId = useAppStore((state) => state.selectedWalletId);
   const setSelectedWalletId = useAppStore((state) => state.setSelectedWalletId);
   const wallets = useAppStore((state) => state.wallets);
-  const addLocalEntry = useLedgerStore((state) => state.addLocalEntry);
   const refreshLedger = useLedgerStore((state) => state.refreshLedger);
-  const addLocalSalaryPeriod = useSalaryStore((state) => state.addLocalSalaryPeriod);
   const allocations = useSalaryStore((state) => state.allocations);
-  const applyLocalSalaryPayment = useSalaryStore(
-    (state) => state.applyLocalSalaryPayment,
-  );
   const error = useSalaryStore((state) => state.error);
   const isLoading = useSalaryStore((state) => state.isLoading);
   const payments = useSalaryStore((state) => state.payments);
@@ -82,10 +69,9 @@ export function SalaryWorkspace({
     }
 
     void refreshSalaryData({
-      isDevBypass,
       userId: user.id,
     });
-  }, [isDevBypass, refreshSalaryData, user?.id]);
+  }, [refreshSalaryData, user?.id]);
 
   const filteredPeriods = useMemo(() => {
     if (!salaryCurrency) {
@@ -122,29 +108,16 @@ export function SalaryWorkspace({
     setPeriodError(null);
 
     try {
-      if (isDevBypass) {
-        addLocalSalaryPeriod(
-          createLocalSalaryPeriod({
-            currency: salaryCurrency,
-            expectedAmount: values.expectedAmount,
-            notes: values.notes,
-            periodMonth: values.periodMonth,
-            userId: user.id,
-          }),
-        );
-      } else {
-        await createSalaryPeriod({
-          currency: salaryCurrency,
-          expectedAmount: values.expectedAmount,
-          notes: values.notes,
-          periodMonth: values.periodMonth,
-        });
+      await createSalaryPeriod({
+        currency: salaryCurrency,
+        expectedAmount: values.expectedAmount,
+        notes: values.notes,
+        periodMonth: values.periodMonth,
+      });
 
-        await refreshSalaryData({
-          isDevBypass: false,
-          userId: user.id,
-        });
-      }
+      await refreshSalaryData({
+        userId: user.id,
+      });
 
       return true;
     } catch (caughtError) {
@@ -174,68 +147,27 @@ export function SalaryWorkspace({
     setPaymentError(null);
 
     try {
-      if (isDevBypass) {
-        const payment = createLocalSalaryPayment({
-          amount: values.amount,
-          currency: salaryCurrency,
-          description: values.description,
-          paymentDate: values.paymentDate,
+      await registerSalaryPayment({
+        allocations: values.allocations,
+        amount: values.amount,
+        currency: salaryCurrency,
+        description: values.description,
+        paymentDate: values.paymentDate,
+        walletId: selectedWalletId,
+      });
+
+      await Promise.all([
+        refreshAppData({
+          userId: user.id,
+        }),
+        refreshLedger({
           userId: user.id,
           walletId: selectedWalletId,
-        });
-        const localAllocations = values.allocations.map((allocation) =>
-          createLocalSalaryAllocation({
-            amount: allocation.amount,
-            salaryPaymentId: payment.id,
-            salaryPeriodId: allocation.salaryPeriodId,
-            userId: user.id,
-          }),
-        );
-
-        applyLocalSalaryPayment({
-          allocations: localAllocations,
-          payment,
-        });
-        applyWalletBalanceDelta({
-          amount: values.amount,
-          walletId: selectedWalletId,
-        });
-        addLocalEntry(
-          createLocalLedgerEntry({
-            amount: values.amount,
-            date: values.paymentDate,
-            description: values.description,
-            type: "salary_payment",
-            userId: user.id,
-            walletId: selectedWalletId,
-          }),
-        );
-      } else {
-        await registerSalaryPayment({
-          allocations: values.allocations,
-          amount: values.amount,
-          currency: salaryCurrency,
-          description: values.description,
-          paymentDate: values.paymentDate,
-          walletId: selectedWalletId,
-        });
-
-        await Promise.all([
-          refreshAppData({
-            isDevBypass: false,
-            userId: user.id,
-          }),
-          refreshLedger({
-            isDevBypass: false,
-            userId: user.id,
-            walletId: selectedWalletId,
-          }),
-          refreshSalaryData({
-            isDevBypass: false,
-            userId: user.id,
-          }),
-        ]);
-      }
+        }),
+        refreshSalaryData({
+          userId: user.id,
+        }),
+      ]);
 
       return true;
     } catch (caughtError) {

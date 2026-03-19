@@ -4,7 +4,6 @@ import { listBudgetProvisions } from '@/modules/provisions/service'
 import { listSalaryPayments, listSalaryPeriods } from '@/modules/salary/service'
 import { listWishes } from '@/modules/wishes/service'
 import type {
-  PlanningExistingState,
   PlanningFetchedData,
   RefreshPlanningDataArgs,
 } from '@/modules/planning/refresh-types'
@@ -22,11 +21,10 @@ export type PlanningQueryDependencies = {
 export async function queryPlanningData(args: {
   currentMonth: string
   dependencies: PlanningQueryDependencies
-  existingState: PlanningExistingState
   refreshArgs: RefreshPlanningDataArgs
 }): Promise<PlanningFetchedData> {
-  const { dependencies, existingState, refreshArgs } = args
-  const { isDevBypass, userId } = refreshArgs
+  const { dependencies, refreshArgs } = args
+  const { userId } = refreshArgs
 
   const [
     salaryPeriods,
@@ -35,24 +33,19 @@ export async function queryPlanningData(args: {
     budgetProvisions,
     paymentEntries,
     recentScores,
+    wishes,
   ] = await Promise.all([
-    dependencies.listSalaryPeriods({ isDevBypass, userId }),
-    dependencies.listSalaryPayments({ isDevBypass, userId }),
-    dependencies.listRecurringExpenses({ isDevBypass, userId }),
-    dependencies.listBudgetProvisions({ isDevBypass, userId }),
+    dependencies.listSalaryPeriods({ userId }),
+    dependencies.listSalaryPayments({ userId }),
+    dependencies.listRecurringExpenses({ userId }),
+    dependencies.listBudgetProvisions({ userId }),
     dependencies.listCommitmentPaymentEntries({
-      isDevBypass,
       month: args.currentMonth,
       userId,
     }),
-    dependencies.listFinancialScores({ isDevBypass, userId }),
+    dependencies.listFinancialScores({ userId }),
+    dependencies.listWishes({ userId }),
   ])
-
-  const shouldReuseExistingDevState = isDevBypass
-  const wishes =
-    shouldReuseExistingDevState && existingState.wishes.length > 0
-      ? null
-      : await dependencies.listWishes({ isDevBypass, userId })
 
   return {
     budgetProvisions,

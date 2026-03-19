@@ -75,27 +75,3 @@ export function mapSettings(row: SettingsRow): AppSettings {
     weeklySummaryDay: row.weekly_summary_day as WeeklySummaryDay,
   };
 }
-
-export function createMockSettings(userId: string): AppSettings {
-  const now = new Date().toISOString();
-
-  return {
-    aiAnalysisFrequency: "manual",
-    alertLevel: "normal",
-    avgMonthsWithoutPayment: 0,
-    createdAt: now,
-    dateFormat: "DD/MM/YYYY",
-    financialMonthStartDay: 1,
-    id: "dev-settings",
-    primaryCurrency: "USD",
-    salaryReferenceAmount: null,
-    savingsGoalPercent: 20,
-    sessionTimeoutMinutes: 5,
-    subscriptionAlertDays: 3,
-    theme: "dark",
-    updatedAt: now,
-    usdCupRate: null,
-    userId,
-    weeklySummaryDay: "monday",
-  };
-}

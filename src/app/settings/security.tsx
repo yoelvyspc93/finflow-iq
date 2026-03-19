@@ -75,7 +75,6 @@ export default function SecuritySettingsScreen() {
     uri: string;
   } | null>(null);
 
-  const isDevBypass = useAuthStore((state) => state.isDevBypass);
   const user = useAuthStore((state) => state.user);
   const settings = useAppStore((state) => state.settings);
   const replaceLocalSettings = useAppStore((state) => state.replaceLocalSettings);
@@ -89,7 +88,7 @@ export default function SecuritySettingsScreen() {
   }, [settings?.sessionTimeoutMinutes]);
 
   useEffect(() => {
-    if (!user?.id || isDevBypass) {
+    if (!user?.id) {
       return;
     }
 
@@ -106,7 +105,7 @@ export default function SecuritySettingsScreen() {
           isEnabled: false,
         });
       });
-  }, [isDevBypass, setMfa, user?.id]);
+  }, [setMfa, user?.id]);
 
   function closeMfaSheet() {
     setMfaSheet(null);
@@ -117,11 +116,6 @@ export default function SecuritySettingsScreen() {
   }
 
   async function handleOpenMfaEnable() {
-    if (isDevBypass) {
-      setMfaError("La verificación en dos pasos no está disponible en modo desarrollo.");
-      return;
-    }
-
     setMfaError(null);
     setIsMfaSubmitting(true);
 
@@ -233,19 +227,11 @@ export default function SecuritySettingsScreen() {
       return;
     }
 
-    if (isDevBypass) {
-      replaceLocalSettings({
-        ...settings,
-        sessionTimeoutMinutes: value,
-        updatedAt: new Date().toISOString(),
-      });
-    } else {
-      const nextSettings = await updateSettings({
-        patch: { session_timeout_minutes: value },
-        userId: user.id,
-      });
-      replaceLocalSettings(nextSettings);
-    }
+    const nextSettings = await updateSettings({
+      patch: { session_timeout_minutes: value },
+      userId: user.id,
+    });
+    replaceLocalSettings(nextSettings);
     setTimeoutSheetOpen(false);
   }
 
@@ -267,7 +253,7 @@ export default function SecuritySettingsScreen() {
               </Text>
             </View>
             <AppSwitch
-              disabled={isMfaSubmitting || isDevBypass}
+              disabled={isMfaSubmitting}
               onValueChange={handleToggleMfa}
               value={mfaEnabled}
             />

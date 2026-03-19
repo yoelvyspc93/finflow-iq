@@ -18,7 +18,6 @@ export function usePlanningScreen(viewParam?: string | string[]) {
   const [sheetError, setSheetError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const isDevBypass = useAuthStore((state) => state.isDevBypass)
   const user = useAuthStore((state) => state.user)
   const settings = useAppStore((state) => state.settings)
   const wallets = useAppStore((state) => state.wallets)
@@ -31,7 +30,6 @@ export function usePlanningScreen(viewParam?: string | string[]) {
     (state) => state.refreshPlanningData,
   )
   const wishProjections = usePlanningStore((state) => state.wishProjections)
-  const addLocalWish = usePlanningStore((state) => state.addLocalWish)
   const refreshCommitmentData = useCommitmentStore(
     (state) => state.refreshCommitmentData,
   )
@@ -39,12 +37,6 @@ export function usePlanningScreen(viewParam?: string | string[]) {
     (state) => state.recurringExpenses,
   )
   const budgetProvisions = useCommitmentStore((state) => state.budgetProvisions)
-  const addLocalRecurringExpense = useCommitmentStore(
-    (state) => state.addLocalRecurringExpense,
-  )
-  const addLocalBudgetProvision = useCommitmentStore(
-    (state) => state.addLocalBudgetProvision,
-  )
   const currentMonth = `${new Date().toISOString().slice(0, 7)}-01`
 
   useEffect(() => {
@@ -66,12 +58,11 @@ export function usePlanningScreen(viewParam?: string | string[]) {
     }
 
     void refreshPlanningData({
-      isDevBypass,
       settings,
       userId: user.id,
       wallets,
     })
-  }, [isDevBypass, refreshPlanningData, settings, user?.id, wallets])
+  }, [refreshPlanningData, settings, user?.id, wallets])
 
   useEffect(() => {
     if (!user?.id || !selectedWalletId) {
@@ -79,18 +70,11 @@ export function usePlanningScreen(viewParam?: string | string[]) {
     }
 
     void refreshCommitmentData({
-      isDevBypass,
       month: currentMonth,
       userId: user.id,
       walletId: selectedWalletId,
     })
-  }, [
-    currentMonth,
-    isDevBypass,
-    refreshCommitmentData,
-    selectedWalletId,
-    user?.id,
-  ])
+  }, [currentMonth, refreshCommitmentData, selectedWalletId, user?.id])
 
   async function refreshAll() {
     if (!user?.id || !settings) {
@@ -98,7 +82,6 @@ export function usePlanningScreen(viewParam?: string | string[]) {
     }
 
     await refreshPlanningData({
-      isDevBypass,
       settings,
       userId: user.id,
       wallets: useAppStore.getState().wallets,
@@ -106,9 +89,7 @@ export function usePlanningScreen(viewParam?: string | string[]) {
   }
 
   const wishes = usePlanningWishes({
-    addLocalWish,
     assignableAmount: overview?.assignableAmount ?? 0,
-    isDevBypass,
     refreshAll,
     setIsSubmitting,
     setPickerOpen,
@@ -120,10 +101,7 @@ export function usePlanningScreen(viewParam?: string | string[]) {
   })
 
   const commitments = usePlanningCommitments({
-    addLocalBudgetProvision,
-    addLocalRecurringExpense,
     currentMonth,
-    isDevBypass,
     refreshCommitmentData,
     selectedWalletId,
     setPickerOpen,

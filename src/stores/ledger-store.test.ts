@@ -1,57 +1,74 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createLocalLedgerEntry } from "@/modules/ledger/types";
-
-const appState = {
-  selectedWalletId: "wallet-a" as string | null,
-};
+const listLedgerEntries = vi.fn();
 
 vi.mock("@/modules/ledger/service", () => ({
-  listLedgerEntries: vi.fn(),
-}));
-
-vi.mock("@/stores/app-store", () => ({
-  useAppStore: {
-    getState: () => appState,
-  },
+  listLedgerEntries,
 }));
 
 const { useLedgerStore } = await import("@/stores/ledger-store");
 
-function createEntry(walletId: string, amount = 25) {
-  return createLocalLedgerEntry({
-    amount,
-    date: "2026-03-18",
-    description: `entry-${walletId}`,
-    type: amount >= 0 ? "income" : "expense",
-    userId: "user-1",
-    walletId,
-  });
-}
-
 describe("useLedgerStore", () => {
   beforeEach(() => {
-    appState.selectedWalletId = "wallet-a";
+    listLedgerEntries.mockReset();
     useLedgerStore.getState().reset();
   });
 
-  it("keeps the visible list scoped to the selected wallet when adding local entries", () => {
-    useLedgerStore.getState().addLocalEntry(createEntry("wallet-a", 100));
-    useLedgerStore.getState().addLocalEntry(createEntry("wallet-b", -20));
+  it("loads entries for the selected wallet", async () => {
+    listLedgerEntries.mockResolvedValue([
+      {
+        amount: 100,
+        budgetProvisionId: null,
+        categoryId: null,
+        createdAt: "2026-03-18T12:00:00.000Z",
+        date: "2026-03-18",
+        description: "Ingreso",
+        id: "entry-1",
+        incomeSourceId: null,
+        recurringExpenseId: null,
+        type: "income",
+        userId: "user-1",
+        walletId: "wallet-a",
+      },
+      {
+        amount: -20,
+        budgetProvisionId: null,
+        categoryId: null,
+        createdAt: "2026-03-17T12:00:00.000Z",
+        date: "2026-03-17",
+        description: "Gasto",
+        id: "entry-2",
+        incomeSourceId: null,
+        recurringExpenseId: null,
+        type: "expense",
+        userId: "user-1",
+        walletId: "wallet-a",
+      },
+    ]);
+
+    await useLedgerStore.getState().refreshLedger({
+      userId: "user-1",
+      walletId: "wallet-a",
+    });
 
     const state = useLedgerStore.getState();
 
-    expect(state.devEntries).toHaveLength(2);
-    expect(state.entries).toHaveLength(1);
-    expect(state.entries[0]?.walletId).toBe("wallet-a");
+    expect(listLedgerEntries).toHaveBeenCalledWith({
+      limit: 12,
+      userId: "user-1",
+      walletId: "wallet-a",
+    });
+    expect(state.entries).toHaveLength(2);
+    expect(state.isReady).toBe(true);
   });
 
-  it("shows all local entries when there is no selected wallet", () => {
-    appState.selectedWalletId = null;
+  it("clears entries when there is no selected wallet", async () => {
+    await useLedgerStore.getState().refreshLedger({
+      userId: "user-1",
+      walletId: null,
+    });
 
-    useLedgerStore.getState().addLocalEntry(createEntry("wallet-a", 100));
-    useLedgerStore.getState().addLocalEntry(createEntry("wallet-b", -20));
-
-    expect(useLedgerStore.getState().entries).toHaveLength(2);
+    expect(useLedgerStore.getState().entries).toEqual([]);
+    expect(listLedgerEntries).not.toHaveBeenCalled();
   });
 });

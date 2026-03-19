@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { queryPlanningData, type PlanningQueryDependencies } from '@/modules/planning/planning-query'
-import type { PlanningExistingState } from '@/modules/planning/refresh-types'
 
 function createDependencies(): PlanningQueryDependencies {
   return {
@@ -15,41 +14,14 @@ function createDependencies(): PlanningQueryDependencies {
   } as unknown as PlanningQueryDependencies
 }
 
-const emptyExistingState: PlanningExistingState = {
-  wishes: [],
-}
-
 describe('planning query', () => {
-  it('skips wish fetches when dev mode already has local state', async () => {
+  it('fetches all planning collections from dependencies', async () => {
     const dependencies = createDependencies()
 
     const result = await queryPlanningData({
       currentMonth: '2026-03-01',
       dependencies,
-      existingState: {
-        wishes: [{ id: 'local-w' }] as never[],
-      },
       refreshArgs: {
-        isDevBypass: true,
-        settings: null,
-        userId: 'user-1',
-        wallets: [],
-      },
-    })
-
-    expect(result.wishes).toBeNull()
-    expect(dependencies.listWishes).not.toHaveBeenCalled()
-  })
-
-  it('fetches wishes in normal mode', async () => {
-    const dependencies = createDependencies()
-
-    const result = await queryPlanningData({
-      currentMonth: '2026-03-01',
-      dependencies,
-      existingState: emptyExistingState,
-      refreshArgs: {
-        isDevBypass: false,
         settings: null,
         userId: 'user-1',
         wallets: [],
@@ -57,6 +29,12 @@ describe('planning query', () => {
     })
 
     expect(result.wishes).toEqual([{ id: 'w-1' }])
+    expect(dependencies.listSalaryPeriods).toHaveBeenCalledOnce()
+    expect(dependencies.listSalaryPayments).toHaveBeenCalledOnce()
+    expect(dependencies.listRecurringExpenses).toHaveBeenCalledOnce()
+    expect(dependencies.listBudgetProvisions).toHaveBeenCalledOnce()
+    expect(dependencies.listCommitmentPaymentEntries).toHaveBeenCalledOnce()
+    expect(dependencies.listFinancialScores).toHaveBeenCalledOnce()
     expect(dependencies.listWishes).toHaveBeenCalledOnce()
   })
 })

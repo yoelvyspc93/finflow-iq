@@ -5,7 +5,6 @@ import { useAppStore } from "@/stores/app-store";
 
 export function AppDataBootstrap() {
   const authStatus = useAuthStore((state) => state.status);
-  const isDevBypass = useAuthStore((state) => state.isDevBypass);
   const pendingMfaFactorId = useAuthStore((state) => state.pendingMfaFactorId);
   const user = useAuthStore((state) => state.user);
   const refreshAppData = useAppStore((state) => state.refreshAppData);
@@ -21,8 +20,8 @@ export function AppDataBootstrap() {
       return;
     }
 
-    void refreshAppData({ isDevBypass, userId: user.id });
-  }, [authStatus, isDevBypass, pendingMfaFactorId, refreshAppData, reset, user?.id]);
+    void refreshAppData({ userId: user.id });
+  }, [authStatus, pendingMfaFactorId, refreshAppData, reset, user?.id]);
 
   return null;
 }

@@ -57,25 +57,6 @@ export function mapCurrencyExchange(row: CurrencyExchangeRow): CurrencyExchange 
   };
 }
 
-export function createMockCurrencyExchanges(userId: string): CurrencyExchange[] {
-  return [
-    {
-      createdAt: new Date().toISOString(),
-      description: "Cambio demo",
-      exchangeInEntryId: "mock-exchange-in-ledger",
-      exchangeOutEntryId: "mock-exchange-out-ledger",
-      exchangeRate: 24,
-      fromAmount: 10,
-      fromWalletId: "dev-wallet-primary",
-      id: "mock-currency-exchange-1",
-      toAmount: 240,
-      toWalletId: "dev-wallet-secondary",
-      transferDate: new Date().toISOString().slice(0, 10),
-      userId,
-    },
-  ];
-}
-
 export function createLocalCurrencyExchange(
   input: CreateLocalCurrencyExchangeInput,
 ): CurrencyExchange {

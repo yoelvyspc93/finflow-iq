@@ -6,7 +6,6 @@ import { useLedgerStore } from "@/stores/ledger-store";
 
 export function LedgerBootstrap() {
   const authStatus = useAuthStore((state) => state.status);
-  const isDevBypass = useAuthStore((state) => state.isDevBypass);
   const pendingMfaFactorId = useAuthStore((state) => state.pendingMfaFactorId);
   const user = useAuthStore((state) => state.user);
   const isAppReady = useAppStore((state) => state.isReady);
@@ -25,14 +24,12 @@ export function LedgerBootstrap() {
     }
 
     void refreshLedger({
-      isDevBypass,
       userId: user.id,
       walletId: selectedWalletId,
     });
   }, [
     authStatus,
     isAppReady,
-    isDevBypass,
     pendingMfaFactorId,
     refreshLedger,
     reset,

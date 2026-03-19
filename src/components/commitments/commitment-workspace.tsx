@@ -16,11 +16,8 @@ import {
   createRecurringExpense,
   settleRecurringExpense,
 } from "@/modules/commitments/service";
-import { createLocalRecurringExpense } from "@/modules/commitments/types";
 import { selectActiveWallet } from "@/modules/ledger/selectors";
-import { createLocalLedgerEntry } from "@/modules/ledger/types";
 import { createBudgetProvision, settleBudgetProvision } from "@/modules/provisions/service";
-import { createLocalBudgetProvision } from "@/modules/provisions/types";
 import { useAuthStore } from "@/stores/auth-store";
 import { useAppStore } from "@/stores/app-store";
 import { useCommitmentStore } from "@/stores/commitment-store";
@@ -62,36 +59,19 @@ export function CommitmentWorkspace({
   const [categories, setCategories] = useState<Category[]>([]);
 
   const currentMonth = createCurrentMonthString();
-  const isDevBypass = useAuthStore((state) => state.isDevBypass);
   const user = useAuthStore((state) => state.user);
-  const applyWalletBalanceDelta = useAppStore(
-    (state) => state.applyWalletBalanceDelta,
-  );
   const refreshAppData = useAppStore((state) => state.refreshAppData);
   const selectedWalletId = useAppStore((state) => state.selectedWalletId);
   const setSelectedWalletId = useAppStore((state) => state.setSelectedWalletId);
   const wallets = useAppStore((state) => state.wallets);
-  const addLocalBudgetProvision = useCommitmentStore(
-    (state) => state.addLocalBudgetProvision,
-  );
-  const addLocalPaymentEntry = useCommitmentStore(
-    (state) => state.addLocalPaymentEntry,
-  );
-  const addLocalRecurringExpense = useCommitmentStore(
-    (state) => state.addLocalRecurringExpense,
-  );
   const commitmentError = useCommitmentStore((state) => state.error);
   const isCommitmentLoading = useCommitmentStore((state) => state.isLoading);
   const overview = useCommitmentStore((state) => state.overview);
-  const recalculateOverview = useCommitmentStore(
-    (state) => state.recalculateOverview,
-  );
   const recurringExpenses = useCommitmentStore((state) => state.recurringExpenses);
   const budgetProvisions = useCommitmentStore((state) => state.budgetProvisions);
   const refreshCommitmentData = useCommitmentStore(
     (state) => state.refreshCommitmentData,
   );
-  const addLocalEntry = useLedgerStore((state) => state.addLocalEntry);
   const refreshLedger = useLedgerStore((state) => state.refreshLedger);
 
   const activeWallet = selectActiveWallet(wallets, selectedWalletId);
@@ -112,7 +92,7 @@ export function CommitmentWorkspace({
 
     async function loadCategories() {
       try {
-        const nextCategories = await listCategories({ isDevBypass, userId });
+        const nextCategories = await listCategories({ userId });
 
         if (!isMounted) {
           return;
@@ -138,7 +118,7 @@ export function CommitmentWorkspace({
     return () => {
       isMounted = false;
     };
-  }, [isDevBypass, user?.id]);
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user?.id || !selectedWalletId) {
@@ -146,14 +126,12 @@ export function CommitmentWorkspace({
     }
 
     void refreshCommitmentData({
-      isDevBypass,
       month: currentMonth,
       userId: user.id,
       walletId: selectedWalletId,
     });
   }, [
     currentMonth,
-    isDevBypass,
     refreshCommitmentData,
     selectedWalletId,
     user?.id,
@@ -171,26 +149,12 @@ export function CommitmentWorkspace({
     setRecurringError(null);
 
     try {
-      if (isDevBypass) {
-        addLocalRecurringExpense(
-          createLocalRecurringExpense({
-            ...values,
-            userId: user.id,
-          }),
-        );
-        recalculateOverview({
-          month: currentMonth,
-          walletId: selectedWalletId,
-        });
-      } else {
-        await createRecurringExpense(values);
-        await refreshCommitmentData({
-          isDevBypass: false,
-          month: currentMonth,
-          userId: user.id,
-          walletId: selectedWalletId,
-        });
-      }
+      await createRecurringExpense(values);
+      await refreshCommitmentData({
+        month: currentMonth,
+        userId: user.id,
+        walletId: selectedWalletId,
+      });
 
       return true;
     } catch (error) {
@@ -217,26 +181,12 @@ export function CommitmentWorkspace({
     setProvisionError(null);
 
     try {
-      if (isDevBypass) {
-        addLocalBudgetProvision(
-          createLocalBudgetProvision({
-            ...values,
-            userId: user.id,
-          }),
-        );
-        recalculateOverview({
-          month: currentMonth,
-          walletId: selectedWalletId,
-        });
-      } else {
-        await createBudgetProvision(values);
-        await refreshCommitmentData({
-          isDevBypass: false,
-          month: currentMonth,
-          userId: user.id,
-          walletId: selectedWalletId,
-        });
-      }
+      await createBudgetProvision(values);
+      await refreshCommitmentData({
+        month: currentMonth,
+        userId: user.id,
+        walletId: selectedWalletId,
+      });
 
       return true;
     } catch (error) {
@@ -263,78 +213,36 @@ export function CommitmentWorkspace({
     setSettlementError(null);
 
     try {
-      if (isDevBypass) {
-        const recurringExpense = filteredRecurringExpenses.find(
-          (expense) => expense.id === values.commitmentId,
-        );
-        const provision = filteredBudgetProvisions.find(
-          (item) => item.id === values.commitmentId,
-        );
-
-        const entry = createLocalLedgerEntry({
-          amount: values.amount * -1,
-          budgetProvisionId:
-            values.kind === "provision" ? values.commitmentId : null,
-          categoryId:
-            values.kind === "recurring"
-              ? (recurringExpense?.categoryId ?? null)
-              : (provision?.categoryId ?? null),
+      if (values.kind === "recurring") {
+        await settleRecurringExpense({
+          amount: values.amount,
           date: values.date,
           description: values.description,
-          recurringExpenseId:
-            values.kind === "recurring" ? values.commitmentId : null,
-          type:
-            values.kind === "recurring"
-              ? "recurring_expense_payment"
-              : "budget_provision_payment",
-          userId: user.id,
-          walletId: selectedWalletId,
-        });
-
-        addLocalEntry(entry);
-        addLocalPaymentEntry(entry, {
-          month: currentMonth,
-          walletId: selectedWalletId,
-        });
-        applyWalletBalanceDelta({
-          amount: values.amount * -1,
-          walletId: selectedWalletId,
+          recurringExpenseId: values.commitmentId,
         });
       } else {
-        if (values.kind === "recurring") {
-          await settleRecurringExpense({
-            amount: values.amount,
-            date: values.date,
-            description: values.description,
-            recurringExpenseId: values.commitmentId,
-          });
-        } else {
-          await settleBudgetProvision({
-            amount: values.amount,
-            budgetProvisionId: values.commitmentId,
-            date: values.date,
-            description: values.description,
-          });
-        }
-
-        await Promise.all([
-          refreshAppData({
-            isDevBypass: false,
-            userId: user.id,
-          }),
-          refreshLedger({
-            isDevBypass: false,
-            userId: user.id,
-            walletId: selectedWalletId,
-          }),
-          refreshCommitmentData({
-            isDevBypass: false,
-            month: currentMonth,
-            userId: user.id,
-            walletId: selectedWalletId,
-          }),
-        ]);
+        await settleBudgetProvision({
+          amount: values.amount,
+          budgetProvisionId: values.commitmentId,
+          date: values.date,
+          description: values.description,
+        });
       }
+
+      await Promise.all([
+        refreshAppData({
+          userId: user.id,
+        }),
+        refreshLedger({
+          userId: user.id,
+          walletId: selectedWalletId,
+        }),
+        refreshCommitmentData({
+          month: currentMonth,
+          userId: user.id,
+          walletId: selectedWalletId,
+        }),
+      ]);
 
       return true;
     } catch (error) {

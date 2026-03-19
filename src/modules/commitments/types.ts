@@ -66,47 +66,6 @@ export function mapRecurringExpense(
   };
 }
 
-export function createMockRecurringExpenses(
-  userId: string,
-): RecurringExpense[] {
-  const now = new Date().toISOString();
-
-  return [
-    {
-      amount: 14.99,
-      billingDay: 8,
-      billingMonth: null,
-      categoryId: null,
-      createdAt: now,
-      frequency: "monthly",
-      id: "mock-recurring-expense-1",
-      isActive: true,
-      name: "Netflix",
-      notes: "Suscripcion principal",
-      type: "subscription",
-      updatedAt: now,
-      userId,
-      walletId: "dev-wallet-primary",
-    },
-    {
-      amount: 120,
-      billingDay: 20,
-      billingMonth: 12,
-      categoryId: null,
-      createdAt: now,
-      frequency: "yearly",
-      id: "mock-recurring-expense-2",
-      isActive: true,
-      name: "Dominio y hosting",
-      notes: null,
-      type: "fixed_expense",
-      updatedAt: now,
-      userId,
-      walletId: "dev-wallet-primary",
-    },
-  ];
-}
-
 export function createLocalRecurringExpense(
   input: CreateLocalRecurringExpenseInput,
 ): RecurringExpense {

@@ -2,9 +2,7 @@ import { useState } from 'react'
 
 import type { PlanningCommitmentDraft } from '@/components/planning/commitment-sheet'
 import { createRecurringExpense } from '@/modules/commitments/service'
-import { createLocalRecurringExpense } from '@/modules/commitments/types'
 import { createBudgetProvision } from '@/modules/provisions/service'
-import { createLocalBudgetProvision } from '@/modules/provisions/types'
 import { buildCommitmentDraft } from '@/modules/planning/view-model'
 import {
   validateCommitmentEventMonth,
@@ -14,16 +12,8 @@ import {
 import type { Wallet } from '@/modules/wallets/types'
 
 export function usePlanningCommitments(args: {
-  addLocalBudgetProvision: (
-    provision: ReturnType<typeof createLocalBudgetProvision>,
-  ) => void
-  addLocalRecurringExpense: (
-    expense: ReturnType<typeof createLocalRecurringExpense>,
-  ) => void
   currentMonth: string
-  isDevBypass: boolean
   refreshCommitmentData: (args: {
-    isDevBypass: boolean
     month: string
     userId: string
     walletId: string
@@ -85,32 +75,16 @@ export function usePlanningCommitments(args: {
         }
         const billingDay = Number(commitmentDraft.day)
 
-        if (args.isDevBypass) {
-          args.addLocalRecurringExpense(
-            createLocalRecurringExpense({
-              amount,
-              billingDay,
-              categoryId: null,
-              frequency: 'monthly',
-              name: commitmentDraft.name,
-              notes: commitmentDraft.notes || null,
-              type: 'fixed_expense',
-              userId,
-              walletId: commitmentDraft.walletId,
-            }),
-          )
-        } else {
-          await createRecurringExpense({
-            amount,
-            billingDay,
-            categoryId: null,
-            frequency: 'monthly',
-            name: commitmentDraft.name,
-            notes: commitmentDraft.notes || undefined,
-            type: 'fixed_expense',
-            walletId: commitmentDraft.walletId,
-          })
-        }
+        await createRecurringExpense({
+          amount,
+          billingDay,
+          categoryId: null,
+          frequency: 'monthly',
+          name: commitmentDraft.name,
+          notes: commitmentDraft.notes || undefined,
+          type: 'fixed_expense',
+          walletId: commitmentDraft.walletId,
+        })
       } else {
         const eventMonthError = validateCommitmentEventMonth(commitmentDraft.month)
         if (eventMonthError) {
@@ -119,34 +93,18 @@ export function usePlanningCommitments(args: {
           return
         }
 
-        if (args.isDevBypass) {
-          args.addLocalBudgetProvision(
-            createLocalBudgetProvision({
-              amount,
-              categoryId: null,
-              month: targetMonth,
-              name: commitmentDraft.name,
-              notes: commitmentDraft.notes || null,
-              recurrence: 'once',
-              userId,
-              walletId: commitmentDraft.walletId,
-            }),
-          )
-        } else {
-          await createBudgetProvision({
-            amount,
-            categoryId: null,
-            month: targetMonth,
-            name: commitmentDraft.name,
-            notes: commitmentDraft.notes || undefined,
-            recurrence: 'once',
-            walletId: commitmentDraft.walletId,
-          })
-        }
+        await createBudgetProvision({
+          amount,
+          categoryId: null,
+          month: targetMonth,
+          name: commitmentDraft.name,
+          notes: commitmentDraft.notes || undefined,
+          recurrence: 'once',
+          walletId: commitmentDraft.walletId,
+        })
       }
 
       await args.refreshCommitmentData({
-        isDevBypass: args.isDevBypass,
         month: args.currentMonth,
         userId,
         walletId: args.selectedWalletId ?? commitmentDraft.walletId,

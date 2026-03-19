@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { WishProjection } from '@/modules/wishes/calculations'
-import { createMockWallet } from '@/modules/wallets/types'
 import {
   buildCommitmentDraft,
   buildPlanningActionTip,
@@ -10,6 +9,28 @@ import {
   getNextWishAmount,
   getNextWishPriority,
 } from '@/modules/planning/view-model'
+
+function createWallet(args: {
+  currency: string
+  id: string
+  name: string
+  position?: number
+  userId: string
+}) {
+  return {
+    balance: 0,
+    color: null,
+    createdAt: '2026-03-01T00:00:00.000Z',
+    currency: args.currency,
+    icon: null,
+    id: args.id,
+    isActive: true,
+    name: args.name,
+    position: args.position ?? 0,
+    updatedAt: '2026-03-01T00:00:00.000Z',
+    userId: args.userId,
+  }
+}
 
 function createWishProjection(input: Partial<WishProjection>): WishProjection {
   return {
@@ -66,8 +87,8 @@ describe('planning view model', () => {
 
   it('builds wish and commitment drafts from wallets and current state', () => {
     const wallets = [
-      createMockWallet({ currency: 'USD', id: 'wallet-1', name: 'Main', userId: 'user-1' }),
-      createMockWallet({ currency: 'CUP', id: 'wallet-2', name: 'Cash', position: 1, userId: 'user-1' }),
+      createWallet({ currency: 'USD', id: 'wallet-1', name: 'Main', userId: 'user-1' }),
+      createWallet({ currency: 'CUP', id: 'wallet-2', name: 'Cash', position: 1, userId: 'user-1' }),
     ]
     const wishProjections = [
       createWishProjection({ wish: { ...createWishProjection({}).wish, priority: 2 } }),

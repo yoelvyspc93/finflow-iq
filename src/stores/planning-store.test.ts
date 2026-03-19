@@ -26,7 +26,6 @@ describe('usePlanningStore', () => {
     })
 
     await usePlanningStore.getState().refreshPlanningData({
-      isDevBypass: false,
       settings: null,
       userId: 'user-1',
       wallets: [],
@@ -44,7 +43,6 @@ describe('usePlanningStore', () => {
     refreshMock.mockRejectedValue(new Error('refresh failed'))
 
     await usePlanningStore.getState().refreshPlanningData({
-      isDevBypass: false,
       settings: null,
       userId: 'user-1',
       wallets: [],

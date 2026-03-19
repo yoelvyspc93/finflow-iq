@@ -10,7 +10,6 @@ import type { LedgerEntry } from '@/modules/ledger/types'
 import type { RecurringExpense } from '@/modules/commitments/types'
 
 export type RefreshPlanningDataArgs = {
-  isDevBypass: boolean
   settings: AppSettings | null
   userId: string
   wallets: Wallet[]
@@ -27,7 +26,7 @@ export type PlanningFetchedData = {
   recurringExpenses: RecurringExpense[]
   salaryPayments: SalaryPayment[]
   salaryPeriods: SalaryPeriod[]
-  wishes: Wish[] | null
+  wishes: Wish[]
 }
 
 export type PlanningResolvedData = {

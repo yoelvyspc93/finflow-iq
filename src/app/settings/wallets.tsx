@@ -26,7 +26,6 @@ import {
   getWalletReferenceSummary,
   updateWallet,
 } from "@/modules/wallets/service";
-import { createMockWallet } from "@/modules/wallets/types";
 import { useAppStore } from "@/stores/app-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { theme } from "@/utils/theme";
@@ -59,7 +58,6 @@ export default function WalletSettingsScreen() {
     visible: false,
   });
 
-  const isDevBypass = useAuthStore((state) => state.isDevBypass);
   const user = useAuthStore((state) => state.user);
   const wallets = useAppStore((state) => state.wallets);
   const refreshAppData = useAppStore((state) => state.refreshAppData);
@@ -77,7 +75,7 @@ export default function WalletSettingsScreen() {
       return;
     }
 
-    if (isDevBypass || !user?.id) {
+    if (!user?.id) {
       setReferenceMap(
         Object.fromEntries(
           wallets.map((wallet) => [
@@ -118,7 +116,7 @@ export default function WalletSettingsScreen() {
 
       setReferenceMap(next);
     });
-  }, [isDevBypass, user?.id, wallets]);
+  }, [user?.id, wallets]);
 
   function openCreateSheet() {
     setEditingWalletId(null);
@@ -191,36 +189,16 @@ export default function WalletSettingsScreen() {
 
     try {
       if (editingWallet) {
-        if (isDevBypass) {
-          upsertLocalWallet({
-            ...editingWallet,
+        const updatedWallet = await updateWallet({
+          patch: {
             color,
             currency: normalizedCurrency,
             name: normalizedName,
-            updatedAt: new Date().toISOString(),
-          });
-        } else {
-          const updatedWallet = await updateWallet({
-            patch: {
-              color,
-              currency: normalizedCurrency,
-              name: normalizedName,
-            },
-            userId: user.id,
-            walletId: editingWallet.id,
-          });
-          upsertLocalWallet(updatedWallet);
-        }
-      } else if (isDevBypass) {
-        upsertLocalWallet(
-          createMockWallet({
-            color,
-            currency: normalizedCurrency,
-            name: normalizedName,
-            position: wallets.length,
-            userId: user.id,
-          }),
-        );
+          },
+          userId: user.id,
+          walletId: editingWallet.id,
+        });
+        upsertLocalWallet(updatedWallet);
       } else {
         const createdWallet = await createWallet({
           input: {
@@ -250,19 +228,6 @@ export default function WalletSettingsScreen() {
     }
 
     try {
-      if (isDevBypass) {
-        const wallet = wallets.find((item) => item.id === walletId);
-        if (!wallet) {
-          return;
-        }
-        upsertLocalWallet({
-          ...wallet,
-          isActive: false,
-          updatedAt: new Date().toISOString(),
-        });
-        return;
-      }
-
       const updatedWallet = await deactivateWallet({ userId: user.id, walletId });
       upsertLocalWallet(updatedWallet);
     } catch (caughtError) {
@@ -281,20 +246,6 @@ export default function WalletSettingsScreen() {
     }
 
     try {
-      if (isDevBypass) {
-        const wallet = wallets.find((item) => item.id === walletId);
-        if (!wallet) {
-          return;
-        }
-
-        upsertLocalWallet({
-          ...wallet,
-          isActive: true,
-          updatedAt: new Date().toISOString(),
-        });
-        return;
-      }
-
       const updatedWallet = await activateWallet({ userId: user.id, walletId });
       upsertLocalWallet(updatedWallet);
     } catch (caughtError) {
@@ -313,13 +264,9 @@ export default function WalletSettingsScreen() {
     }
 
     try {
-      if (isDevBypass) {
-        removeLocalWallet(walletId);
-        return;
-      }
-
       await deleteWallet({ userId: user.id, walletId });
-      await refreshAppData({ isDevBypass: false, userId: user.id });
+      removeLocalWallet(walletId);
+      await refreshAppData({ userId: user.id });
     } catch (caughtError) {
       openInfoAlert(
         "No se pudo eliminar",

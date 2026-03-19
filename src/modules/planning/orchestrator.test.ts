@@ -7,9 +7,73 @@ import {
   evaluatePlanningState,
   mergePlanningScores,
 } from '@/modules/planning/orchestrator'
-import { createMockSettings } from '@/modules/settings/types'
-import { createMockWallet } from '@/modules/wallets/types'
-import { createMockWishes } from '@/modules/wishes/types'
+
+function createSettings(userId: string) {
+  return {
+    aiAnalysisFrequency: 'manual' as const,
+    alertLevel: 'normal' as const,
+    avgMonthsWithoutPayment: 0,
+    createdAt: '2026-03-01T00:00:00.000Z',
+    dateFormat: 'DD/MM/YYYY' as const,
+    financialMonthStartDay: 1,
+    id: 'settings-1',
+    primaryCurrency: 'USD' as const,
+    salaryReferenceAmount: null,
+    savingsGoalPercent: 20,
+    sessionTimeoutMinutes: 5 as const,
+    subscriptionAlertDays: 3,
+    theme: 'dark' as const,
+    updatedAt: '2026-03-01T00:00:00.000Z',
+    usdCupRate: null,
+    userId,
+    weeklySummaryDay: 'monday' as const,
+  }
+}
+
+function createWallet(args: {
+  currency: string
+  id: string
+  name: string
+  userId: string
+}) {
+  return {
+    balance: 0,
+    color: null,
+    createdAt: '2026-03-01T00:00:00.000Z',
+    currency: args.currency,
+    icon: null,
+    id: args.id,
+    isActive: true,
+    name: args.name,
+    position: 0,
+    updatedAt: '2026-03-01T00:00:00.000Z',
+    userId: args.userId,
+  }
+}
+
+function createWishes(userId: string) {
+  return [
+    {
+      aiAdvice: null,
+      confidenceLevel: null,
+      confidenceReason: null,
+      createdAt: '2026-03-01T00:00:00.000Z',
+      estimatedAmount: 350,
+      estimatedPurchaseDate: null,
+      id: 'wish-1',
+      isPurchased: false,
+      lastAiAdviceAt: null,
+      lastCalculatedAt: null,
+      name: 'Sony WH-1000XM5',
+      notes: 'Esperar una oferta',
+      priority: 1,
+      purchasedAt: null,
+      updatedAt: '2026-03-01T00:00:00.000Z',
+      userId,
+      walletId: 'wallet-1',
+    },
+  ]
+}
 
 describe('planning orchestrator', () => {
   beforeEach(() => {
@@ -59,13 +123,13 @@ describe('planning orchestrator', () => {
   it('evaluates overview, score payload and wish sync data without goals', () => {
     const userId = 'user-1'
     const settings = {
-      ...createMockSettings(userId),
+      ...createSettings(userId),
       avgMonthsWithoutPayment: 2,
       salaryReferenceAmount: 1000,
       savingsGoalPercent: 10,
     }
     const wallets = [
-      { ...createMockWallet({ currency: 'USD', id: 'wallet-1', name: 'Main', userId }), balance: 1500 },
+      { ...createWallet({ currency: 'USD', id: 'wallet-1', name: 'Main', userId }), balance: 1500 },
     ]
 
     const result = evaluatePlanningState({
@@ -80,7 +144,7 @@ describe('planning orchestrator', () => {
       settings,
       userId,
       wallets,
-      wishes: createMockWishes(userId),
+      wishes: createWishes(userId),
     })
 
     expect(result.overview.availableBalance).toBe(1500)

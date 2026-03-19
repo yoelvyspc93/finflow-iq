@@ -133,57 +133,6 @@ export function mapSalaryAllocation(row: SalaryAllocationRow): SalaryAllocation 
   };
 }
 
-export function createMockSalaryPeriods(userId: string): SalaryPeriod[] {
-  const now = new Date().toISOString();
-
-  return [
-    {
-      coveredAmount: 0,
-      createdAt: now,
-      currency: "USD",
-      expectedAmount: 450,
-      id: "mock-salary-period-current",
-      notes: "Nomina base",
-      periodMonth: new Date().toISOString().slice(0, 7) + "-01",
-      status: "pending",
-      updatedAt: now,
-      userId,
-    },
-  ];
-}
-
-export function createMockSalaryPayments(userId: string): SalaryPayment[] {
-  return [
-    {
-      allocatedAmount: 0,
-      createdAt: new Date().toISOString(),
-      currency: "USD",
-      description: "Cobro demo",
-      grossAmount: 250,
-      id: "mock-salary-payment-1",
-      ledgerEntryId: "mock-ledger-salary-payment-1",
-      paymentDate: new Date().toISOString().slice(0, 10),
-      status: "unallocated",
-      updatedAt: new Date().toISOString(),
-      userId,
-      walletId: "dev-wallet-primary",
-    },
-  ];
-}
-
-export function createMockSalaryAllocations(userId: string): SalaryAllocation[] {
-  return [
-    {
-      amount: 0,
-      createdAt: new Date().toISOString(),
-      id: "mock-salary-allocation-empty",
-      salaryPaymentId: "mock-salary-payment-1",
-      salaryPeriodId: "mock-salary-period-current",
-      userId,
-    },
-  ].filter((allocation) => allocation.amount > 0);
-}
-
 export function createLocalSalaryPeriod(
   input: CreateLocalSalaryPeriodInput,
 ): SalaryPeriod {

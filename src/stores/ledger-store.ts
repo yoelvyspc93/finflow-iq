@@ -2,21 +2,14 @@ import { create } from "zustand";
 
 import { listLedgerEntries } from "@/modules/ledger/service";
 import { resolveVisibleLedgerEntries } from "@/modules/ledger/view-state";
-import {
-  sortLedgerEntries,
-  type LedgerEntry,
-} from "@/modules/ledger/types";
-import { useAppStore } from "@/stores/app-store";
+import { type LedgerEntry } from "@/modules/ledger/types";
 
 type RefreshLedgerArgs = {
-  isDevBypass: boolean;
   userId: string;
   walletId: string | null;
 };
 
 type LedgerStore = {
-  addLocalEntry: (entry: LedgerEntry) => void;
-  devEntries: LedgerEntry[];
   entries: LedgerEntry[];
   error: string | null;
   isLoading: boolean;
@@ -26,7 +19,6 @@ type LedgerStore = {
 };
 
 const initialState = {
-  devEntries: [] as LedgerEntry[],
   entries: [] as LedgerEntry[],
   error: null,
   isLoading: false,
@@ -35,34 +27,10 @@ const initialState = {
 
 export const useLedgerStore = create<LedgerStore>((set) => ({
   ...initialState,
-  addLocalEntry: (entry) =>
-    set((state) => {
-      const devEntries = sortLedgerEntries([entry, ...state.devEntries]);
-      return {
-        devEntries,
-        entries: resolveVisibleLedgerEntries(
-          devEntries,
-          useAppStore.getState().selectedWalletId,
-        ),
-      };
-    }),
-  refreshLedger: async ({ isDevBypass, userId, walletId }) => {
+  refreshLedger: async ({ userId, walletId }) => {
     set({ error: null, isLoading: true });
 
     try {
-      if (isDevBypass) {
-        set({
-          entries: resolveVisibleLedgerEntries(
-            useLedgerStore.getState().devEntries,
-            walletId,
-          ),
-          error: null,
-          isLoading: false,
-          isReady: true,
-        });
-        return;
-      }
-
       if (!walletId) {
         set({
           entries: [],
@@ -91,7 +59,7 @@ export const useLedgerStore = create<LedgerStore>((set) => ({
         error:
           error instanceof Error
             ? error.message
-            : "No se pudo cargar el historial del ledger.",
+            : "No se pudo cargar el historial de movimientos.",
         isLoading: false,
         isReady: true,
       });

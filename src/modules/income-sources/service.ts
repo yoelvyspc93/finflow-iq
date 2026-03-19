@@ -1,12 +1,7 @@
 import { supabase } from "@/lib/supabase/client";
-import {
-  createMockIncomeSources,
-  mapIncomeSource,
-  type IncomeSource,
-} from "@/modules/income-sources/types";
+import { mapIncomeSource, type IncomeSource } from "@/modules/income-sources/types";
 
 type ListIncomeSourcesArgs = {
-  isDevBypass: boolean;
   userId: string;
 };
 
@@ -29,13 +24,8 @@ type DeleteIncomeSourceArgs = {
 };
 
 export async function listIncomeSources({
-  isDevBypass,
   userId,
 }: ListIncomeSourcesArgs): Promise<IncomeSource[]> {
-  if (isDevBypass) {
-    return createMockIncomeSources(userId);
-  }
-
   const { data, error } = await supabase
     .from("income_sources")
     .select("*")

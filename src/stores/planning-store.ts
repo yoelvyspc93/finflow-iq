@@ -13,14 +13,12 @@ import {
 import { type Wish } from "@/modules/wishes/types";
 
 type RefreshPlanningDataArgs = {
-  isDevBypass: boolean;
   settings: AppSettings | null;
   userId: string;
   wallets: Wallet[];
 };
 
 type PlanningStore = {
-  addLocalWish: (wish: Wish) => void;
   currentScore: FinancialScore | null;
   error: string | null;
   isLoading: boolean;
@@ -46,11 +44,7 @@ const initialState = {
 
 export const usePlanningStore = create<PlanningStore>((set) => ({
   ...initialState,
-  addLocalWish: (wish) =>
-    set((state) => ({
-      wishes: [...state.wishes, wish].sort((left, right) => left.priority - right.priority),
-    })),
-  refreshPlanningData: async ({ isDevBypass, settings, userId, wallets }) => {
+  refreshPlanningData: async ({ settings, userId, wallets }) => {
     set({ error: null, isLoading: true });
 
     try {
@@ -60,7 +54,6 @@ export const usePlanningStore = create<PlanningStore>((set) => ({
           wishes: existingState.wishes,
         },
         refreshArgs: {
-          isDevBypass,
           settings,
           userId,
           wallets,
@@ -83,7 +76,7 @@ export const usePlanningStore = create<PlanningStore>((set) => ({
         error:
           error instanceof Error
             ? error.message
-            : "No se pudo cargar la planificacion.",
+            : "No se pudo cargar la planificación.",
         isLoading: false,
         isReady: true,
         overview: null,

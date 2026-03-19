@@ -57,44 +57,6 @@ export function mapBudgetProvision(row: BudgetProvisionRow): BudgetProvision {
   };
 }
 
-export function createMockBudgetProvisions(
-  userId: string,
-): BudgetProvision[] {
-  const now = new Date().toISOString();
-  const currentMonth = new Date().toISOString().slice(0, 7);
-
-  return [
-    {
-      amount: 80,
-      categoryId: null,
-      createdAt: now,
-      id: "mock-budget-provision-1",
-      isActive: true,
-      month: `${currentMonth}-01`,
-      name: "Regalo cumpleanos",
-      notes: "Compra especial del mes",
-      recurrence: "once",
-      updatedAt: now,
-      userId,
-      walletId: "dev-wallet-primary",
-    },
-    {
-      amount: 150,
-      categoryId: null,
-      createdAt: now,
-      id: "mock-budget-provision-2",
-      isActive: true,
-      month: `${new Date().getUTCFullYear()}-12-01`,
-      name: "Fin de ano",
-      notes: null,
-      recurrence: "yearly",
-      updatedAt: now,
-      userId,
-      walletId: "dev-wallet-primary",
-    },
-  ];
-}
-
 export function createLocalBudgetProvision(
   input: CreateLocalBudgetProvisionInput,
 ): BudgetProvision {

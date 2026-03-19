@@ -1,12 +1,7 @@
 import { supabase } from "@/lib/supabase/client";
-import {
-  createMockCategories,
-  mapCategory,
-  type Category,
-} from "@/modules/categories/types";
+import { mapCategory, type Category } from "@/modules/categories/types";
 
 type ListCategoriesArgs = {
-  isDevBypass: boolean;
   userId: string;
 };
 
@@ -33,13 +28,8 @@ type DeleteCategoryArgs = {
 };
 
 export async function listCategories({
-  isDevBypass,
   userId,
 }: ListCategoriesArgs): Promise<Category[]> {
-  if (isDevBypass) {
-    return createMockCategories(userId);
-  }
-
   const { data, error } = await supabase
     .from("categories")
     .select("*")
