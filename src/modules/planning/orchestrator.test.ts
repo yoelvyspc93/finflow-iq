@@ -54,6 +54,7 @@ function createWallet(args: {
 function createWishes(userId: string) {
   return [
     {
+      actualPurchaseAmount: null,
       aiAdvice: null,
       confidenceLevel: null,
       confidenceReason: null,
@@ -66,6 +67,7 @@ function createWishes(userId: string) {
       lastCalculatedAt: null,
       name: 'Sony WH-1000XM5',
       notes: 'Esperar una oferta',
+      purchaseLedgerEntryId: null,
       priority: 1,
       purchasedAt: null,
       updatedAt: '2026-03-01T00:00:00.000Z',

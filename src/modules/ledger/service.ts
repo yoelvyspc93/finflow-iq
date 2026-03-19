@@ -5,6 +5,7 @@ import {
   type ExpenseInput,
   type LedgerEntry,
   type ManualIncomeInput,
+  type WishPurchaseExpenseInput,
   type WalletBalanceReconciliation,
 } from "@/modules/ledger/types";
 
@@ -65,6 +66,25 @@ export async function createExpense(input: ExpenseInput): Promise<LedgerEntry> {
     gross_amount: input.amount,
     target_category_id: input.categoryId ?? undefined,
     target_wallet_id: input.walletId,
+  });
+
+  if (error) {
+    throw error;
+  }
+
+  return mapLedgerEntry(data);
+}
+
+export async function createWishPurchaseExpense(
+  input: WishPurchaseExpenseInput,
+): Promise<LedgerEntry> {
+  const { data, error } = await supabase.rpc("create_wish_purchase_expense", {
+    entry_date: input.date,
+    entry_description: input.description ?? undefined,
+    gross_amount: input.amount,
+    target_category_id: input.categoryId ?? undefined,
+    target_wallet_id: input.walletId,
+    target_wish_id: input.wishId,
   });
 
   if (error) {

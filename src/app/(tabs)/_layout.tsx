@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
     maxHeight: 74,
     paddingTop: theme.spacing.xs,
     paddingBottom: theme.spacing.xs,
-    backgroundColor: 'red',
+    backgroundColor: theme.colors.background,
     borderTopWidth: 0,
   },
   tabBarLabel: {

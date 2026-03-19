@@ -17,6 +17,7 @@ export type LedgerEntry = {
   type: LedgerEntryType;
   userId: string;
   walletId: string;
+  wishId: string | null;
 };
 
 export type LedgerEntryInputBase = {
@@ -32,6 +33,10 @@ export type ManualIncomeInput = LedgerEntryInputBase & {
 
 export type ExpenseInput = LedgerEntryInputBase & {
   categoryId?: string | null;
+};
+
+export type WishPurchaseExpenseInput = ExpenseInput & {
+  wishId: string;
 };
 
 export type AdjustmentInput = LedgerEntryInputBase;
@@ -54,6 +59,7 @@ export type CreateLocalLedgerEntryInput = {
   type: LedgerEntryType;
   userId: string;
   walletId: string;
+  wishId?: string | null;
 };
 
 export function mapLedgerEntry(row: LedgerEntryRow): LedgerEntry {
@@ -70,6 +76,7 @@ export function mapLedgerEntry(row: LedgerEntryRow): LedgerEntry {
     type: row.type,
     userId: row.user_id,
     walletId: row.wallet_id,
+    wishId: row.wish_id,
   };
 }
 
@@ -89,6 +96,7 @@ export function createLocalLedgerEntry(
     type: input.type,
     userId: input.userId,
     walletId: input.walletId,
+    wishId: input.wishId ?? null,
   };
 }
 

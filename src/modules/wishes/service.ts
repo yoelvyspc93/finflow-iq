@@ -11,6 +11,10 @@ type WishListArgs = {
   userId: string;
 };
 
+type PendingWishListArgs = WishListArgs & {
+  walletId: string;
+};
+
 export type SyncWishProjectionInput = {
   confidenceLevel: WishConfidenceLevel | null;
   confidenceReason: string | null;
@@ -26,6 +30,26 @@ export async function listWishes({
     .from("wishes")
     .select("*")
     .eq("user_id", userId)
+    .order("priority", { ascending: true })
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []).map(mapWish);
+}
+
+export async function listPendingWishes({
+  userId,
+  walletId,
+}: PendingWishListArgs): Promise<Wish[]> {
+  const { data, error } = await supabase
+    .from("wishes")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("wallet_id", walletId)
+    .eq("is_purchased", false)
     .order("priority", { ascending: true })
     .order("created_at", { ascending: false });
 

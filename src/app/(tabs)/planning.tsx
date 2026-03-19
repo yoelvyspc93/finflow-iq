@@ -8,6 +8,7 @@ import { CommitmentSectionList } from '@/components/planning/commitment-section-
 import { CommitmentSheet } from '@/components/planning/commitment-sheet'
 import { PlanningSheetStack } from '@/components/planning/planning-sheet-stack'
 import { WishProjectionList } from '@/components/planning/wish-projection-list'
+import { WishPurchaseSheet } from '@/components/planning/wish-purchase-sheet'
 import { BottomSheet } from '@/components/ui/bottom-sheet'
 import { DecorativeBackground } from '@/components/ui/decorative-background'
 import { ScreenHeader } from '@/components/ui/screen-header'
@@ -21,7 +22,9 @@ export default function PlanningScreen() {
   const {
     actionTip,
     budgetProvisions,
+    categories,
     closeSheet,
+    closeWishPurchaseSheet,
     commitmentDraft,
     commitmentError,
     commitmentOpen,
@@ -35,18 +38,25 @@ export default function PlanningScreen() {
     isReady,
     isSubmitting,
     openCommitmentSheet,
+    openWishPurchaseSheet,
     openWishSheet,
     pickerOpen,
+    purchaseDraft,
+    purchaseError,
+    purchaseSubmitting,
     recurringExpenses,
+    selectedWishForPurchase,
     selectedWalletId,
     setCommitmentDraft,
     setCommitmentOpen,
     setFilter,
     setPickerOpen,
+    setPurchaseDraft,
     setView,
     setWishDraft,
     sheet,
     sheetError,
+    submitWishPurchase,
     view,
     wallets,
     wishDraft,
@@ -93,6 +103,7 @@ export default function PlanningScreen() {
             filter={filter}
             items={filteredWishes}
             onFilterChange={(value) => setFilter(value as typeof filter)}
+            onPurchaseWish={openWishPurchaseSheet}
           />
         ) : (
           <CommitmentSectionList
@@ -152,6 +163,19 @@ export default function PlanningScreen() {
         sheetError={sheetError}
         wallets={wallets}
         wishDraft={wishDraft}
+      />
+
+      <WishPurchaseSheet
+        categories={categories}
+        draft={purchaseDraft}
+        error={purchaseError}
+        isSubmitting={purchaseSubmitting}
+        onClose={closeWishPurchaseSheet}
+        onSubmit={() => void submitWishPurchase()}
+        selectedWish={selectedWishForPurchase}
+        setDraft={setPurchaseDraft}
+        visible={selectedWishForPurchase !== null}
+        wallets={wallets}
       />
     </SafeAreaView>
   )

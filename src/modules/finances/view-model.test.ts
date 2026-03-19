@@ -44,7 +44,6 @@ function createDraft(): FinancesDraft {
     destinationWalletId: 'wallet-usd',
     incomeSourceId: 'inc-1',
     rate: '24',
-    wish: true,
   }
 }
 
@@ -83,7 +82,6 @@ describe('finances view model', () => {
     expect(next.amount).toBe('')
     expect(next.description).toBe('')
     expect(next.rate).toBe('1')
-    expect(next.wish).toBe(false)
     expect(next.destinationWalletId).toBe('wallet-usd')
     expect(next.categoryId).toBe('cat-1')
     expect(next.incomeSourceId).toBe('inc-1')

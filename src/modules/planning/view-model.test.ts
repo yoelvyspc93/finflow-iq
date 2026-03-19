@@ -4,6 +4,7 @@ import type { WishProjection } from '@/modules/wishes/calculations'
 import {
   buildCommitmentDraft,
   buildPlanningActionTip,
+  buildWishPurchaseDraft,
   buildWishDraft,
   filterWishProjectionItems,
   getNextWishAmount,
@@ -40,6 +41,7 @@ function createWishProjection(input: Partial<WishProjection>): WishProjection {
     monthsUntilPurchase: 2,
     progressRatio: 0.4,
     wish: {
+      actualPurchaseAmount: null,
       aiAdvice: null,
       confidenceLevel: null,
       confidenceReason: null,
@@ -52,6 +54,7 @@ function createWishProjection(input: Partial<WishProjection>): WishProjection {
       lastCalculatedAt: null,
       name: 'Headphones',
       notes: null,
+      purchaseLedgerEntryId: null,
       priority: 1,
       purchasedAt: null,
       updatedAt: '2026-03-01T00:00:00.000Z',
@@ -74,13 +77,45 @@ describe('planning view model', () => {
 
   it('filters wishes and computes next priority and amount', () => {
     const projections = [
-      createWishProjection({ wish: { ...createWishProjection({}).wish, id: 'wish-1', isPurchased: false, priority: 1, estimatedAmount: 300 } }),
-      createWishProjection({ wish: { ...createWishProjection({}).wish, id: 'wish-2', isPurchased: true, priority: 3, estimatedAmount: 120 } }),
-      createWishProjection({ wish: { ...createWishProjection({}).wish, id: 'wish-3', isPurchased: false, priority: 2, estimatedAmount: 700 } }),
+      createWishProjection({
+        estimatedPurchaseDate: '2026-04-01',
+        wish: {
+          ...createWishProjection({}).wish,
+          id: 'wish-1',
+          isPurchased: false,
+          priority: 1,
+          estimatedAmount: 300,
+        },
+      }),
+      createWishProjection({
+        wish: {
+          ...createWishProjection({}).wish,
+          id: 'wish-2',
+          isPurchased: true,
+          priority: 3,
+          estimatedAmount: 120,
+          purchasedAt: '2026-05-10T00:00:00.000Z',
+        },
+      }),
+      createWishProjection({
+        estimatedPurchaseDate: '2026-03-25',
+        wish: {
+          ...createWishProjection({}).wish,
+          id: 'wish-3',
+          isPurchased: false,
+          priority: 2,
+          estimatedAmount: 700,
+        },
+      }),
     ]
 
     expect(filterWishProjectionItems({ filter: 'pending', items: projections })).toHaveLength(2)
     expect(filterWishProjectionItems({ filter: 'bought', items: projections })).toHaveLength(1)
+    expect(
+      filterWishProjectionItems({ filter: 'all', items: projections }).map(
+        (item) => item.wish.id,
+      ),
+    ).toEqual(['wish-3', 'wish-1', 'wish-2'])
     expect(getNextWishAmount(projections)).toBe(300)
     expect(getNextWishPriority(projections)).toBe('4')
   })
@@ -100,6 +135,12 @@ describe('planning view model', () => {
       notes: '',
       priority: '3',
       walletId: 'wallet-1',
+    })
+    expect(buildWishPurchaseDraft(wishProjections[0].wish)).toEqual({
+      amount: '300',
+      categoryId: null,
+      date: '2026-03-18',
+      description: 'Headphones',
     })
     expect(
       buildCommitmentDraft({ selectedWalletId: 'wallet-2', wallets }),

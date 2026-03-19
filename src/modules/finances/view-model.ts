@@ -85,7 +85,6 @@ export function createInitialFinancesDraft(today: string): FinancesDraft {
     destinationWalletId: null,
     incomeSourceId: null,
     rate: '1',
-    wish: false,
   }
 }
 
@@ -150,7 +149,6 @@ export function buildFinancesDraftForSheet(args: {
           })
         : null,
     rate: '1',
-    wish: false,
   }
 }
 

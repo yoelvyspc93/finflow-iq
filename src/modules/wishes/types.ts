@@ -9,6 +9,7 @@ export type WishConfidenceLevel =
   | "risky";
 
 export type Wish = {
+  actualPurchaseAmount: number | null;
   aiAdvice: string | null;
   confidenceLevel: WishConfidenceLevel | null;
   confidenceReason: string | null;
@@ -21,6 +22,7 @@ export type Wish = {
   lastCalculatedAt: string | null;
   name: string;
   notes: string | null;
+  purchaseLedgerEntryId: string | null;
   priority: number;
   purchasedAt: string | null;
   updatedAt: string;
@@ -38,6 +40,7 @@ export type CreateWishInput = {
 
 export function mapWish(row: WishRow): Wish {
   return {
+    actualPurchaseAmount: row.actual_purchase_amount,
     aiAdvice: row.ai_advice,
     confidenceLevel: row.confidence_level as WishConfidenceLevel | null,
     confidenceReason: row.confidence_reason,
@@ -50,6 +53,7 @@ export function mapWish(row: WishRow): Wish {
     lastCalculatedAt: row.last_calculated_at,
     name: row.name,
     notes: row.notes,
+    purchaseLedgerEntryId: row.purchase_ledger_entry_id,
     priority: row.priority,
     purchasedAt: row.purchased_at,
     updatedAt: row.updated_at,
@@ -62,6 +66,7 @@ export function createLocalWish(input: CreateWishInput & { userId: string }): Wi
   const now = new Date().toISOString();
 
   return {
+    actualPurchaseAmount: null,
     aiAdvice: null,
     confidenceLevel: null,
     confidenceReason: null,
@@ -74,6 +79,7 @@ export function createLocalWish(input: CreateWishInput & { userId: string }): Wi
     lastCalculatedAt: null,
     name: input.name.trim(),
     notes: input.notes ?? null,
+    purchaseLedgerEntryId: null,
     priority: input.priority,
     purchasedAt: null,
     updatedAt: now,
