@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useFocusEffect } from '@react-navigation/native'
 
 import type { PlanningSheetKind } from '@/components/planning/planning-sheet-stack'
 import type { WishPurchaseDraft } from '@/components/planning/wish-purchase-sheet'
@@ -74,7 +75,7 @@ export function usePlanningScreen(viewParam?: string | string[]) {
     }
   }, [viewParam])
 
-  useEffect(() => {
+  const loadCategories = useCallback(() => {
     if (!user?.id) {
       setCategories([])
       return
@@ -84,10 +85,23 @@ export function usePlanningScreen(viewParam?: string | string[]) {
       setCategories(nextCategories)
       setPurchaseDraft((current) => ({
         ...current,
-        categoryId: current.categoryId ?? nextCategories[0]?.id ?? null,
+        categoryId:
+          current.categoryId && nextCategories.some((item) => item.id === current.categoryId)
+            ? current.categoryId
+            : nextCategories[0]?.id ?? null,
       }))
     })
   }, [user?.id])
+
+  useEffect(() => {
+    loadCategories()
+  }, [loadCategories])
+
+  useFocusEffect(
+    useCallback(() => {
+      loadCategories()
+    }, [loadCategories]),
+  )
 
   useEffect(() => {
     if (!user?.id || !settings) {

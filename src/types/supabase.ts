@@ -80,6 +80,7 @@ export type Database = {
           created_at: string
           icon: string
           id: string
+          is_active: boolean
           is_default: boolean
           name: string
           user_id: string
@@ -89,6 +90,7 @@ export type Database = {
           created_at?: string
           icon: string
           id?: string
+          is_active?: boolean
           is_default?: boolean
           name: string
           user_id: string
@@ -98,6 +100,7 @@ export type Database = {
           created_at?: string
           icon?: string
           id?: string
+          is_active?: boolean
           is_default?: boolean
           name?: string
           user_id?: string
@@ -212,6 +215,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          is_active: boolean
           is_default: boolean
           name: string
           user_id: string
@@ -219,6 +223,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          is_active?: boolean
           is_default?: boolean
           name: string
           user_id: string
@@ -226,6 +231,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          is_active?: boolean
           is_default?: boolean
           name?: string
           user_id?: string

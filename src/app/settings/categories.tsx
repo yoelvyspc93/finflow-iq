@@ -15,10 +15,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AppAlert } from "@/components/ui/app-alert";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { DecorativeBackground } from "@/components/ui/decorative-background";
+import { AppSwitch } from "@/components/ui/app-switch";
 import { ScreenHeader } from "@/components/ui/screen-header";
 import {
   createCategory,
   deleteCategory,
+  getCategoryReferenceSummary,
   listCategories,
   updateCategory,
 } from "@/modules/categories/service";
@@ -44,6 +46,8 @@ export default function CategorySettingsScreen() {
   const [name, setName] = useState("");
   const [color, setColor] = useState("#4F6BFF");
   const [error, setError] = useState<string | null>(null);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [referenceMap, setReferenceMap] = useState<Record<string, { totalReferences: number }>>({});
   const [alertState, setAlertState] = useState<AlertState>({
     message: "",
     title: "",
@@ -61,8 +65,44 @@ export default function CategorySettingsScreen() {
       return;
     }
 
-    void listCategories({ userId: user.id }).then(setCategories);
+    void listCategories({ includeInactive: true, userId: user.id }).then(setCategories);
   }, [user?.id]);
+
+  useEffect(() => {
+    if (!categories.length) {
+      setReferenceMap({});
+      return;
+    }
+
+    if (!user?.id) {
+      setReferenceMap(
+        Object.fromEntries(categories.map((category) => [category.id, { totalReferences: 1 }])),
+      );
+      return;
+    }
+
+    void Promise.allSettled(
+      categories.map(async (category) => ({
+        categoryId: category.id,
+        summary: await getCategoryReferenceSummary({
+          categoryId: category.id,
+          userId: user.id,
+        }),
+      })),
+    ).then((results) => {
+      const next = Object.fromEntries(
+        results.map((result, index) => {
+          if (result.status === "fulfilled") {
+            return [result.value.categoryId, result.value.summary];
+          }
+
+          return [categories[index]?.id ?? `category-${index}`, { totalReferences: 1 }];
+        }),
+      );
+
+      setReferenceMap(next);
+    });
+  }, [categories, user?.id]);
 
   function openCreate() {
     setEditingId(null);
@@ -159,8 +199,36 @@ export default function CategorySettingsScreen() {
         "No se pudo eliminar",
         caughtError instanceof Error
           ? caughtError.message
-          : "La categoria tiene referencias y no puede eliminarse.",
+          : "La categoria tiene referencias y no puede eliminarse. Desactívala con el switch.",
       );
+    }
+  }
+
+  async function handleToggleActive(category: Category, nextValue: boolean) {
+    if (!user?.id) {
+      return;
+    }
+
+    setUpdatingId(category.id);
+
+    try {
+      const updated = await updateCategory({
+        categoryId: category.id,
+        patch: { isActive: nextValue },
+        userId: user.id,
+      });
+      setCategories((current) =>
+        current.map((item) => (item.id === updated.id ? updated : item)),
+      );
+    } catch (caughtError) {
+      showInfo(
+        "No se pudo actualizar",
+        caughtError instanceof Error
+          ? caughtError.message
+          : "No se pudo cambiar el estado de la categoria.",
+      );
+    } finally {
+      setUpdatingId(null);
     }
   }
 
@@ -188,15 +256,34 @@ export default function CategorySettingsScreen() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.section}>
           {categories.map((category) => (
-            <View key={category.id} style={styles.row}>
+            <View
+              key={category.id}
+              style={[styles.row, !category.isActive && styles.rowInactive]}
+            >
               <View style={[styles.dot, { backgroundColor: category.color }]} />
-              <Text style={styles.name}>{category.name}</Text>
+              <View style={styles.meta}>
+                <Text style={[styles.name, !category.isActive && styles.nameInactive]}>
+                  {category.name}
+                </Text>
+                {!category.isActive ? (
+                  <Text style={styles.status}>Inactiva</Text>
+                ) : null}
+              </View>
               <View style={styles.actions}>
+                <AppSwitch
+                  disabled={updatingId === category.id}
+                  onValueChange={(value) => {
+                    void handleToggleActive(category, value);
+                  }}
+                  value={category.isActive}
+                />
+                {referenceMap[category.id]?.totalReferences === 0 ? (
+                  <Pressable onPress={() => confirmDelete(category)} style={({ pressed }) => pressed && styles.pressed}>
+                    <Ionicons color={theme.colors.grayLight} name="trash-outline" size={17} />
+                  </Pressable>
+                ) : null}
                 <Pressable onPress={() => openEdit(category)} style={({ pressed }) => pressed && styles.pressed}>
                   <Ionicons color={theme.colors.white} name="create-outline" size={17} />
-                </Pressable>
-                <Pressable onPress={() => confirmDelete(category)} style={({ pressed }) => pressed && styles.pressed}>
-                  <Ionicons color={theme.colors.grayLight} name="trash-outline" size={17} />
                 </Pressable>
               </View>
             </View>
@@ -272,8 +359,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.divider,
   },
+  rowInactive: {
+    opacity: 0.72,
+  },
   dot: { width: 10, height: 10, borderRadius: 999 },
-  name: { flex: 1, color: theme.colors.white, fontSize: 14, fontWeight: "700" },
+  meta: { flex: 1, gap: 2 },
+  name: { color: theme.colors.white, fontSize: 14, fontWeight: "700" },
+  nameInactive: { color: theme.colors.grayLight },
+  status: { color: theme.colors.grayLight, fontSize: 11, fontWeight: "700" },
   actions: { flexDirection: "row", alignItems: "center", gap: 12 },
   sheetTitle: { color: theme.colors.white, fontSize: 22, fontWeight: "700", marginBottom: 8 },
   sheetDescription: { color: theme.colors.grayLight, fontSize: 13, lineHeight: 19, marginBottom: 10 },

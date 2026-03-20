@@ -15,10 +15,12 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { AppAlert } from "@/components/ui/app-alert";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { DecorativeBackground } from "@/components/ui/decorative-background";
+import { AppSwitch } from "@/components/ui/app-switch";
 import { ScreenHeader } from "@/components/ui/screen-header";
 import {
   createIncomeSource,
   deleteIncomeSource,
+  getIncomeSourceReferenceSummary,
   listIncomeSources,
   updateIncomeSource,
 } from "@/modules/income-sources/service";
@@ -41,6 +43,8 @@ export default function IncomeSourceSettingsScreen() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [referenceMap, setReferenceMap] = useState<Record<string, { totalReferences: number }>>({});
   const [alertState, setAlertState] = useState<AlertState>({
     message: "",
     title: "",
@@ -58,8 +62,44 @@ export default function IncomeSourceSettingsScreen() {
       return;
     }
 
-    void listIncomeSources({ userId: user.id }).then(setIncomeSources);
+    void listIncomeSources({ includeInactive: true, userId: user.id }).then(setIncomeSources);
   }, [user?.id]);
+
+  useEffect(() => {
+    if (!incomeSources.length) {
+      setReferenceMap({});
+      return;
+    }
+
+    if (!user?.id) {
+      setReferenceMap(
+        Object.fromEntries(incomeSources.map((source) => [source.id, { totalReferences: 1 }])),
+      );
+      return;
+    }
+
+    void Promise.allSettled(
+      incomeSources.map(async (source) => ({
+        incomeSourceId: source.id,
+        summary: await getIncomeSourceReferenceSummary({
+          incomeSourceId: source.id,
+          userId: user.id,
+        }),
+      })),
+    ).then((results) => {
+      const next = Object.fromEntries(
+        results.map((result, index) => {
+          if (result.status === "fulfilled") {
+            return [result.value.incomeSourceId, result.value.summary];
+          }
+
+          return [incomeSources[index]?.id ?? `income-source-${index}`, { totalReferences: 1 }];
+        }),
+      );
+
+      setReferenceMap(next);
+    });
+  }, [incomeSources, user?.id]);
 
   function openCreate() {
     setEditingId(null);
@@ -151,8 +191,36 @@ export default function IncomeSourceSettingsScreen() {
         "No se pudo eliminar",
         caughtError instanceof Error
           ? caughtError.message
-          : "La fuente tiene referencias y no puede eliminarse.",
+          : "La fuente tiene referencias y no puede eliminarse. Desactívala con el switch.",
       );
+    }
+  }
+
+  async function handleToggleActive(source: IncomeSource, nextValue: boolean) {
+    if (!user?.id) {
+      return;
+    }
+
+    setUpdatingId(source.id);
+
+    try {
+      const updated = await updateIncomeSource({
+        incomeSourceId: source.id,
+        patch: { isActive: nextValue },
+        userId: user.id,
+      });
+      setIncomeSources((current) =>
+        current.map((item) => (item.id === updated.id ? updated : item)),
+      );
+    } catch (caughtError) {
+      showInfo(
+        "No se pudo actualizar",
+        caughtError instanceof Error
+          ? caughtError.message
+          : "No se pudo cambiar el estado de la fuente de ingreso.",
+      );
+    } finally {
+      setUpdatingId(null);
     }
   }
 
@@ -180,15 +248,34 @@ export default function IncomeSourceSettingsScreen() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.section}>
           {incomeSources.map((source) => (
-            <View key={source.id} style={styles.row}>
+            <View
+              key={source.id}
+              style={[styles.row, !source.isActive && styles.rowInactive]}
+            >
               <View style={styles.dot} />
-              <Text style={styles.name}>{source.name}</Text>
+              <View style={styles.meta}>
+                <Text style={[styles.name, !source.isActive && styles.nameInactive]}>
+                  {source.name}
+                </Text>
+                {!source.isActive ? (
+                  <Text style={styles.status}>Inactiva</Text>
+                ) : null}
+              </View>
               <View style={styles.actions}>
+                <AppSwitch
+                  disabled={updatingId === source.id}
+                  onValueChange={(value) => {
+                    void handleToggleActive(source, value);
+                  }}
+                  value={source.isActive}
+                />
+                {referenceMap[source.id]?.totalReferences === 0 ? (
+                  <Pressable onPress={() => confirmDelete(source)} style={({ pressed }) => pressed && styles.pressed}>
+                    <Ionicons color={theme.colors.grayLight} name="trash-outline" size={17} />
+                  </Pressable>
+                ) : null}
                 <Pressable onPress={() => openEdit(source)} style={({ pressed }) => pressed && styles.pressed}>
                   <Ionicons color={theme.colors.white} name="create-outline" size={17} />
-                </Pressable>
-                <Pressable onPress={() => confirmDelete(source)} style={({ pressed }) => pressed && styles.pressed}>
-                  <Ionicons color={theme.colors.grayLight} name="trash-outline" size={17} />
                 </Pressable>
               </View>
             </View>
@@ -254,8 +341,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.divider,
   },
+  rowInactive: {
+    opacity: 0.72,
+  },
   dot: { width: 10, height: 10, borderRadius: 999, backgroundColor: theme.colors.grayLight },
-  name: { flex: 1, color: theme.colors.white, fontSize: 14, fontWeight: "700" },
+  meta: { flex: 1, gap: 2 },
+  name: { color: theme.colors.white, fontSize: 14, fontWeight: "700" },
+  nameInactive: { color: theme.colors.grayLight },
+  status: { color: theme.colors.grayLight, fontSize: 11, fontWeight: "700" },
   actions: { flexDirection: "row", alignItems: "center", gap: 12 },
   sheetTitle: { color: theme.colors.white, fontSize: 22, fontWeight: "700", marginBottom: 8 },
   sheetDescription: { color: theme.colors.grayLight, fontSize: 13, lineHeight: 19, marginBottom: 10 },
