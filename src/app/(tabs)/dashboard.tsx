@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import {
   Pressable,
   ScrollView,
@@ -292,11 +292,11 @@ export default function DashboardScreen() {
             <Ionicons color="#5E7BFF" name="sparkles-outline" size={15} />
           </View>
           <View style={styles.tipBody}>
-          <Text style={styles.tipEyebrow}>SUGERENCIA</Text>
-          <Text style={styles.tipText}>
+            <Text style={styles.tipEyebrow}>SUGERENCIA</Text>
+            <Text style={styles.tipText}>
               Si reduces un poco los gastos variables este mes, tendrás más margen
               para cubrir compromisos y planificar compras.
-          </Text>
+            </Text>
           </View>
         </View>
 
@@ -342,6 +342,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.lg,
     gap: theme.spacing.lg,
+    margin: 0,
+    backgroundColor: "#44020244",
   },
   sectionTitle: {
     color: theme.colors.white,

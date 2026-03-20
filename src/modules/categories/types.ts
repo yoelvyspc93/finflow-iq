@@ -7,6 +7,7 @@ export type Category = {
   createdAt: string;
   icon: string;
   id: string;
+  isActive: boolean;
   isDefault: boolean;
   name: string;
   userId: string;
@@ -18,6 +19,7 @@ export function mapCategory(row: CategoryRow): Category {
     createdAt: row.created_at,
     icon: row.icon,
     id: row.id,
+    isActive: row.is_active,
     isDefault: row.is_default,
     name: row.name,
     userId: row.user_id,

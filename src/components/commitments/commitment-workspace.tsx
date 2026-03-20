@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 
 import { CommitmentListCard } from "@/components/commitments/commitment-list-card";
 import { BudgetProvisionComposerCard } from "@/components/commitments/budget-provision-composer-card";
@@ -82,15 +83,16 @@ export function CommitmentWorkspace({
     (provision) => provision.walletId === selectedWalletId,
   );
 
-  useEffect(() => {
+  const loadCategories = useCallback(() => {
     if (!user?.id) {
-      return;
+      setCategories([]);
+      return () => {};
     }
 
     const userId = user.id;
     let isMounted = true;
 
-    async function loadCategories() {
+    async function run() {
       try {
         const nextCategories = await listCategories({ userId });
 
@@ -113,12 +115,18 @@ export function CommitmentWorkspace({
       }
     }
 
-    void loadCategories();
+    void run();
 
     return () => {
       isMounted = false;
     };
   }, [user?.id]);
+
+  useEffect(() => loadCategories(), [loadCategories]);
+
+  useFocusEffect(
+    useCallback(() => loadCategories(), [loadCategories]),
+  );
 
   useEffect(() => {
     if (!user?.id || !selectedWalletId) {

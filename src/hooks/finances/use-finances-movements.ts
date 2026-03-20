@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { useFocusEffect } from '@react-navigation/native'
 
 import type { FinancesDraft, FinancesFormSheetMode } from '@/components/finances/finances-form-sheet'
 import { listCategories } from '@/modules/categories/service'
@@ -38,23 +39,53 @@ export function useFinancesMovements(args: {
 }) {
   const [categories, setCategories] = useState<Category[]>([])
   const [incomeSources, setIncomeSources] = useState<IncomeSource[]>([])
+  const [activeCategories, setActiveCategories] = useState<Category[]>([])
+  const [activeIncomeSources, setActiveIncomeSources] = useState<IncomeSource[]>([])
   const { setDraft, userId } = args
 
-  useEffect(() => {
-    if (!userId) return
+  const loadReferenceData = useCallback(() => {
+    if (!userId) {
+      setCategories([])
+      setIncomeSources([])
+      setActiveCategories([])
+      setActiveIncomeSources([])
+      return
+    }
+
     void Promise.all([
+      listCategories({ includeInactive: true, userId }),
+      listIncomeSources({ includeInactive: true, userId }),
       listCategories({ userId }),
       listIncomeSources({ userId }),
-    ]).then(([nextCategories, nextIncomeSources]) => {
+    ]).then(([nextCategories, nextIncomeSources, nextActiveCategories, nextActiveIncomeSources]) => {
       setCategories(nextCategories)
       setIncomeSources(nextIncomeSources)
+      setActiveCategories(nextActiveCategories)
+      setActiveIncomeSources(nextActiveIncomeSources)
       setDraft((current) => ({
         ...current,
-        categoryId: current.categoryId ?? nextCategories[0]?.id ?? null,
-        incomeSourceId: current.incomeSourceId ?? nextIncomeSources[0]?.id ?? null,
+        categoryId:
+          current.categoryId && nextActiveCategories.some((item) => item.id === current.categoryId)
+            ? current.categoryId
+            : nextActiveCategories[0]?.id ?? null,
+        incomeSourceId:
+          current.incomeSourceId &&
+          nextActiveIncomeSources.some((item) => item.id === current.incomeSourceId)
+            ? current.incomeSourceId
+            : nextActiveIncomeSources[0]?.id ?? null,
       }))
     })
   }, [setDraft, userId])
+
+  useEffect(() => {
+    loadReferenceData()
+  }, [loadReferenceData])
+
+  useFocusEffect(
+    useCallback(() => {
+      loadReferenceData()
+    }, [loadReferenceData]),
+  )
 
   async function submitMovementSheet(sheet: FinancesFormSheetMode) {
     const baseValidationError = validateFinancesBaseSubmit({
@@ -241,6 +272,8 @@ export function useFinancesMovements(args: {
   }
 
   return {
+    activeCategories,
+    activeIncomeSources,
     categories,
     incomeSources,
     submitMovementSheet,

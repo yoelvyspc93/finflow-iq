@@ -128,6 +128,8 @@ export function useFinancesScreen() {
   return {
     activeFormSheet: quickActions.activeFormSheet,
     activeWallet,
+    activeCategories: movements.activeCategories,
+    activeIncomeSources: movements.activeIncomeSources,
     categories: movements.categories,
     closeFormSheet: quickActions.closeFormSheet,
     closeQuickSheet: quickActions.closeQuickSheet,

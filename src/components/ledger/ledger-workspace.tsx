@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 
 import { FinancialCards } from "@/components/dashboard/financial-cards";
 import { ExchangeComposerCard } from "@/components/exchanges/exchange-composer-card";
@@ -115,15 +116,17 @@ export function LedgerWorkspace({
     (1 + (settings?.savingsGoalPercent ?? 0) / 100);
   const assignableAmount = freeAmount - reserveAmount;
 
-  useEffect(() => {
+  const loadReferenceData = useCallback(() => {
     if (!user?.id) {
-      return;
+      setCategories([]);
+      setIncomeSources([]);
+      return () => {};
     }
 
     const userId = user.id;
     let isMounted = true;
 
-    async function loadReferenceData() {
+    async function run() {
       try {
         const [nextCategories, nextIncomeSources] = await Promise.all([
           listCategories({ userId }),
@@ -150,12 +153,18 @@ export function LedgerWorkspace({
       }
     }
 
-    void loadReferenceData();
+    void run();
 
     return () => {
       isMounted = false;
     };
   }, [user?.id]);
+
+  useEffect(() => loadReferenceData(), [loadReferenceData]);
+
+  useFocusEffect(
+    useCallback(() => loadReferenceData(), [loadReferenceData]),
+  );
 
   useEffect(() => {
     if (!user?.id || !selectedWalletId) {

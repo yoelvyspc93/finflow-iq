@@ -18,6 +18,8 @@ export default function FinancesScreen() {
   const router = useRouter()
   const {
     activeFormSheet,
+    activeCategories,
+    activeIncomeSources,
     activeWallet,
     categories,
     closeFormSheet,
@@ -146,10 +148,10 @@ export default function FinancesScreen() {
       <FinancesFormSheet
         activeWalletCurrency={activeWallet?.currency}
         activeWalletName={activeWallet?.name}
-        categories={categories}
+        categories={activeCategories}
         draft={draft}
         error={error}
-        incomeSources={incomeSources}
+        incomeSources={activeIncomeSources}
         isSubmitting={isSubmitting}
         onClose={closeFormSheet}
         onSubmit={() => void submitSheet()}

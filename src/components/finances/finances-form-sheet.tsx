@@ -110,27 +110,31 @@ export function FinancesFormSheet({
         <>
           <Text style={styles.label}>CATEGORIA</Text>
           <View style={styles.chips}>
-            {categories.slice(0, 4).map((item) => (
-              <Pressable
-                key={item.id}
-                onPress={() =>
-                  setDraft((current) => ({ ...current, categoryId: item.id }))
-                }
-                style={[
-                  styles.chip,
-                  draft.categoryId === item.id && styles.chipActive,
-                ]}
-              >
-                <Text
+            {categories.length ? (
+              categories.map((item) => (
+                <Pressable
+                  key={item.id}
+                  onPress={() =>
+                    setDraft((current) => ({ ...current, categoryId: item.id }))
+                  }
                   style={[
-                    styles.chipText,
-                    draft.categoryId === item.id && styles.chipTextActive,
+                    styles.chip,
+                    draft.categoryId === item.id && styles.chipActive,
                   ]}
                 >
-                  {item.name}
-                </Text>
-              </Pressable>
-            ))}
+                  <Text
+                    style={[
+                      styles.chipText,
+                      draft.categoryId === item.id && styles.chipTextActive,
+                    ]}
+                  >
+                    {item.name}
+                  </Text>
+                </Pressable>
+              ))
+            ) : (
+              <Text style={styles.soft}>No hay categorias activas disponibles.</Text>
+            )}
           </View>
         </>
       ) : null}
@@ -138,30 +142,34 @@ export function FinancesFormSheet({
         <>
           <Text style={styles.label}>FUENTE</Text>
           <View style={styles.chips}>
-            {incomeSources.map((item) => (
-              <Pressable
-                key={item.id}
-                onPress={() =>
-                  setDraft((current) => ({
-                    ...current,
-                    incomeSourceId: item.id,
-                  }))
-                }
-                style={[
-                  styles.chip,
-                  draft.incomeSourceId === item.id && styles.chipActive,
-                ]}
-              >
-                <Text
+            {incomeSources.length ? (
+              incomeSources.map((item) => (
+                <Pressable
+                  key={item.id}
+                  onPress={() =>
+                    setDraft((current) => ({
+                      ...current,
+                      incomeSourceId: item.id,
+                    }))
+                  }
                   style={[
-                    styles.chipText,
-                    draft.incomeSourceId === item.id && styles.chipTextActive,
+                    styles.chip,
+                    draft.incomeSourceId === item.id && styles.chipActive,
                   ]}
                 >
-                  {item.name}
-                </Text>
-              </Pressable>
-            ))}
+                  <Text
+                    style={[
+                      styles.chipText,
+                      draft.incomeSourceId === item.id && styles.chipTextActive,
+                    ]}
+                  >
+                    {item.name}
+                  </Text>
+                </Pressable>
+              ))
+            ) : (
+              <Text style={styles.soft}>No hay fuentes de ingreso activas disponibles.</Text>
+            )}
           </View>
         </>
       ) : null}

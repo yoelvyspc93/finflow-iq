@@ -86,19 +86,23 @@ export function WishPurchaseSheet({
       </View>
       <Text style={styles.label}>CATEGORIA</Text>
       <View style={styles.chips}>
-        {categories.slice(0, 4).map((item) => (
-          <Pressable
-            key={item.id}
-            onPress={() => setDraft((current) => ({ ...current, categoryId: item.id }))}
-            style={[styles.chip, draft.categoryId === item.id && styles.chipActive]}
-          >
-            <Text
-              style={[styles.chipText, draft.categoryId === item.id && styles.chipTextActive]}
+        {categories.length ? (
+          categories.map((item) => (
+            <Pressable
+              key={item.id}
+              onPress={() => setDraft((current) => ({ ...current, categoryId: item.id }))}
+              style={[styles.chip, draft.categoryId === item.id && styles.chipActive]}
             >
-              {item.name}
-            </Text>
-          </Pressable>
-        ))}
+              <Text
+                style={[styles.chipText, draft.categoryId === item.id && styles.chipTextActive]}
+              >
+                {item.name}
+              </Text>
+            </Pressable>
+          ))
+        ) : (
+          <Text style={styles.soft}>No hay categorias activas disponibles.</Text>
+        )}
       </View>
       <Text style={styles.label}>DESCRIPCION</Text>
       <TextInput

@@ -344,14 +344,22 @@ export function SettingsSheetStack({
         <FieldLabel label={`Categorías (${categories.length})`} />
         <View style={styles.libraryGroup}>
           {categories.map((category) => (
-            <View key={category.id} style={styles.libraryRow}>
+            <View
+              key={category.id}
+              style={[styles.libraryRow, !category.isActive && styles.libraryRowInactive]}
+            >
               <View
                 style={[
                   styles.libraryDot,
                   { backgroundColor: category.color || "#4562FF" },
                 ]}
               />
-              <Text style={styles.libraryText}>{category.name}</Text>
+              <View style={styles.libraryMeta}>
+                <Text style={styles.libraryText}>{category.name}</Text>
+                {!category.isActive ? (
+                  <Text style={styles.libraryStatus}>Inactiva</Text>
+                ) : null}
+              </View>
             </View>
           ))}
         </View>
@@ -359,9 +367,17 @@ export function SettingsSheetStack({
         <FieldLabel label={`Fuentes de ingreso (${incomeSources.length})`} />
         <View style={styles.libraryGroup}>
           {incomeSources.map((source) => (
-            <View key={source.id} style={styles.libraryRow}>
+            <View
+              key={source.id}
+              style={[styles.libraryRow, !source.isActive && styles.libraryRowInactive]}
+            >
               <View style={[styles.libraryDot, styles.libraryDotNeutral]} />
-              <Text style={styles.libraryText}>{source.name}</Text>
+              <View style={styles.libraryMeta}>
+                <Text style={styles.libraryText}>{source.name}</Text>
+                {!source.isActive ? (
+                  <Text style={styles.libraryStatus}>Inactiva</Text>
+                ) : null}
+              </View>
             </View>
           ))}
         </View>
@@ -472,10 +488,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
+  libraryRowInactive: {
+    opacity: 0.7,
+  },
   libraryDot: {
     width: 10,
     height: 10,
     borderRadius: 999,
+  },
+  libraryMeta: {
+    flex: 1,
+    gap: 2,
   },
   libraryDotNeutral: {
     backgroundColor: "#94A3B8",
@@ -483,6 +506,11 @@ const styles = StyleSheet.create({
   libraryText: {
     color: "#E2E8F0",
     fontSize: 14,
+    fontWeight: "700",
+  },
+  libraryStatus: {
+    color: "#94A3B8",
+    fontSize: 11,
     fontWeight: "700",
   },
   errorText: {
