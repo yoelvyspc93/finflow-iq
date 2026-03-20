@@ -23,6 +23,8 @@
     "supabase:link": "node ./scripts/supabase-link.mjs",
     "supabase:db:push": "npx supabase db push",
     "supabase:db:pull": "npx supabase db pull",
+    "supabase:db:clean": "node ./scripts/supabase-reset-db.mjs",
+    "supabase:db:seed:test": "node ./scripts/supabase-seed-test-user.mjs",
     "supabase:config:push": "npx supabase config push",
     "supabase:types": "node ./scripts/supabase-gen-types.mjs"
   },

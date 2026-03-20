@@ -72,7 +72,7 @@ export default function TabsLayout() {
         tabBarStyle: [
           styles.tabBar,
           {
-            height: 74 + insets.bottom,
+            height: 58 + Math.max(insets.bottom, theme.spacing.xs),
             paddingBottom: Math.max(theme.spacing.xs, insets.bottom),
           },
         ],
@@ -120,10 +120,10 @@ export default function TabsLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    height: 74,
+    height: 58,
     paddingTop: theme.spacing.xs,
     paddingBottom: theme.spacing.xs,
-    backgroundColor: theme.colors.background,
+    backgroundColor: 'blue',
     borderTopWidth: 0,
   },
   tabBarLabel: {
