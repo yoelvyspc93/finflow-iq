@@ -22,6 +22,6 @@ const styles = StyleSheet.create({
   },
   texture: {
     ...StyleSheet.absoluteFillObject,
-    opacity: 0.2,
+    opacity: 0.1,
   },
 });
