@@ -343,7 +343,6 @@ const styles = StyleSheet.create({
     paddingVertical: theme.spacing.lg,
     gap: theme.spacing.lg,
     margin: 0,
-    backgroundColor: "#44020244",
   },
   sectionTitle: {
     color: theme.colors.white,
