@@ -22,6 +22,7 @@ import { selectActiveWallet } from "@/modules/ledger/selectors";
 import { useAppStore } from "@/stores/app-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { useCommitmentStore } from "@/stores/commitment-store";
+import { usePlanningStore } from "@/stores/planning-store";
 import { useSalaryStore } from "@/stores/salary-store";
 import { theme } from "@/utils/theme";
 
@@ -90,6 +91,8 @@ export default function DashboardScreen() {
     (state) => state.refreshCommitmentData,
   );
   const commitmentOverview = useCommitmentStore((state) => state.overview);
+  const currentScore = usePlanningStore((state) => state.currentScore);
+  const refreshPlanningData = usePlanningStore((state) => state.refreshPlanningData);
   const refreshSalaryData = useSalaryStore((state) => state.refreshSalaryData);
   const salaryOverview = useSalaryStore((state) => state.overview);
   const visibleWallets = wallets.filter((wallet) => wallet.isActive);
@@ -97,7 +100,7 @@ export default function DashboardScreen() {
   const activeWallet = selectActiveWallet(wallets, selectedWalletId);
 
   useEffect(() => {
-    if (!user?.id || !selectedWalletId) {
+    if (!user?.id || !selectedWalletId || !settings) {
       return;
     }
 
@@ -107,6 +110,11 @@ export default function DashboardScreen() {
         userId: user.id,
         walletId: selectedWalletId,
       }),
+      refreshPlanningData({
+        settings,
+        userId: user.id,
+        wallets,
+      }),
       refreshSalaryData({
         userId: user.id,
       }),
@@ -114,12 +122,15 @@ export default function DashboardScreen() {
   }, [
     currentMonth,
     refreshCommitmentData,
+    refreshPlanningData,
     refreshSalaryData,
     selectedWalletId,
+    settings,
     user?.id,
+    wallets,
   ]);
-  const effectiveSalaryOverview = salaryOverview;
 
+  const effectiveSalaryOverview = salaryOverview;
   const committedAmount = commitmentOverview?.totalRemaining ?? 0;
   const freeAmount = Math.max(0, (activeWallet?.balance ?? 0) - committedAmount);
   const reserveAmount =
@@ -131,16 +142,19 @@ export default function DashboardScreen() {
     activeWallet?.balance && activeWallet.balance > 0
       ? clamp(freeAmount / activeWallet.balance, 0, 1)
       : 0;
-  const healthScore = Math.round(
+  const healthScore = currentScore?.score ?? Math.round(
     clamp(
       38 +
-      liquidityRatio * 34 +
-      Math.min(settings?.savingsGoalPercent ?? 0, 25) -
-      (effectiveSalaryOverview?.monthsWithoutPayment ?? 0) * 3,
+        liquidityRatio * 34 +
+        Math.min(settings?.savingsGoalPercent ?? 0, 25) -
+        (effectiveSalaryOverview?.monthsWithoutPayment ?? 0) * 3,
       0,
       100,
     ),
   );
+  const weeklyTip =
+    currentScore?.aiTip ??
+    "Si reduces un poco los gastos variables este mes, tendras mas margen para cubrir compromisos y planificar compras.";
   const budgetAlert = activeWallet?.balance
     ? Math.round(clamp((committedAmount / activeWallet.balance) * 100, 0, 100))
     : 0;
@@ -173,7 +187,8 @@ export default function DashboardScreen() {
           {visibleWallets.length > 0 ? (
             visibleWallets.map((wallet, index) => {
               const isActive = wallet.id === selectedWalletId;
-              const min = visibleWallets.length === 1 ? viewportWidth : viewportWidth * 0.85
+              const min = visibleWallets.length === 1 ? viewportWidth : viewportWidth * 0.85;
+
               return (
                 <Pressable
                   key={wallet.id}
@@ -187,13 +202,9 @@ export default function DashboardScreen() {
                   ]}
                 >
                   <Text style={styles.walletName}>{wallet.name}</Text>
-                  <Text style={styles.walletAmount}>
-                    {formatMoney(wallet.balance)}
-                  </Text>
+                  <Text style={styles.walletAmount}>{formatMoney(wallet.balance)}</Text>
                   <View style={styles.walletFooter}>
-                    <Text style={styles.walletMeta}>
-                      {wallet.currency}
-                    </Text>
+                    <Text style={styles.walletMeta}>{wallet.currency}</Text>
                     <View
                       style={[
                         styles.walletToggle,
@@ -210,7 +221,7 @@ export default function DashboardScreen() {
             <View style={[styles.walletCard, styles.walletCardMuted]}>
               <Text style={styles.walletName}>Sin billeteras</Text>
               <Text style={styles.walletAmount}>USD 0.00</Text>
-              <Text style={styles.walletMeta}>Completa la configuración inicial</Text>
+              <Text style={styles.walletMeta}>Completa la configuracion inicial</Text>
             </View>
           )}
         </ScrollView>
@@ -247,7 +258,8 @@ export default function DashboardScreen() {
           <View style={styles.salaryMain}>
             <Text style={styles.salaryLabel}>Pendiente por recibir</Text>
             <Text style={styles.salaryValue}>
-              {formatMoney(effectiveSalaryOverview?.pendingTotal ?? 0)} {activeWallet?.currency ?? settings?.primaryCurrency ?? "USD"}
+              {formatMoney(effectiveSalaryOverview?.pendingTotal ?? 0)}{" "}
+              {activeWallet?.currency ?? settings?.primaryCurrency ?? "USD"}
             </Text>
             <View style={styles.progressTrack}>
               <View
@@ -257,7 +269,7 @@ export default function DashboardScreen() {
                     width: `${clamp(
                       ((effectiveSalaryOverview?.pendingTotal ?? 0) /
                         Math.max((effectiveSalaryOverview?.pendingTotal ?? 0) + 1, 1)) *
-                      100,
+                        100,
                       16,
                       82,
                     )}%`,
@@ -293,16 +305,16 @@ export default function DashboardScreen() {
           </View>
           <View style={styles.tipBody}>
             <Text style={styles.tipEyebrow}>SUGERENCIA</Text>
-            <Text style={styles.tipText}>
-              Si reduces un poco los gastos variables este mes, tendrás más margen
-              para cubrir compromisos y planificar compras.
-            </Text>
+            <Text style={styles.tipText}>{weeklyTip}</Text>
           </View>
         </View>
 
         <View style={styles.sectionRow}>
-          <Text style={styles.sectionTitle}>Resumen rápido</Text>
-          <Pressable onPress={() => router.push("/insights")} style={({ pressed }) => [styles.insightLink, pressed && styles.pressed]}>
+          <Text style={styles.sectionTitle}>Resumen rapido</Text>
+          <Pressable
+            onPress={() => router.push("/insights")}
+            style={({ pressed }) => [styles.insightLink, pressed && styles.pressed]}
+          >
             <Text style={styles.insightLinkText}>Ver todos</Text>
           </Pressable>
         </View>
@@ -325,7 +337,7 @@ export default function DashboardScreen() {
             </View>
             <Text style={styles.insightLabel}>Alerta de presupuesto</Text>
             <Text style={styles.insightValue}>{budgetAlert}%</Text>
-            <Text style={styles.insightMetaNegative}>Límite de ocio</Text>
+            <Text style={styles.insightMetaNegative}>Limite de ocio</Text>
           </View>
         </View>
       </ScrollView>
@@ -646,4 +658,3 @@ const styles = StyleSheet.create({
     opacity: 0.88,
   },
 });
-

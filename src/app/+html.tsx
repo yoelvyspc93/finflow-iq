@@ -17,7 +17,7 @@ export default function Html({ children }: { children: ReactNode }) {
         <meta charSet="utf-8" />
         <meta
           name="viewport"
-          content="width=device-width, initial-scale=1, viewport-fit=cover"
+          content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no"
         />
         <meta name="theme-color" content="#0F1223" />
         <meta name="mobile-web-app-capable" content="yes" />

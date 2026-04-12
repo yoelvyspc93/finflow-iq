@@ -1,3 +1,8 @@
+import {
+  generateDashboardHealthSummary,
+  generateWeeklyFinancialTip,
+  generateWishAdviceBatch,
+} from '@/modules/ai/service'
 import { listCommitmentPaymentEntries, listRecurringExpenses } from '@/modules/commitments/service'
 import {
   getCurrentWeekStart,
@@ -54,7 +59,7 @@ export function createPlanningRefreshService() {
         wishes: resolvedData.wishes,
       })
 
-      const currentScore = await persistPlanningSideEffects({
+      const persistedScore = await persistPlanningSideEffects({
         dependencies: {
           getCurrentWeekStart,
           syncWishProjections,
@@ -64,12 +69,60 @@ export function createPlanningRefreshService() {
         userId: args.refreshArgs.userId,
       })
 
+      let currentScore = persistedScore
+      let dashboardHealth = null
+      let wishProjections = evaluation.wishProjections
+      let wishes = resolvedData.wishes
+
+      if (currentScore && args.refreshArgs.settings) {
+        try {
+          currentScore = await generateWeeklyFinancialTip({
+            commitmentOverview: evaluation.commitmentOverview,
+            currentScore,
+            overview: evaluation.overview,
+            recentScores: fetchedData.recentScores,
+            salaryOverview: evaluation.salaryOverview,
+            settings: args.refreshArgs.settings,
+            userId: args.refreshArgs.userId,
+            wallets: args.refreshArgs.wallets,
+            wishProjections: evaluation.wishProjections,
+          })
+
+          const wishInsightResult = await generateWishAdviceBatch({
+            commitmentOverview: evaluation.commitmentOverview,
+            currentScore,
+            overview: evaluation.overview,
+            settings: args.refreshArgs.settings,
+            userId: args.refreshArgs.userId,
+            wishes: resolvedData.wishes,
+            wishProjections: evaluation.wishProjections,
+          })
+
+          wishProjections = wishInsightResult.wishProjections
+          wishes = wishInsightResult.wishes
+          dashboardHealth = await generateDashboardHealthSummary({
+            commitmentOverview: evaluation.commitmentOverview,
+            currentScore,
+            overview: evaluation.overview,
+            recentScores: fetchedData.recentScores,
+            salaryOverview: evaluation.salaryOverview,
+            settings: args.refreshArgs.settings,
+            userId: args.refreshArgs.userId,
+            wallets: args.refreshArgs.wallets,
+            wishProjections,
+          })
+        } catch {
+          // Planning refresh must keep working even if AI generation fails.
+        }
+      }
+
       return {
         currentScore,
+        dashboardHealth,
         overview: evaluation.overview,
         recentScores: mergePlanningScores(currentScore, fetchedData.recentScores),
-        wishProjections: evaluation.wishProjections,
-        wishes: resolvedData.wishes,
+        wishProjections,
+        wishes,
       }
     },
   }

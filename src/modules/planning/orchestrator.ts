@@ -19,6 +19,7 @@ import type { LedgerEntry } from '@/modules/ledger/types'
 import type { BudgetProvision } from '@/modules/provisions/types'
 import type { RecurringExpense } from '@/modules/commitments/types'
 import type { Wish } from '@/modules/wishes/types'
+import type { SalaryOverview } from '@/modules/salary/calculations'
 
 export type PlanningOverview = {
   assignableAmount: number
@@ -39,6 +40,7 @@ export type PlanningEvaluationResult = {
     userId: string
   }
   overview: PlanningOverview
+  salaryOverview: SalaryOverview
   salaryStabilityScore: number
   wishProjectionSyncInputs: {
     confidenceLevel: WishProjection['confidenceLevel']
@@ -214,6 +216,7 @@ export function evaluatePlanningState(args: {
       userId: args.userId,
     },
     overview,
+    salaryOverview,
     salaryStabilityScore,
     wishProjectionSyncInputs: wishProjections.map((projection) => ({
       confidenceLevel: projection.confidenceLevel,

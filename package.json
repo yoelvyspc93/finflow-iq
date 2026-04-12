@@ -25,6 +25,7 @@
     "supabase:db:pull": "npx supabase db pull",
     "supabase:db:clean": "node ./scripts/supabase-reset-db.mjs",
     "supabase:db:seed:test": "node ./scripts/supabase-seed-test-user.mjs",
+    "supabase:ai:smoke": "node ./scripts/supabase-ai-smoke.mjs --linked",
     "supabase:config:push": "npx supabase config push",
     "supabase:types": "node ./scripts/supabase-gen-types.mjs"
   },

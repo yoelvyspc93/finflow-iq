@@ -24,6 +24,7 @@ export default function InsightsScreen() {
   const settings = useAppStore((state) => state.settings)
   const wallets = useAppStore((state) => state.wallets)
   const currentScore = usePlanningStore((state) => state.currentScore)
+  const dashboardHealth = usePlanningStore((state) => state.dashboardHealth)
   const recentScores = usePlanningStore((state) => state.recentScores)
   const overview = usePlanningStore((state) => state.overview)
   const refreshPlanningData = usePlanningStore(
@@ -104,12 +105,19 @@ export default function InsightsScreen() {
     [currentScore, recentScores],
   )
 
+  const aiSummary =
+    dashboardHealth?.summary ??
+    currentScore?.aiTip ??
+    (savingsRatio > 0
+      ? `Este mes tienes capacidad de ahorro equivalente a ${Math.min(savingsRatio, 100)}% de tus ingresos de referencia.`
+      : 'Tu situacion mantiene liquidez, pero aun depende de convertir dinero libre en ahorro.')
+
   return (
     <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
       <DecorativeBackground />
       <ScreenHeader
         leftAction={{ icon: 'back', onPress: () => router.back() }}
-        title="Análisis"
+        title="Analisis"
       />
 
       <ScrollView
@@ -167,12 +175,12 @@ export default function InsightsScreen() {
 
         <View style={styles.card}>
           <Text style={styles.softText}>Tu dinero dura</Text>
-          <Text style={styles.days}>{coverageDays} días</Text>
+          <Text style={styles.days}>{coverageDays} dias</Text>
         </View>
 
         <View style={styles.rowBetween}>
           <Text style={styles.sectionTitle}>Ingresos vs Gastos</Text>
-          <Text style={styles.softText}>Últimos 6 meses</Text>
+          <Text style={styles.softText}>Ultimas 6 semanas</Text>
         </View>
 
         <View style={styles.card}>
@@ -200,18 +208,42 @@ export default function InsightsScreen() {
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>Resumen automático</Text>
+        <Text style={styles.sectionTitle}>Resumen automatico</Text>
         <View style={styles.card}>
+          <Text style={styles.bodyText}>{aiSummary}</Text>
+          {dashboardHealth ? (
+            <>
+              <Text style={styles.bodyText}>Riesgo principal: {dashboardHealth.mainRisk}</Text>
+              <Text style={styles.bodyText}>
+                Oportunidad principal: {dashboardHealth.mainOpportunity}
+              </Text>
+              <Text style={styles.bodyText}>
+                Accion inmediata: {dashboardHealth.immediateAction}
+              </Text>
+              <Text style={styles.bodyText}>
+                Accion semanal: {dashboardHealth.weeklyAction}
+              </Text>
+            </>
+          ) : null}
           <Text style={styles.bodyText}>
-            {savingsRatio > 0
-              ? `Este mes tienes capacidad de ahorro equivalente a ${Math.min(savingsRatio, 100)}% de tus ingresos de referencia.`
-              : 'Tu situación mantiene liquidez, pero aún depende de convertir dinero libre en ahorro.'}
-          </Text>
-          <Text style={styles.bodyText}>
-            Si mantienes este ritmo, podrías sostener tus compromisos por al
-            menos {Math.max(coverageDays, 30)} días.
+            Si mantienes este ritmo, podrias sostener tus compromisos por al menos{" "}
+            {Math.max(coverageDays, 30)} dias.
           </Text>
         </View>
+
+        {dashboardHealth?.alerts?.length ? (
+          <>
+            <Text style={styles.sectionTitle}>Alertas inteligentes</Text>
+            <View style={styles.card}>
+              {dashboardHealth.alerts.map((alert) => (
+                <View key={alert.id} style={styles.alertRow}>
+                  <Text style={styles.alertTitle}>{alert.title}</Text>
+                  <Text style={styles.bodyText}>{alert.body}</Text>
+                </View>
+              ))}
+            </View>
+          </>
+        ) : null}
 
         <Pressable
           onPress={() => router.push('/(tabs)/planning')}
@@ -220,7 +252,7 @@ export default function InsightsScreen() {
             pressed && styles.pressed,
           ]}
         >
-          <Text style={styles.backPlanningText}>Volver a Planificación</Text>
+          <Text style={styles.backPlanningText}>Volver a Planificacion</Text>
         </Pressable>
       </ScrollView>
     </SafeAreaView>
@@ -266,6 +298,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   bodyText: { color: theme.colors.grayLight, fontSize: 13, lineHeight: 19 },
+  alertRow: { gap: 4, marginBottom: 8 },
+  alertTitle: { color: theme.colors.white, fontSize: 13, fontWeight: '700' },
   days: { color: theme.colors.white, fontSize: 36, fontWeight: '700' },
   chart: {
     minHeight: 160,
