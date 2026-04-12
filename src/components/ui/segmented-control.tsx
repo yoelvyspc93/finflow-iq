@@ -1,6 +1,7 @@
 import { theme } from "@/utils/theme";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  Platform,
   Pressable,
   StyleSheet,
   Text,
@@ -129,12 +130,13 @@ export function SegmentedControl<T extends string>({
   return (
     <View style={styles.container}>
       <View style={styles.scrollContent}>
-        <Animated.View pointerEvents="none" style={[styles.activePill, animatedPillStyle]} />
+        <Animated.View style={[styles.activePill, styles.noPointerEvents, animatedPillStyle]} />
         {options.map((option) => {
           const isActive = option.value === value;
 
           return (
             <Pressable
+              accessibilityRole="button"
               key={option.value}
               onLayout={(event) => {
                 const { width, x } = event.nativeEvent.layout;
@@ -204,10 +206,17 @@ const styles = StyleSheet.create({
     bottom: 0,
     borderRadius: 10,
     backgroundColor: theme.colors.primary,
-    shadowColor: theme.colors.primary,
-    shadowOpacity: 0.24,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
+    ...(Platform.OS === "web"
+      ? { boxShadow: "0px 4px 12px rgba(75, 105, 255, 0.24)" }
+      : {
+          shadowColor: theme.colors.primary,
+          shadowOpacity: 0.24,
+          shadowRadius: 10,
+          shadowOffset: { width: 0, height: 4 },
+        }),
+  },
+  noPointerEvents: {
+    pointerEvents: "none",
   },
   segmentText: {
     color: theme.colors.grayLight,

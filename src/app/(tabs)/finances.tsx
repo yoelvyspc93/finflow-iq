@@ -26,6 +26,7 @@ export default function FinancesScreen() {
     closeQuickSheet,
     draft,
     error,
+    exchanges,
     filter,
     formTitle,
     incomeSources,
@@ -76,9 +77,11 @@ export default function FinancesScreen() {
           <MovementSectionList
             categories={categories}
             entries={ledgerEntries}
+            exchanges={exchanges}
             filter={filter}
             incomeSources={incomeSources}
             onFilterChange={(value) => setFilter(value as typeof filter)}
+            wallets={wallets}
           />
         ) : (
           <SalaryHistoryList
@@ -91,7 +94,7 @@ export default function FinancesScreen() {
 
       <BottomSheet onClose={closeQuickSheet} visible={sheet === 'quick'}>
         <View style={styles.sheetHeader}>
-          <Text style={styles.sheetTitle}>Acciones Rapidas</Text>
+          <Text style={styles.sheetTitle}>Acciones rápidas</Text>
           <Pressable onPress={closeQuickSheet}>
             <Feather color="#8A96B3" name="x" size={20} />
           </Pressable>

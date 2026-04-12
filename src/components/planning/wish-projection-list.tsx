@@ -99,7 +99,9 @@ export function WishProjectionList({
                     ? "Conviene esperar"
                     : "Revisar antes de comprar"}
           </Text>
-          <Text style={styles.bodyText}>{item.wish.notes ?? item.confidenceReason}</Text>
+          <Text style={styles.bodyText}>
+            {item.wish.aiAdvice ?? item.wish.notes ?? item.confidenceReason}
+          </Text>
           <Text style={styles.softText}>
             {item.wish.isPurchased
               ? "Compra registrada"

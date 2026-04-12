@@ -1,49 +1,49 @@
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 
-import { Feather } from "@expo/vector-icons";
+import { Feather } from '@expo/vector-icons'
 
-import { BottomSheet } from "@/components/ui/bottom-sheet";
-import type { Category } from "@/modules/categories/types";
-import type { IncomeSource } from "@/modules/income-sources/types";
-import type { Wallet } from "@/modules/wallets/types";
-import { theme } from "@/utils/theme";
+import { BottomSheet } from '@/components/ui/bottom-sheet'
+import type { Category } from '@/modules/categories/types'
+import type { IncomeSource } from '@/modules/income-sources/types'
+import type { Wallet } from '@/modules/wallets/types'
+import { theme } from '@/utils/theme'
 
 export type FinancesFormSheetMode =
-  | "expense"
-  | "income"
-  | "transfer"
-  | "salary-period"
-  | "salary-payment"
-  | null;
+  | 'expense'
+  | 'income'
+  | 'transfer'
+  | 'salary-period'
+  | 'salary-payment'
+  | null
 
 export type FinancesDraft = {
-  amount: string;
-  categoryId: string | null;
-  date: string;
-  description: string;
-  destinationAmount: string;
-  destinationWalletId: string | null;
-  incomeSourceId: string | null;
-  rate: string;
-};
+  amount: string
+  categoryId: string | null
+  date: string
+  description: string
+  destinationAmount: string
+  destinationWalletId: string | null
+  incomeSourceId: string | null
+  rate: string
+}
 
 type FinancesFormSheetProps = {
-  activeWalletCurrency: string | null | undefined;
-  activeWalletName: string | undefined;
-  categories: Category[];
-  draft: FinancesDraft;
-  error: string | null;
-  incomeSources: IncomeSource[];
-  isSubmitting: boolean;
-  onClose: () => void;
-  onSubmit: () => void;
-  setDraft: React.Dispatch<React.SetStateAction<FinancesDraft>>;
-  sheet: FinancesFormSheetMode;
-  submitLabel: string;
-  title: string;
-  wallets: Wallet[];
-  selectedWalletId: string | null;
-};
+  activeWalletCurrency: string | null | undefined
+  activeWalletName: string | undefined
+  categories: Category[]
+  draft: FinancesDraft
+  error: string | null
+  incomeSources: IncomeSource[]
+  isSubmitting: boolean
+  onClose: () => void
+  onSubmit: () => void
+  setDraft: React.Dispatch<React.SetStateAction<FinancesDraft>>
+  sheet: FinancesFormSheetMode
+  submitLabel: string
+  title: string
+  wallets: Wallet[]
+  selectedWalletId: string | null
+}
 
 export function FinancesFormSheet({
   activeWalletCurrency,
@@ -66,12 +66,12 @@ export function FinancesFormSheet({
     <BottomSheet onClose={onClose} visible={sheet !== null}>
       <View style={styles.sheetHeader}>
         <Text style={styles.sheetTitle}>{title}</Text>
-        <Pressable onPress={onClose}>
+        <Pressable accessibilityLabel="Cerrar formulario" accessibilityRole="button" onPress={onClose}>
           <Feather color="#8A96B3" name="x" size={20} />
         </Pressable>
       </View>
       <Text style={styles.label}>
-        {sheet === "salary-period" ? "MONTO NOMINA" : "MONTO"}
+        {sheet === 'salary-period' ? 'MONTO ESPERADO' : 'MONTO'}
       </Text>
       <View style={styles.amountBox}>
         <Text style={styles.currency}>$</Text>
@@ -88,12 +88,12 @@ export function FinancesFormSheet({
         <View style={styles.col}>
           <Text style={styles.label}>BILLETERA</Text>
           <View style={styles.field}>
-            <Text style={styles.fieldText}>{activeWalletName ?? "Efectivo"}</Text>
+            <Text style={styles.fieldText}>{activeWalletName ?? 'Efectivo'}</Text>
           </View>
         </View>
         <View style={styles.col}>
           <Text style={styles.label}>
-            {sheet === "salary-period" ? "PERÍODO (AAAA-MM)" : "FECHA"}
+            {sheet === 'salary-period' ? 'PERÍODO (AAAA-MM)' : 'FECHA'}
           </Text>
           <View style={styles.field}>
             <TextInput
@@ -101,18 +101,19 @@ export function FinancesFormSheet({
                 setDraft((current) => ({ ...current, date: value }))
               }
               style={styles.fieldInput}
-              value={sheet === "salary-period" ? draft.date.slice(0, 7) : draft.date}
+              value={sheet === 'salary-period' ? draft.date.slice(0, 7) : draft.date}
             />
           </View>
         </View>
       </View>
-      {sheet === "expense" ? (
+      {sheet === 'expense' ? (
         <>
-          <Text style={styles.label}>CATEGORIA</Text>
+          <Text style={styles.label}>CATEGORÍA</Text>
           <View style={styles.chips}>
             {categories.length ? (
               categories.map((item) => (
                 <Pressable
+                  accessibilityRole="button"
                   key={item.id}
                   onPress={() =>
                     setDraft((current) => ({ ...current, categoryId: item.id }))
@@ -133,18 +134,19 @@ export function FinancesFormSheet({
                 </Pressable>
               ))
             ) : (
-              <Text style={styles.soft}>No hay categorias activas disponibles.</Text>
+              <Text style={styles.soft}>No hay categorías activas disponibles.</Text>
             )}
           </View>
         </>
       ) : null}
-      {sheet === "income" ? (
+      {sheet === 'income' ? (
         <>
           <Text style={styles.label}>FUENTE</Text>
           <View style={styles.chips}>
             {incomeSources.length ? (
               incomeSources.map((item) => (
                 <Pressable
+                  accessibilityRole="button"
                   key={item.id}
                   onPress={() =>
                     setDraft((current) => ({
@@ -173,7 +175,7 @@ export function FinancesFormSheet({
           </View>
         </>
       ) : null}
-      {sheet === "transfer" ? (
+      {sheet === 'transfer' ? (
         <>
           <Text style={styles.label}>DESTINO</Text>
           <View style={styles.chips}>
@@ -186,6 +188,7 @@ export function FinancesFormSheet({
               )
               .map((item) => (
                 <Pressable
+                  accessibilityRole="button"
                   key={item.id}
                   onPress={() =>
                     setDraft((current) => ({
@@ -242,7 +245,7 @@ export function FinancesFormSheet({
           </View>
         </>
       ) : null}
-      <Text style={styles.label}>DESCRIPCION</Text>
+      <Text style={styles.label}>DESCRIPCIÓN</Text>
       <TextInput
         multiline
         onChangeText={(value) =>
@@ -253,59 +256,60 @@ export function FinancesFormSheet({
         style={styles.area}
         value={draft.description}
       />
-      {sheet === "salary-payment" ? (
+      {sheet === 'salary-payment' ? (
         <Text style={styles.soft}>
-          Se asignara automaticamente a los periodos pendientes visibles.
+          Se asignará automáticamente a los períodos pendientes visibles.
         </Text>
       ) : null}
-      {sheet === "salary-period" ? (
+      {sheet === 'salary-period' ? (
         <Text style={styles.soft}>
-          Crea un período de nómina para que los cobros de salario se asignen
-          automaticamente.
+          Crea un período salarial para que los pagos se asignen automáticamente.
         </Text>
       ) : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <Pressable
+        accessibilityLabel={submitLabel}
+        accessibilityRole="button"
         onPress={onSubmit}
         style={({ pressed }) => [styles.button, pressed && styles.pressed]}
       >
         <Text style={styles.buttonText}>
-          {isSubmitting ? "Guardando..." : submitLabel}
+          {isSubmitting ? 'Guardando...' : submitLabel}
         </Text>
       </Pressable>
     </BottomSheet>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   sheetHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: theme.spacing.lg,
   },
-  sheetTitle: { color: theme.colors.white, fontSize: 24, fontWeight: "700" },
+  sheetTitle: { color: theme.colors.white, fontSize: 24, fontWeight: '700' },
   label: {
     color: theme.colors.grayLight,
     fontSize: 12,
-    fontWeight: "700",
+    fontWeight: '700',
     marginBottom: 8,
     marginTop: 8,
   },
   amountBox: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 10,
     borderRadius: theme.radii.sm,
     borderWidth: 1,
     borderColor: theme.colors.divider,
-    backgroundColor: "rgba(39, 46, 82, 0.38)",
+    backgroundColor: 'rgba(39, 46, 82, 0.38)',
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
-  currency: { color: theme.colors.primary, fontSize: 28, fontWeight: "700" },
-  amountInput: { flex: 1, color: theme.colors.white, fontSize: 28, fontWeight: "700" },
-  cols: { flexDirection: "row", gap: 12 },
+  currency: { color: theme.colors.primary, fontSize: 28, fontWeight: '700' },
+  amountInput: { flex: 1, color: theme.colors.white, fontSize: 28, fontWeight: '700' },
+  cols: { flexDirection: 'row', gap: 12 },
   col: { flex: 1 },
   field: {
     minHeight: 42,
@@ -313,12 +317,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.divider,
     backgroundColor: theme.colors.backgroundCard,
-    justifyContent: "center",
+    justifyContent: 'center',
     paddingHorizontal: 12,
   },
-  fieldText: { color: theme.colors.white, fontSize: 14, fontWeight: "600" },
+  fieldText: { color: theme.colors.white, fontSize: 14, fontWeight: '600' },
   fieldInput: { color: theme.colors.white, fontSize: 14, paddingVertical: 0 },
-  chips: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   chip: {
     minWidth: 74,
     minHeight: 40,
@@ -326,15 +330,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.divider,
     backgroundColor: theme.colors.backgroundCard,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingHorizontal: theme.spacing.md,
   },
   chipActive: {
     borderColor: theme.colors.primary,
     backgroundColor: theme.colors.blueSoft,
   },
-  chipText: { color: theme.colors.grayLight, fontSize: 12, fontWeight: "700" },
+  chipText: { color: theme.colors.grayLight, fontSize: 12, fontWeight: '700' },
   chipTextActive: { color: theme.colors.white },
   area: {
     minHeight: 88,
@@ -345,18 +349,18 @@ const styles = StyleSheet.create({
     color: theme.colors.white,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.md,
-    textAlignVertical: "top",
+    textAlignVertical: 'top',
   },
   soft: { color: theme.colors.grayLight, fontSize: 12, lineHeight: 18 },
   error: { color: theme.colors.red, fontSize: 13, lineHeight: 20, marginTop: 12 },
   button: {
     minHeight: 52,
     borderRadius: theme.radii.sm,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: theme.colors.primary,
     marginTop: 18,
   },
-  buttonText: { color: theme.colors.white, fontSize: 15, fontWeight: "700" },
+  buttonText: { color: theme.colors.white, fontSize: 15, fontWeight: '700' },
   pressed: { opacity: 0.88 },
-});
+})

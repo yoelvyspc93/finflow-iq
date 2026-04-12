@@ -1,9 +1,14 @@
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
+import { useEffect, useState } from 'react'
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 
 import { Feather } from '@expo/vector-icons'
 
 import { BottomSheet } from '@/components/ui/bottom-sheet'
+import { generateWishSimulationInsights } from '@/modules/ai/service'
 import type { Category } from '@/modules/categories/types'
+import { useAppStore } from '@/stores/app-store'
+import { useAuthStore } from '@/stores/auth-store'
+import { usePlanningStore } from '@/stores/planning-store'
 import type { Wallet } from '@/modules/wallets/types'
 import type { Wish } from '@/modules/wishes/types'
 import { theme } from '@/utils/theme'
@@ -40,11 +45,67 @@ export function WishPurchaseSheet({
   visible,
   wallets,
 }: WishPurchaseSheetProps) {
+  const user = useAuthStore((state) => state.user)
+  const overview = usePlanningStore((state) => state.overview)
+  const currentScore = usePlanningStore((state) => state.currentScore)
+  const wishProjections = usePlanningStore((state) => state.wishProjections)
+  const settings = useAppStore((state) => state.settings)
+  const [simulationError, setSimulationError] = useState<string | null>(null)
+  const [simulationItems, setSimulationItems] = useState<
+    Awaited<ReturnType<typeof generateWishSimulationInsights>>
+  >([])
+  const [simulationLoading, setSimulationLoading] = useState(false)
   const wallet = wallets.find((item) => item.id === selectedWish?.walletId) ?? null
   const amount = Number(draft.amount)
   const amountIsValid = !Number.isNaN(amount) && amount > 0
   const difference =
     selectedWish && amountIsValid ? amount - selectedWish.estimatedAmount : null
+  const selectedProjection =
+    selectedWish
+      ? wishProjections.find((projection) => projection.wish.id === selectedWish.id) ?? null
+      : null
+
+  useEffect(() => {
+    if (!visible || !selectedWish || !selectedProjection || !currentScore || !overview || !user?.id || !settings) {
+      setSimulationItems([])
+      setSimulationError(null)
+      setSimulationLoading(false)
+      return
+    }
+
+    let isCurrent = true
+    setSimulationLoading(true)
+    setSimulationError(null)
+
+    void generateWishSimulationInsights({
+      currentScore,
+      overview,
+      userId: user.id,
+      wishProjection: selectedProjection,
+    })
+      .then((result) => {
+        if (!isCurrent) {
+          return
+        }
+
+        setSimulationItems(result)
+        setSimulationLoading(false)
+      })
+      .catch((nextError) => {
+        if (!isCurrent) {
+          return
+        }
+
+        setSimulationError(
+          nextError instanceof Error ? nextError.message : 'No se pudo cargar la simulacion.',
+        )
+        setSimulationLoading(false)
+      })
+
+    return () => {
+      isCurrent = false
+    }
+  }, [currentScore, overview, selectedProjection, selectedWish, settings, user?.id, visible])
 
   return (
     <BottomSheet onClose={onClose} visible={visible}>
@@ -130,6 +191,41 @@ export function WishPurchaseSheet({
               {difference > 0 ? 'por encima' : 'por debajo'} del valor estimado.
             </Text>
           ) : null}
+        </View>
+      ) : null}
+      {selectedWish ? (
+        <View style={styles.contextCard}>
+          <Text style={styles.contextTitle}>Simulacion rapida</Text>
+          {simulationLoading ? (
+            <View style={styles.simulationLoading}>
+              <ActivityIndicator color={theme.colors.primary} />
+              <Text style={styles.soft}>Calculando escenarios...</Text>
+            </View>
+          ) : simulationError ? (
+            <Text style={styles.error}>{simulationError}</Text>
+          ) : (
+            simulationItems.map((item) => (
+              <View key={item.scenario} style={styles.simulationCard}>
+                <View style={styles.rowBetween}>
+                  <Text style={styles.contextTitle}>{item.label}</Text>
+                  <Text style={styles.contextAmount}>
+                    Score {item.after.financialScore} ({item.delta.financialScore >= 0 ? '+' : ''}
+                    {item.delta.financialScore})
+                  </Text>
+                </View>
+                <Text style={styles.soft}>
+                  Asignable: ${item.after.assignableAmount.toFixed(2)} ({item.delta.assignableAmount >= 0 ? '+' : ''}
+                  {item.delta.assignableAmount.toFixed(2)})
+                </Text>
+                <Text style={styles.soft}>
+                  Balance: ${item.after.availableBalance.toFixed(2)} ({item.delta.availableBalance >= 0 ? '+' : ''}
+                  {item.delta.availableBalance.toFixed(2)})
+                </Text>
+                <Text style={styles.soft}>{item.interpretation.summary}</Text>
+                <Text style={styles.soft}>Accion: {item.interpretation.recommendedAction}</Text>
+              </View>
+            ))
+          )}
         </View>
       ) : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
@@ -234,6 +330,20 @@ const styles = StyleSheet.create({
   contextTitle: { color: theme.colors.white, fontSize: 14, fontWeight: '700', flex: 1 },
   contextAmount: { color: theme.colors.primary, fontSize: 13, fontWeight: '700' },
   soft: { color: theme.colors.grayLight, fontSize: 12, lineHeight: 18 },
+  simulationCard: {
+    gap: 6,
+    borderRadius: theme.radii.sm,
+    borderWidth: 1,
+    borderColor: theme.colors.divider,
+    backgroundColor: 'rgba(39, 46, 82, 0.22)',
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.md,
+  },
+  simulationLoading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
   error: { color: theme.colors.red, fontSize: 13, lineHeight: 20, marginTop: 12 },
   button: {
     minHeight: 52,

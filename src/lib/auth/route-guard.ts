@@ -23,7 +23,7 @@ export function resolveProtectedRoute(
   ) {
     return {
       isLoading: true,
-      loadingMessage: "Restaurando sesion...",
+      loadingMessage: "Restaurando sesión...",
       redirectTo: null,
       requiresOnboarding: false,
     };

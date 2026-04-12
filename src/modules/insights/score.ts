@@ -76,6 +76,26 @@ export async function upsertFinancialScore(input: {
   return mapFinancialScore(data);
 }
 
+export async function updateFinancialScoreAiTip(args: {
+  aiTip: string | null
+  scoreId: string
+}) {
+  const { data, error } = await supabase
+    .from("financial_scores")
+    .update({
+      ai_tip: args.aiTip,
+    })
+    .eq("id", args.scoreId)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return mapFinancialScore(data);
+}
+
 export {
   calculateFinancialScore,
   calculateSalaryStabilityScore,

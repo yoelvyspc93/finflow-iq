@@ -17,15 +17,15 @@ export default function Html({ children }: { children: ReactNode }) {
         <meta charSet="utf-8" />
         <meta
           name="viewport"
-          content="width=device-width, initial-scale=1, viewport-fit=cover"
+          content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no"
         />
         <meta name="theme-color" content="#0F1223" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="FinFlow IQ" />
-        <link rel="manifest" href="./manifest.json" />
-        <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+        <link rel="manifest" href="/manifest.json" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <title>FinFlow IQ</title>
         <meta name="description" content="FinFlow IQ es una app de finanzas personales que te ayuda a controlar tu dinero." />
         <style>{`

@@ -67,3 +67,9 @@ enable_anonymous_sign_ins = false
 enable_signup = true
 double_confirm_changes = true
 enable_confirmations = true
+
+[functions.financial-ai]
+verify_jwt = false
+
+[functions.enqueue-financial-ai]
+verify_jwt = false

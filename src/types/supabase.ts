@@ -14,6 +14,163 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_insights: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          expires_at: string | null
+          id: string
+          input_snapshot: Json
+          input_tokens: number | null
+          job_id: string | null
+          latency_ms: number | null
+          model: string | null
+          output_json: Json | null
+          output_text: string | null
+          output_tokens: number | null
+          prompt_version: string | null
+          provider: string | null
+          scope: string
+          scope_id: string | null
+          snapshot_fingerprint: string
+          source: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          expires_at?: string | null
+          id?: string
+          input_snapshot: Json
+          input_tokens?: number | null
+          job_id?: string | null
+          latency_ms?: number | null
+          model?: string | null
+          output_json?: Json | null
+          output_text?: string | null
+          output_tokens?: number | null
+          prompt_version?: string | null
+          provider?: string | null
+          scope: string
+          scope_id?: string | null
+          snapshot_fingerprint: string
+          source?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          expires_at?: string | null
+          id?: string
+          input_snapshot?: Json
+          input_tokens?: number | null
+          job_id?: string | null
+          latency_ms?: number | null
+          model?: string | null
+          output_json?: Json | null
+          output_text?: string | null
+          output_tokens?: number | null
+          prompt_version?: string | null
+          provider?: string | null
+          scope?: string
+          scope_id?: string | null
+          snapshot_fingerprint?: string
+          source?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_insights_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "ai_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_jobs: {
+        Row: {
+          ai_insight_id: string | null
+          attempts: number
+          available_at: string
+          completed_at: string | null
+          created_at: string
+          id: string
+          input_snapshot: Json
+          last_error: string | null
+          max_attempts: number
+          model: string | null
+          priority: number
+          prompt_version: string | null
+          provider: string | null
+          scope: string
+          scope_id: string | null
+          snapshot_fingerprint: string
+          started_at: string | null
+          status: string
+          trigger_source: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ai_insight_id?: string | null
+          attempts?: number
+          available_at?: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          input_snapshot: Json
+          last_error?: string | null
+          max_attempts?: number
+          model?: string | null
+          priority?: number
+          prompt_version?: string | null
+          provider?: string | null
+          scope: string
+          scope_id?: string | null
+          snapshot_fingerprint: string
+          started_at?: string | null
+          status?: string
+          trigger_source: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ai_insight_id?: string | null
+          attempts?: number
+          available_at?: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          input_snapshot?: Json
+          last_error?: string | null
+          max_attempts?: number
+          model?: string | null
+          priority?: number
+          prompt_version?: string | null
+          provider?: string | null
+          scope?: string
+          scope_id?: string | null
+          snapshot_fingerprint?: string
+          started_at?: string | null
+          status?: string
+          trigger_source?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_jobs_ai_insight_id_fkey"
+            columns: ["ai_insight_id"]
+            isOneToOne: false
+            referencedRelation: "ai_insights"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       budget_provisions: {
         Row: {
           amount: number
@@ -756,6 +913,38 @@ export type Database = {
         Args: { target_metadata: Json; target_user_id: string }
         Returns: undefined
       }
+      claim_ai_jobs: {
+        Args: { target_batch_size?: number }
+        Returns: {
+          ai_insight_id: string | null
+          attempts: number
+          available_at: string
+          completed_at: string | null
+          created_at: string
+          id: string
+          input_snapshot: Json
+          last_error: string | null
+          max_attempts: number
+          model: string | null
+          priority: number
+          prompt_version: string | null
+          provider: string | null
+          scope: string
+          scope_id: string | null
+          snapshot_fingerprint: string
+          started_at: string | null
+          status: string
+          trigger_source: string
+          updated_at: string
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "ai_jobs"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       create_adjustment: {
         Args: {
           entry_date: string
@@ -968,6 +1157,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      install_process_financial_ai_schedule: { Args: never; Returns: undefined }
       reconcile_wallet_balance: {
         Args: { target_wallet_id: string }
         Returns: {

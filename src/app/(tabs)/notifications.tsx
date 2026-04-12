@@ -11,11 +11,12 @@ import { ScreenHeader } from "@/components/ui/screen-header";
 import { useAppStore } from "@/stores/app-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { useCommitmentStore } from "@/stores/commitment-store";
+import { usePlanningStore } from "@/stores/planning-store";
 import { theme } from "@/utils/theme";
 
-type NotificationFilter = "all" | "commitments" | "security";
-type NotificationIcon = "calendar" | "shield";
-type NotificationKind = "commitments" | "security";
+type NotificationFilter = "all" | "commitments" | "security" | "financial";
+type NotificationIcon = "calendar" | "shield" | "pulse";
+type NotificationKind = "commitments" | "security" | "financial";
 
 type NotificationItem = {
   body: string;
@@ -30,6 +31,7 @@ type NotificationItem = {
 
 const filters: { label: string; value: NotificationFilter }[] = [
   { label: "Todos", value: "all" },
+  { label: "Finanzas", value: "financial" },
   { label: "Compromisos", value: "commitments" },
   { label: "Seguridad", value: "security" },
 ];
@@ -113,10 +115,13 @@ export default function NotificationsScreen() {
 
   const user = useAuthStore((state) => state.user);
   const wallets = useAppStore((state) => state.wallets);
+  const settings = useAppStore((state) => state.settings);
   const recurringExpenses = useCommitmentStore((state) => state.recurringExpenses);
   const budgetProvisions = useCommitmentStore((state) => state.budgetProvisions);
   const isLoading = useCommitmentStore((state) => state.isLoading);
   const refreshCommitmentData = useCommitmentStore((state) => state.refreshCommitmentData);
+  const dashboardHealth = usePlanningStore((state) => state.dashboardHealth);
+  const refreshPlanningData = usePlanningStore((state) => state.refreshPlanningData);
 
   const activeWalletIds = useMemo(
     () => new Set(wallets.filter((wallet) => wallet.isActive).map((wallet) => wallet.id)),
@@ -129,12 +134,21 @@ export default function NotificationsScreen() {
     }
 
     const month = `${new Date().toISOString().slice(0, 7)}-01`;
-    void refreshCommitmentData({
-      month,
-      userId: user.id,
-      walletId: null,
-    });
-  }, [refreshCommitmentData, user?.id]);
+    void Promise.all([
+      refreshCommitmentData({
+        month,
+        userId: user.id,
+        walletId: null,
+      }),
+      settings
+        ? refreshPlanningData({
+            settings,
+            userId: user.id,
+            wallets,
+          })
+        : Promise.resolve(),
+    ]);
+  }, [refreshCommitmentData, refreshPlanningData, settings, user?.id, wallets]);
 
   const items = useMemo<NotificationItem[]>(() => {
     const currentMonth = new Date().getUTCMonth() + 1;
@@ -189,6 +203,22 @@ export default function NotificationsScreen() {
         tone: "#4B69FF",
       }));
 
+    const financialItems: NotificationItem[] = (dashboardHealth?.alerts ?? []).map((alert) => ({
+      body: alert.body,
+      date: new Date().toISOString(),
+      icon: "pulse",
+      id: `financial-${alert.id}`,
+      kind: "financial",
+      targetRoute: alert.route,
+      title: alert.title,
+      tone:
+        alert.severity === "high"
+          ? "#FF6B6D"
+          : alert.severity === "medium"
+            ? "#F59E0B"
+            : "#4B69FF",
+    }));
+
     const securityItems: NotificationItem[] = user?.last_sign_in_at
       ? [
         {
@@ -204,10 +234,10 @@ export default function NotificationsScreen() {
       ]
       : [];
 
-    return [...commitmentItems, ...provisionItems, ...securityItems].sort((left, right) =>
+    return [...financialItems, ...commitmentItems, ...provisionItems, ...securityItems].sort((left, right) =>
       right.date.localeCompare(left.date),
     );
-  }, [activeWalletIds, budgetProvisions, recurringExpenses, user?.last_sign_in_at]);
+  }, [activeWalletIds, budgetProvisions, dashboardHealth?.alerts, recurringExpenses, user?.last_sign_in_at]);
 
   const filteredItems = useMemo(
     () => items.filter((item) => filter === "all" || item.kind === filter),
@@ -233,6 +263,8 @@ export default function NotificationsScreen() {
   const emptyMessage =
     filter === "security"
       ? "No hay eventos de seguridad recientes."
+      : filter === "financial"
+        ? "No hay alertas financieras activas."
       : filter === "commitments"
         ? "No hay compromisos programados para este mes."
         : "No hay notificaciones disponibles en este momento.";
@@ -275,6 +307,8 @@ export default function NotificationsScreen() {
                   <View style={[styles.iconWrap, { backgroundColor: `${item.tone}22` }]}>
                     {item.icon === "calendar" ? (
                       <MaterialCommunityIcons color={item.tone} name="calendar-refresh-outline" size={20} />
+                    ) : item.icon === "pulse" ? (
+                      <Ionicons color={item.tone} name="pulse-outline" size={18} />
                     ) : (
                       <Ionicons color={item.tone} name="shield-checkmark-outline" size={18} />
                     )}

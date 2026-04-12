@@ -88,6 +88,28 @@ export async function syncWishProjections(
   }
 }
 
+export async function updateWishAiAdvice(args: {
+  aiAdvice: string | null
+  lastAiAdviceAt: string | null
+  wishId: string
+}) {
+  const { data, error } = await supabase
+    .from("wishes")
+    .update({
+      ai_advice: args.aiAdvice,
+      last_ai_advice_at: args.lastAiAdviceAt,
+    })
+    .eq("id", args.wishId)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return mapWish(data);
+}
+
 export async function createWish(input: CreateWishInput & { userId: string }) {
   const { data, error } = await supabase
     .from("wishes")

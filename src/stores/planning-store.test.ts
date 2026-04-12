@@ -1,6 +1,25 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const refreshMock = vi.fn()
+const supabaseChannelOn = vi.fn()
+const supabaseChannelSubscribe = vi.fn()
+const supabaseChannelUnsubscribe = vi.fn()
+
+const supabaseChannel = {
+  on: supabaseChannelOn,
+  subscribe: supabaseChannelSubscribe,
+  unsubscribe: supabaseChannelUnsubscribe,
+}
+
+supabaseChannelOn.mockReturnValue(supabaseChannel)
+supabaseChannelSubscribe.mockReturnValue(supabaseChannel)
+supabaseChannelUnsubscribe.mockResolvedValue(undefined)
+
+vi.mock('@/lib/supabase/client', () => ({
+  supabase: {
+    channel: vi.fn(() => supabaseChannel),
+  },
+}))
 
 vi.mock('@/modules/planning/planning-refresh-service', () => ({
   planningRefreshService: {

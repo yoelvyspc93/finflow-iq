@@ -28,6 +28,7 @@ export function useFinancesScreen() {
   const selectedWalletId = useAppStore((state) => state.selectedWalletId)
   const refreshAppData = useAppStore((state) => state.refreshAppData)
   const activeWallet = selectActiveWallet(wallets, selectedWalletId)
+  const exchanges = useExchangeStore((state) => state.exchanges)
   const ledgerEntries = useLedgerStore((state) => state.entries)
   const refreshLedger = useLedgerStore((state) => state.refreshLedger)
   const refreshExchangeData = useExchangeStore(
@@ -106,21 +107,21 @@ export function useFinancesScreen() {
   ])
 
   async function submitSheet() {
-    const movementHandled = await movements.submitMovementSheet(
+    const movementResult = await movements.submitMovementSheet(
       quickActions.activeFormSheet,
     )
-    if (movementHandled) {
-      if (!quickActions.error) {
+    if (movementResult.handled) {
+      if (movementResult.success) {
         quickActions.setSheet(null)
       }
       return
     }
 
-    const salaryHandled = await movements.submitSalarySheet({
+    const salaryResult = await movements.submitSalarySheet({
       salaryCurrency: asSalaryCurrency(activeWallet?.currency ?? null),
       sheet: quickActions.activeFormSheet,
     })
-    if (salaryHandled && !quickActions.error) {
+    if (salaryResult.handled && salaryResult.success) {
       quickActions.setSheet(null)
     }
   }
@@ -135,6 +136,7 @@ export function useFinancesScreen() {
     closeQuickSheet: quickActions.closeQuickSheet,
     draft: quickActions.draft,
     error: quickActions.error,
+    exchanges,
     filter,
     formTitle: quickActions.formTitle,
     incomeSources: movements.incomeSources,

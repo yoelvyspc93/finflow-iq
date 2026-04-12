@@ -1,37 +1,39 @@
-import { useEffect, useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { useEffect, useMemo, useState } from 'react'
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 
-import { useRouter } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from 'expo-router'
+import { SafeAreaView } from 'react-native-safe-area-context'
 
-import { AppSwitch } from "@/components/ui/app-switch";
-import { BottomSheet } from "@/components/ui/bottom-sheet";
-import { DecorativeBackground } from "@/components/ui/decorative-background";
-import { ScreenHeader } from "@/components/ui/screen-header";
+import { AppSwitch } from '@/components/ui/app-switch'
+import { BottomSheet } from '@/components/ui/bottom-sheet'
+import { DecorativeBackground } from '@/components/ui/decorative-background'
+import { ScreenHeader } from '@/components/ui/screen-header'
 import {
   createTotpChallenge,
   disableTotpFactor,
   enrollTotpFactor,
   getPrimaryTotpFactor,
+  isTotpEnrollmentDisabledError,
+  isTotpEnrollmentSupported,
   toUserFriendlyMfaError,
   verifyTotpChallenge,
-} from "@/lib/auth/mfa";
-import { updateSettings } from "@/modules/settings/service";
-import type { SessionTimeoutMinutes } from "@/modules/settings/types";
-import { useAppStore } from "@/stores/app-store";
-import { useAuthStore } from "@/stores/auth-store";
-import { useSecurityStore } from "@/stores/security-store";
-import { theme } from "@/utils/theme";
+} from '@/lib/auth/mfa'
+import { updateSettings } from '@/modules/settings/service'
+import type { SessionTimeoutMinutes } from '@/modules/settings/types'
+import { useAppStore } from '@/stores/app-store'
+import { useAuthStore } from '@/stores/auth-store'
+import { useSecurityStore } from '@/stores/security-store'
+import { theme } from '@/utils/theme'
 
-type MfaSheetMode = "enable" | "disable" | null;
+type MfaSheetMode = 'enable' | 'disable' | null
 
 const timeoutOptions: { label: string; value: SessionTimeoutMinutes }[] = [
-  { label: "Inmediato", value: 0 },
-  { label: "5 min", value: 5 },
-  { label: "10 min", value: 10 },
-  { label: "20 min", value: 20 },
-  { label: "30 min", value: 30 },
-];
+  { label: 'Inmediato', value: 0 },
+  { label: '5 min', value: 5 },
+  { label: '10 min', value: 10 },
+  { label: '20 min', value: 20 },
+  { label: '30 min', value: 30 },
+]
 
 function Row({
   hint,
@@ -39,13 +41,14 @@ function Row({
   title,
   value,
 }: {
-  hint?: string;
-  onPress?: () => void;
-  title: string;
-  value?: string;
+  hint?: string
+  onPress?: () => void
+  title: string
+  value?: string
 }) {
   return (
     <Pressable
+      accessibilityRole="button"
       disabled={!onPress}
       onPress={onPress}
       style={({ pressed }) => [styles.row, pressed && onPress && styles.pressed]}
@@ -58,38 +61,51 @@ function Row({
         {value ? <Text style={styles.rowValue}>{value}</Text> : null}
       </View>
     </Pressable>
-  );
+  )
 }
 
 export default function SecuritySettingsScreen() {
-  const router = useRouter();
-  const [mfaSheet, setMfaSheet] = useState<MfaSheetMode>(null);
-  const [timeoutSheetOpen, setTimeoutSheetOpen] = useState(false);
-  const [mfaError, setMfaError] = useState<string | null>(null);
-  const [mfaCode, setMfaCode] = useState("");
-  const [mfaFriendlyName] = useState("FinFlow Authenticator");
-  const [isMfaSubmitting, setIsMfaSubmitting] = useState(false);
+  const router = useRouter()
+  const [mfaSheet, setMfaSheet] = useState<MfaSheetMode>(null)
+  const [timeoutSheetOpen, setTimeoutSheetOpen] = useState(false)
+  const [mfaError, setMfaError] = useState<string | null>(null)
+  const [mfaCode, setMfaCode] = useState('')
+  const [mfaFriendlyName] = useState('FinFlow Authenticator')
+  const [isMfaSubmitting, setIsMfaSubmitting] = useState(false)
+  const [canEnrollTotp, setCanEnrollTotp] = useState(isTotpEnrollmentSupported())
   const [enrollment, setEnrollment] = useState<{
-    factorId: string;
-    secret: string;
-    uri: string;
-  } | null>(null);
+    factorId: string
+    secret: string
+    uri: string
+  } | null>(null)
 
-  const user = useAuthStore((state) => state.user);
-  const settings = useAppStore((state) => state.settings);
-  const replaceLocalSettings = useAppStore((state) => state.replaceLocalSettings);
-  const mfaEnabled = useSecurityStore((state) => state.mfaEnabled);
-  const mfaFactorId = useSecurityStore((state) => state.mfaFactorId);
-  const setMfa = useSecurityStore((state) => state.setMfa);
+  const user = useAuthStore((state) => state.user)
+  const settings = useAppStore((state) => state.settings)
+  const replaceLocalSettings = useAppStore((state) => state.replaceLocalSettings)
+  const mfaEnabled = useSecurityStore((state) => state.mfaEnabled)
+  const mfaFactorId = useSecurityStore((state) => state.mfaFactorId)
+  const setMfa = useSecurityStore((state) => state.setMfa)
 
   const timeoutLabel = useMemo(() => {
-    const current = settings?.sessionTimeoutMinutes ?? 5;
-    return timeoutOptions.find((item) => item.value === current)?.label ?? "5 min";
-  }, [settings?.sessionTimeoutMinutes]);
+    const current = settings?.sessionTimeoutMinutes ?? 5
+    return timeoutOptions.find((item) => item.value === current)?.label ?? '5 min'
+  }, [settings?.sessionTimeoutMinutes])
+
+  const mfaHint = useMemo(() => {
+    if (mfaEnabled) {
+      return 'Protege tu cuenta con códigos temporales desde una app de autenticación.'
+    }
+
+    if (!canEnrollTotp) {
+      return 'No disponible en este entorno hasta que el backend habilite TOTP.'
+    }
+
+    return 'Protege tu cuenta con códigos temporales desde una app de autenticación.'
+  }, [canEnrollTotp, mfaEnabled])
 
   useEffect(() => {
     if (!user?.id) {
-      return;
+      return
     }
 
     void getPrimaryTotpFactor()
@@ -97,149 +113,164 @@ export default function SecuritySettingsScreen() {
         setMfa({
           factorId: factor?.id ?? null,
           isEnabled: Boolean(factor),
-        });
+        })
       })
       .catch(() => {
         setMfa({
           factorId: null,
           isEnabled: false,
-        });
-      });
-  }, [setMfa, user?.id]);
+        })
+      })
+  }, [setMfa, user?.id])
 
   function closeMfaSheet() {
-    setMfaSheet(null);
-    setMfaError(null);
-    setMfaCode("");
-    setIsMfaSubmitting(false);
-    setEnrollment(null);
+    setMfaSheet(null)
+    setMfaError(null)
+    setMfaCode('')
+    setIsMfaSubmitting(false)
+    setEnrollment(null)
   }
 
   async function handleOpenMfaEnable() {
-    setMfaError(null);
-    setIsMfaSubmitting(true);
+    if (!canEnrollTotp) {
+      setMfaError('La verificación en dos pasos no está disponible en este entorno todavía.')
+      return
+    }
+
+    setMfaError(null)
+    setIsMfaSubmitting(true)
 
     try {
-      const data = await enrollTotpFactor(mfaFriendlyName);
+      const data = await enrollTotpFactor(mfaFriendlyName)
       setEnrollment({
         factorId: data.id,
         secret: data.totp.secret,
         uri: data.totp.uri,
-      });
-      setMfaSheet("enable");
+      })
+      setMfaSheet('enable')
     } catch (error) {
+      if (isTotpEnrollmentDisabledError(error)) {
+        setCanEnrollTotp(false)
+      }
+
       setMfaError(
         toUserFriendlyMfaError(
           error,
-          "No se pudo iniciar la configuración de verificación en dos pasos.",
+          'No se pudo iniciar la configuración de verificación en dos pasos.',
         ),
-      );
+      )
     } finally {
-      setIsMfaSubmitting(false);
+      setIsMfaSubmitting(false)
     }
   }
 
   async function handleVerifyMfaEnable() {
     if (!enrollment) {
-      setMfaError("No hay una verificación pendiente.");
-      return;
-    }
-    if (!/^\d{6}$/.test(mfaCode.trim())) {
-      setMfaError("Escribe un código de 6 dígitos.");
-      return;
+      setMfaError('No hay una verificación pendiente.')
+      return
     }
 
-    setIsMfaSubmitting(true);
-    setMfaError(null);
+    if (!/^\d{6}$/.test(mfaCode.trim())) {
+      setMfaError('Escribe un código de 6 dígitos.')
+      return
+    }
+
+    setIsMfaSubmitting(true)
+    setMfaError(null)
 
     try {
-      const challenge = await createTotpChallenge(enrollment.factorId);
+      const challenge = await createTotpChallenge(enrollment.factorId)
       await verifyTotpChallenge({
         challengeId: challenge.id,
         code: mfaCode,
         factorId: enrollment.factorId,
-      });
+      })
 
       setMfa({
         factorId: enrollment.factorId,
         isEnabled: true,
-      });
-      closeMfaSheet();
+      })
+      closeMfaSheet()
     } catch (error) {
-      setMfaError(toUserFriendlyMfaError(error, "El código es inválido o ya venció."));
-      setIsMfaSubmitting(false);
+      setMfaError(
+        toUserFriendlyMfaError(error, 'El código es inválido o ya venció.'),
+      )
+      setIsMfaSubmitting(false)
     }
   }
 
   async function handleDisableMfa() {
     if (!mfaFactorId) {
-      setMfaError("No hay una verificación activa.");
-      return;
-    }
-    if (!/^\d{6}$/.test(mfaCode.trim())) {
-      setMfaError("Escribe un código de 6 dígitos.");
-      return;
+      setMfaError('No hay una verificación activa.')
+      return
     }
 
-    setIsMfaSubmitting(true);
-    setMfaError(null);
+    if (!/^\d{6}$/.test(mfaCode.trim())) {
+      setMfaError('Escribe un código de 6 dígitos.')
+      return
+    }
+
+    setIsMfaSubmitting(true)
+    setMfaError(null)
 
     try {
       await disableTotpFactor({
         code: mfaCode,
         factorId: mfaFactorId,
-      });
+      })
 
       setMfa({
         factorId: null,
         isEnabled: false,
-      });
-      closeMfaSheet();
+      })
+      closeMfaSheet()
     } catch (error) {
       setMfaError(
         toUserFriendlyMfaError(
           error,
-          "No se pudo desactivar la verificación en dos pasos.",
+          'No se pudo desactivar la verificación en dos pasos.',
         ),
-      );
-      setIsMfaSubmitting(false);
+      )
+      setIsMfaSubmitting(false)
     }
   }
 
   function handleToggleMfa(nextValue: boolean) {
     if (nextValue) {
-      void handleOpenMfaEnable();
-      return;
+      void handleOpenMfaEnable()
+      return
     }
 
-    setMfaCode("");
-    setMfaError(null);
-    setMfaSheet("disable");
+    setMfaCode('')
+    setMfaError(null)
+    setMfaSheet('disable')
   }
 
   async function handleSelectTimeout(value: SessionTimeoutMinutes) {
     if (!settings || !user?.id) {
-      return;
+      return
     }
 
     if (settings.sessionTimeoutMinutes === value) {
-      setTimeoutSheetOpen(false);
-      return;
+      setTimeoutSheetOpen(false)
+      return
     }
 
     const nextSettings = await updateSettings({
       patch: { session_timeout_minutes: value },
       userId: user.id,
-    });
-    replaceLocalSettings(nextSettings);
-    setTimeoutSheetOpen(false);
+    })
+    replaceLocalSettings(nextSettings)
+    setTimeoutSheetOpen(false)
   }
 
+  const mfaToggleDisabled = isMfaSubmitting || (!mfaEnabled && !canEnrollTotp)
+
   return (
-    <SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
+    <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
       <DecorativeBackground />
       <ScreenHeader
-        leftAction={{ icon: "back", onPress: () => router.back() }}
+        leftAction={{ icon: 'back', onPress: () => router.back() }}
         title="Seguridad"
       />
 
@@ -248,16 +279,19 @@ export default function SecuritySettingsScreen() {
           <View style={styles.securityRow}>
             <View style={styles.rowText}>
               <Text style={styles.rowTitle}>Verificación en dos pasos</Text>
-              <Text style={styles.rowHint}>
-                Protege tu cuenta con códigos temporales desde una app de autenticación.
-              </Text>
+              <Text style={styles.rowHint}>{mfaHint}</Text>
             </View>
             <AppSwitch
-              disabled={isMfaSubmitting}
+              disabled={mfaToggleDisabled}
               onValueChange={handleToggleMfa}
               value={mfaEnabled}
             />
           </View>
+          {!mfaEnabled && !canEnrollTotp ? (
+            <Text style={styles.inlineInfo}>
+              La activación está deshabilitada hasta que el entorno soporte TOTP.
+            </Text>
+          ) : null}
           <Row
             hint="Cierra la sesión automáticamente cuando no uses la app."
             onPress={() => setTimeoutSheetOpen(true)}
@@ -268,12 +302,16 @@ export default function SecuritySettingsScreen() {
         {mfaError ? <Text style={styles.inlineError}>{mfaError}</Text> : null}
       </ScrollView>
 
-      <BottomSheet onClose={closeMfaSheet} visible={mfaSheet === "enable"}>
+      <BottomSheet onClose={closeMfaSheet} visible={mfaSheet === 'enable'}>
         <Text style={styles.sheetTitle}>Activar verificación en dos pasos</Text>
-        <Text style={styles.sheetDescription}>1) Agrega este secreto en tu app de autenticación.</Text>
-        <Text style={styles.mfaSecret}>{enrollment?.secret ?? "--"}</Text>
-        <Text style={styles.sheetDescription}>2) Usa este código URI si tu app lo permite.</Text>
-        <Text style={styles.mfaUri}>{enrollment?.uri ?? "--"}</Text>
+        <Text style={styles.sheetDescription}>
+          1) Agrega este secreto en tu app de autenticación.
+        </Text>
+        <Text style={styles.mfaSecret}>{enrollment?.secret ?? '--'}</Text>
+        <Text style={styles.sheetDescription}>
+          2) Usa este código URI si tu app lo permite.
+        </Text>
+        <Text style={styles.mfaUri}>{enrollment?.uri ?? '--'}</Text>
         <Text style={styles.sheetDescription}>
           3) Escribe un código de 6 dígitos para confirmar.
         </Text>
@@ -288,8 +326,9 @@ export default function SecuritySettingsScreen() {
         />
         {mfaError ? <Text style={styles.error}>{mfaError}</Text> : null}
         <Pressable
+          accessibilityRole="button"
           onPress={() => {
-            void handleVerifyMfaEnable();
+            void handleVerifyMfaEnable()
           }}
           style={({ pressed }) => [
             styles.button,
@@ -298,12 +337,12 @@ export default function SecuritySettingsScreen() {
           ]}
         >
           <Text style={styles.buttonText}>
-            {isMfaSubmitting ? "Verificando..." : "Verificar y activar"}
+            {isMfaSubmitting ? 'Verificando...' : 'Verificar y activar'}
           </Text>
         </Pressable>
       </BottomSheet>
 
-      <BottomSheet onClose={closeMfaSheet} visible={mfaSheet === "disable"}>
+      <BottomSheet onClose={closeMfaSheet} visible={mfaSheet === 'disable'}>
         <Text style={styles.sheetTitle}>Desactivar verificación en dos pasos</Text>
         <Text style={styles.sheetDescription}>
           Confirma con un código actual de tu app de autenticación.
@@ -319,8 +358,9 @@ export default function SecuritySettingsScreen() {
         />
         {mfaError ? <Text style={styles.error}>{mfaError}</Text> : null}
         <Pressable
+          accessibilityRole="button"
           onPress={() => {
-            void handleDisableMfa();
+            void handleDisableMfa()
           }}
           style={({ pressed }) => [
             styles.button,
@@ -329,7 +369,7 @@ export default function SecuritySettingsScreen() {
           ]}
         >
           <Text style={styles.buttonText}>
-            {isMfaSubmitting ? "Desactivando..." : "Confirmar y desactivar"}
+            {isMfaSubmitting ? 'Desactivando...' : 'Confirmar y desactivar'}
           </Text>
         </Pressable>
       </BottomSheet>
@@ -342,9 +382,10 @@ export default function SecuritySettingsScreen() {
         <View style={styles.timeoutList}>
           {timeoutOptions.map((option) => (
             <Pressable
+              accessibilityRole="button"
               key={option.value}
               onPress={() => {
-                void handleSelectTimeout(option.value);
+                void handleSelectTimeout(option.value)
               }}
               style={({ pressed }) => [
                 styles.timeoutItem,
@@ -365,7 +406,7 @@ export default function SecuritySettingsScreen() {
         </View>
       </BottomSheet>
     </SafeAreaView>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -380,12 +421,12 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.backgroundCard,
     borderWidth: 1,
     borderColor: theme.colors.divider,
-    overflow: "hidden",
+    overflow: 'hidden',
   },
   securityRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     gap: 12,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.md,
@@ -393,20 +434,27 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.colors.divider,
   },
   row: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     gap: 12,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: theme.colors.divider,
   },
-  rowText: { flex: 1, gap: 2, maxWidth: "70%" },
-  rowTitle: { color: theme.colors.white, fontSize: 14, fontWeight: "700" },
+  rowText: { flex: 1, gap: 2, maxWidth: '70%' },
+  rowTitle: { color: theme.colors.white, fontSize: 14, fontWeight: '700' },
   rowHint: { color: theme.colors.grayLight, fontSize: 11, lineHeight: 16 },
-  rowValueWrap: { flexDirection: "row", alignItems: "center", gap: 6 },
-  rowValue: { color: theme.colors.primary, fontSize: 12, fontWeight: "700" },
+  rowValueWrap: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  rowValue: { color: theme.colors.primary, fontSize: 12, fontWeight: '700' },
+  inlineInfo: {
+    color: theme.colors.grayLight,
+    fontSize: 12,
+    lineHeight: 18,
+    paddingHorizontal: theme.spacing.md,
+    paddingBottom: theme.spacing.md,
+  },
   inlineError: {
     color: theme.colors.red,
     fontSize: 12,
@@ -417,7 +465,7 @@ const styles = StyleSheet.create({
   sheetTitle: {
     color: theme.colors.white,
     fontSize: 22,
-    fontWeight: "700",
+    fontWeight: '700',
     marginBottom: 8,
   },
   sheetDescription: {
@@ -429,7 +477,7 @@ const styles = StyleSheet.create({
   mfaSecret: {
     color: theme.colors.white,
     fontSize: 18,
-    fontWeight: "700",
+    fontWeight: '700',
     letterSpacing: 1,
     marginBottom: 10,
   },
@@ -446,9 +494,9 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.backgroundCard,
     color: theme.colors.white,
     fontSize: 24,
-    fontWeight: "800",
+    fontWeight: '800',
     letterSpacing: 6,
-    textAlign: "center",
+    textAlign: 'center',
     paddingVertical: 10,
     marginBottom: 8,
   },
@@ -456,12 +504,12 @@ const styles = StyleSheet.create({
   button: {
     minHeight: 50,
     borderRadius: 14,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: theme.colors.primary,
   },
   buttonDisabled: { opacity: 0.7 },
-  buttonText: { color: theme.colors.white, fontSize: 14, fontWeight: "700" },
+  buttonText: { color: theme.colors.white, fontSize: 14, fontWeight: '700' },
   timeoutList: {
     gap: 8,
     marginTop: 8,
@@ -472,7 +520,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.divider,
     backgroundColor: theme.colors.backgroundCard,
-    justifyContent: "center",
+    justifyContent: 'center',
     paddingHorizontal: 14,
   },
   timeoutItemActive: {
@@ -482,11 +530,11 @@ const styles = StyleSheet.create({
   timeoutText: {
     color: theme.colors.white,
     fontSize: 14,
-    fontWeight: "600",
+    fontWeight: '600',
   },
   timeoutTextActive: {
     color: theme.colors.white,
-    fontWeight: "700",
+    fontWeight: '700',
   },
   pressed: { opacity: 0.88 },
-});
+})

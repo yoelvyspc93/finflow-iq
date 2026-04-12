@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Animated, Easing, Pressable, StyleSheet } from "react-native";
+import { Animated, Easing, Platform, Pressable, StyleSheet } from "react-native";
 
 type AppSwitchProps = {
   disabled?: boolean;
@@ -78,11 +78,15 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFFFFF",
   },
   thumbActive: {
-    shadowColor: "#1D4ED8",
-    shadowOpacity: 0.22,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
     elevation: 2,
+    ...(Platform.OS === "web"
+      ? { boxShadow: "0px 2px 8px rgba(29, 78, 216, 0.22)" }
+      : {
+          shadowColor: "#1D4ED8",
+          shadowOpacity: 0.22,
+          shadowRadius: 6,
+          shadowOffset: { width: 0, height: 2 },
+        }),
   },
   pressed: {
     opacity: 0.9,

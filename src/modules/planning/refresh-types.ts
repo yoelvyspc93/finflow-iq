@@ -1,3 +1,4 @@
+import type { DashboardHealthOutput } from '@/modules/ai/types'
 import type { FinancialScore } from '@/modules/insights/score'
 import type { PlanningOverview } from '@/modules/planning/orchestrator'
 import type { BudgetProvision } from '@/modules/provisions/types'
@@ -35,6 +36,7 @@ export type PlanningResolvedData = {
 
 export type PlanningRefreshResult = {
   currentScore: FinancialScore | null
+  dashboardHealth: DashboardHealthOutput | null
   overview: PlanningOverview | null
   recentScores: FinancialScore[]
   wishProjections: WishProjection[]
