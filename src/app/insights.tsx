@@ -58,6 +58,7 @@ export default function InsightsScreen() {
           ),
         )
       : 0
+  const displayedCoverageDays = coverageDays > 365 ? '365+' : String(coverageDays)
 
   const savingsRatio =
     overview?.monthlyIncome && overview.monthlyIncome > 0
@@ -74,33 +75,39 @@ export default function InsightsScreen() {
             .slice(0, 6)
             .reverse()
             .map((item) => ({
+              id: item.weekStart,
               label: new Date(`${item.weekStart}T00:00:00.000Z`)
-                .toLocaleDateString('es-ES', { month: 'short' })
+                .toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })
                 .toUpperCase(),
               value: item.score,
             }))
         : [
             {
+              id: 'fallback-ene',
               label: 'ENE',
               value: currentScore?.breakdown.liquidity_score ?? 42,
             },
             {
+              id: 'fallback-feb',
               label: 'FEB',
               value: currentScore?.breakdown.commitment_score ?? 56,
             },
             {
+              id: 'fallback-mar',
               label: 'MAR',
               value: currentScore?.breakdown.savings_score ?? 48,
             },
             {
+              id: 'fallback-abr',
               label: 'ABR',
               value: currentScore?.breakdown.salary_stability_score ?? 62,
             },
             {
+              id: 'fallback-may',
               label: 'MAY',
               value: currentScore?.breakdown.wishlist_pressure_score ?? 58,
             },
-            { label: 'JUN', value: currentScore?.score ?? 64 },
+            { id: 'fallback-jun', label: 'JUN', value: currentScore?.score ?? 64 },
           ],
     [currentScore, recentScores],
   )
@@ -110,14 +117,14 @@ export default function InsightsScreen() {
     currentScore?.aiTip ??
     (savingsRatio > 0
       ? `Este mes tienes capacidad de ahorro equivalente a ${Math.min(savingsRatio, 100)}% de tus ingresos de referencia.`
-      : 'Tu situacion mantiene liquidez, pero aun depende de convertir dinero libre en ahorro.')
+      : 'Tu situación mantiene liquidez, pero aún depende de convertir dinero libre en ahorro.')
 
   return (
     <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
       <DecorativeBackground />
       <ScreenHeader
         leftAction={{ icon: 'back', onPress: () => router.back() }}
-        title="Analisis"
+        title="Análisis"
       />
 
       <ScrollView
@@ -174,19 +181,19 @@ export default function InsightsScreen() {
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.softText}>Tu dinero dura</Text>
-          <Text style={styles.days}>{coverageDays} dias</Text>
+          <Text style={styles.softText}>Cobertura estimada</Text>
+          <Text style={styles.days}>{displayedCoverageDays} días</Text>
         </View>
 
         <View style={styles.rowBetween}>
-          <Text style={styles.sectionTitle}>Ingresos vs Gastos</Text>
-          <Text style={styles.softText}>Ultimas 6 semanas</Text>
+          <Text style={styles.sectionTitle}>Evolución del puntaje</Text>
+          <Text style={styles.softText}>Últimas 6 semanas</Text>
         </View>
 
         <View style={styles.card}>
           <View style={styles.chart}>
             {scoreBars.map((bar) => (
-              <View key={bar.label} style={styles.chartGroup}>
+              <View key={bar.id} style={styles.chartGroup}>
                 <View style={styles.chartCols}>
                   <View
                     style={[
@@ -208,7 +215,7 @@ export default function InsightsScreen() {
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>Resumen automatico</Text>
+        <Text style={styles.sectionTitle}>Resumen automático</Text>
         <View style={styles.card}>
           <Text style={styles.bodyText}>{aiSummary}</Text>
           {dashboardHealth ? (
@@ -218,16 +225,16 @@ export default function InsightsScreen() {
                 Oportunidad principal: {dashboardHealth.mainOpportunity}
               </Text>
               <Text style={styles.bodyText}>
-                Accion inmediata: {dashboardHealth.immediateAction}
+                Acción inmediata: {dashboardHealth.immediateAction}
               </Text>
               <Text style={styles.bodyText}>
-                Accion semanal: {dashboardHealth.weeklyAction}
+                Acción semanal: {dashboardHealth.weeklyAction}
               </Text>
             </>
           ) : null}
           <Text style={styles.bodyText}>
-            Si mantienes este ritmo, podrias sostener tus compromisos por al menos{" "}
-            {Math.max(coverageDays, 30)} dias.
+            Si mantienes este ritmo, podrías sostener tus compromisos por al menos{' '}
+            {Math.max(Math.min(coverageDays, 365), 30)} días.
           </Text>
         </View>
 
@@ -252,7 +259,7 @@ export default function InsightsScreen() {
             pressed && styles.pressed,
           ]}
         >
-          <Text style={styles.backPlanningText}>Volver a Planificacion</Text>
+          <Text style={styles.backPlanningText}>Volver a Planificación</Text>
         </Pressable>
       </ScrollView>
     </SafeAreaView>

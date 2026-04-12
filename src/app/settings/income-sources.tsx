@@ -1,81 +1,86 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from 'react'
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
-} from "react-native";
+} from 'react-native'
 
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from '@expo/vector-icons'
+import { useRouter } from 'expo-router'
+import { SafeAreaView } from 'react-native-safe-area-context'
 
-import { AppAlert } from "@/components/ui/app-alert";
-import { BottomSheet } from "@/components/ui/bottom-sheet";
-import { DecorativeBackground } from "@/components/ui/decorative-background";
-import { AppSwitch } from "@/components/ui/app-switch";
-import { ScreenHeader } from "@/components/ui/screen-header";
+import { AppAlert } from '@/components/ui/app-alert'
+import { BottomSheet } from '@/components/ui/bottom-sheet'
+import { DecorativeBackground } from '@/components/ui/decorative-background'
+import { AppSwitch } from '@/components/ui/app-switch'
+import { ScreenHeader } from '@/components/ui/screen-header'
 import {
   createIncomeSource,
   deleteIncomeSource,
   getIncomeSourceReferenceSummary,
   listIncomeSources,
   updateIncomeSource,
-} from "@/modules/income-sources/service";
-import type { IncomeSource } from "@/modules/income-sources/types";
-import { useAuthStore } from "@/stores/auth-store";
-import { theme } from "@/utils/theme";
+} from '@/modules/income-sources/service'
+import type { IncomeSource } from '@/modules/income-sources/types'
+import { useAuthStore } from '@/stores/auth-store'
+import { theme } from '@/utils/theme'
 
 type AlertState = {
-  confirmLabel?: string;
-  message: string;
-  onConfirm?: () => void;
-  title: string;
-  visible: boolean;
-};
+  confirmLabel?: string
+  message: string
+  onConfirm?: () => void
+  title: string
+  visible: boolean
+}
 
 export default function IncomeSourceSettingsScreen() {
-  const router = useRouter();
-  const [incomeSources, setIncomeSources] = useState<IncomeSource[]>([]);
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [name, setName] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
-  const [referenceMap, setReferenceMap] = useState<Record<string, { totalReferences: number }>>({});
+  const router = useRouter()
+  const [incomeSources, setIncomeSources] = useState<IncomeSource[]>([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [name, setName] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [updatingId, setUpdatingId] = useState<string | null>(null)
+  const [referenceMap, setReferenceMap] = useState<Record<string, { totalReferences: number }>>({})
   const [alertState, setAlertState] = useState<AlertState>({
-    message: "",
-    title: "",
+    message: '',
+    title: '',
     visible: false,
-  });
+  })
 
-  const user = useAuthStore((state) => state.user);
+  const user = useAuthStore((state) => state.user)
   const editing = useMemo(
     () => incomeSources.find((item) => item.id === editingId) ?? null,
     [editingId, incomeSources],
-  );
+  )
 
   useEffect(() => {
     if (!user?.id) {
-      return;
+      return
     }
 
-    void listIncomeSources({ includeInactive: true, userId: user.id }).then(setIncomeSources);
-  }, [user?.id]);
+    setIsLoading(true)
+    void listIncomeSources({ includeInactive: true, userId: user.id })
+      .then(setIncomeSources)
+      .finally(() => setIsLoading(false))
+  }, [user?.id])
 
   useEffect(() => {
     if (!incomeSources.length) {
-      setReferenceMap({});
-      return;
+      setReferenceMap({})
+      return
     }
 
     if (!user?.id) {
       setReferenceMap(
         Object.fromEntries(incomeSources.map((source) => [source.id, { totalReferences: 1 }])),
-      );
-      return;
+      )
+      return
     }
 
     void Promise.allSettled(
@@ -89,35 +94,35 @@ export default function IncomeSourceSettingsScreen() {
     ).then((results) => {
       const next = Object.fromEntries(
         results.map((result, index) => {
-          if (result.status === "fulfilled") {
-            return [result.value.incomeSourceId, result.value.summary];
+          if (result.status === 'fulfilled') {
+            return [result.value.incomeSourceId, result.value.summary]
           }
 
-          return [incomeSources[index]?.id ?? `income-source-${index}`, { totalReferences: 1 }];
+          return [incomeSources[index]?.id ?? `income-source-${index}`, { totalReferences: 1 }]
         }),
-      );
+      )
 
-      setReferenceMap(next);
-    });
-  }, [incomeSources, user?.id]);
+      setReferenceMap(next)
+    })
+  }, [incomeSources, user?.id])
 
   function openCreate() {
-    setEditingId(null);
-    setName("");
-    setError(null);
-    setSheetOpen(true);
+    setEditingId(null)
+    setName('')
+    setError(null)
+    setSheetOpen(true)
   }
 
   function openEdit(item: IncomeSource) {
-    setEditingId(item.id);
-    setName(item.name);
-    setError(null);
-    setSheetOpen(true);
+    setEditingId(item.id)
+    setName(item.name)
+    setError(null)
+    setSheetOpen(true)
   }
 
   function closeSheet() {
-    setSheetOpen(false);
-    setError(null);
+    setSheetOpen(false)
+    setError(null)
   }
 
   function showInfo(title: string, message: string) {
@@ -125,32 +130,32 @@ export default function IncomeSourceSettingsScreen() {
       message,
       title,
       visible: true,
-    });
+    })
   }
 
   function closeAlert() {
     setAlertState({
-      message: "",
-      title: "",
+      message: '',
+      title: '',
       visible: false,
-    });
+    })
   }
 
   function confirmAlert() {
-    const action = alertState.onConfirm;
-    closeAlert();
-    action?.();
+    const action = alertState.onConfirm
+    closeAlert()
+    action?.()
   }
 
   async function handleSave() {
     if (!user?.id) {
-      return;
+      return
     }
 
-    const normalizedName = name.trim();
+    const normalizedName = name.trim()
     if (!normalizedName) {
-      setError("Escribe un nombre para la fuente.");
-      return;
+      setError('Escribe un nombre para la fuente.')
+      return
     }
 
     try {
@@ -159,94 +164,105 @@ export default function IncomeSourceSettingsScreen() {
           incomeSourceId: editing.id,
           patch: { name: normalizedName },
           userId: user.id,
-        });
+        })
         setIncomeSources((current) =>
           current.map((item) => (item.id === updated.id ? updated : item)),
-        );
+        )
       } else {
-        const created = await createIncomeSource({ name: normalizedName, userId: user.id });
-        setIncomeSources((current) => [...current, created]);
+        const created = await createIncomeSource({ name: normalizedName, userId: user.id })
+        setIncomeSources((current) => [...current, created])
       }
 
-      closeSheet();
+      closeSheet()
     } catch (caughtError) {
       setError(
         caughtError instanceof Error
           ? caughtError.message
-          : "No se pudo guardar la fuente de ingreso.",
-      );
+          : 'No se pudo guardar la fuente de ingreso.',
+      )
     }
   }
 
   async function handleDelete(id: string) {
     if (!user?.id) {
-      return;
+      return
     }
 
     try {
-      await deleteIncomeSource({ incomeSourceId: id, userId: user.id });
-      setIncomeSources((current) => current.filter((item) => item.id !== id));
+      await deleteIncomeSource({ incomeSourceId: id, userId: user.id })
+      setIncomeSources((current) => current.filter((item) => item.id !== id))
     } catch (caughtError) {
       showInfo(
-        "No se pudo eliminar",
+        'No se pudo eliminar',
         caughtError instanceof Error
           ? caughtError.message
-          : "La fuente tiene referencias y no puede eliminarse. Desactívala con el switch.",
-      );
+          : 'La fuente tiene referencias y no puede eliminarse. Desactívala con el switch.',
+      )
     }
   }
 
   async function handleToggleActive(source: IncomeSource, nextValue: boolean) {
     if (!user?.id) {
-      return;
+      return
     }
 
-    setUpdatingId(source.id);
+    setUpdatingId(source.id)
 
     try {
       const updated = await updateIncomeSource({
         incomeSourceId: source.id,
         patch: { isActive: nextValue },
         userId: user.id,
-      });
+      })
       setIncomeSources((current) =>
         current.map((item) => (item.id === updated.id ? updated : item)),
-      );
+      )
     } catch (caughtError) {
       showInfo(
-        "No se pudo actualizar",
+        'No se pudo actualizar',
         caughtError instanceof Error
           ? caughtError.message
-          : "No se pudo cambiar el estado de la fuente de ingreso.",
-      );
+          : 'No se pudo cambiar el estado de la fuente de ingreso.',
+      )
     } finally {
-      setUpdatingId(null);
+      setUpdatingId(null)
     }
   }
 
   function confirmDelete(source: IncomeSource) {
     setAlertState({
-      confirmLabel: "Eliminar",
-      message: `Se eliminara la fuente "${source.name}".`,
+      confirmLabel: 'Eliminar',
+      message: `Se eliminará la fuente "${source.name}".`,
       onConfirm: () => {
-        void handleDelete(source.id);
+        void handleDelete(source.id)
       },
-      title: "Eliminar fuente de ingreso",
+      title: 'Eliminar fuente de ingreso',
       visible: true,
-    });
+    })
   }
 
   return (
-    <SafeAreaView edges={["top", "bottom"]} style={styles.safeArea}>
+    <SafeAreaView edges={['top', 'bottom']} style={styles.safeArea}>
       <DecorativeBackground />
       <ScreenHeader
-        leftAction={{ icon: "back", onPress: () => router.back() }}
-        primaryAction={{ icon: "plus", onPress: openCreate }}
+        leftAction={{ icon: 'back', onPress: () => router.back() }}
+        primaryAction={{ icon: 'plus', onPress: openCreate }}
         title="Fuentes de ingreso"
       />
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.section}>
+          {isLoading ? (
+            <View style={styles.loadingState}>
+              <ActivityIndicator color={theme.colors.primary} />
+              <Text style={styles.loadingText}>Cargando fuentes de ingreso...</Text>
+            </View>
+          ) : null}
+          {!isLoading && incomeSources.length === 0 ? (
+            <View style={styles.loadingState}>
+              <Text style={styles.loadingText}>No hay fuentes de ingreso creadas.</Text>
+            </View>
+          ) : null}
           {incomeSources.map((source) => (
             <View
               key={source.id}
@@ -265,7 +281,7 @@ export default function IncomeSourceSettingsScreen() {
                 <AppSwitch
                   disabled={updatingId === source.id}
                   onValueChange={(value) => {
-                    void handleToggleActive(source, value);
+                    void handleToggleActive(source, value)
                   }}
                   value={source.isActive}
                 />
@@ -285,7 +301,7 @@ export default function IncomeSourceSettingsScreen() {
 
       <BottomSheet onClose={closeSheet} visible={sheetOpen}>
         <Text style={styles.sheetTitle}>
-          {editing ? "Editar fuente de ingreso" : "Nueva fuente de ingreso"}
+          {editing ? 'Editar fuente de ingreso' : 'Nueva fuente de ingreso'}
         </Text>
         <Text style={styles.sheetDescription}>
           Gestiona tus fuentes de ingreso personales por usuario.
@@ -304,14 +320,14 @@ export default function IncomeSourceSettingsScreen() {
 
         <Pressable onPress={() => void handleSave()} style={({ pressed }) => [styles.submitButton, pressed && styles.pressed]}>
           <Text style={styles.submitButtonText}>
-            {editing ? "Guardar fuente" : "Crear fuente"}
+            {editing ? 'Guardar fuente' : 'Crear fuente'}
           </Text>
         </Pressable>
       </BottomSheet>
 
       <AppAlert
         cancelLabel="Cancelar"
-        confirmLabel={alertState.confirmLabel ?? "Aceptar"}
+        confirmLabel={alertState.confirmLabel ?? 'Aceptar'}
         message={alertState.message}
         onCancel={closeAlert}
         onConfirm={alertState.onConfirm ? confirmAlert : undefined}
@@ -319,7 +335,7 @@ export default function IncomeSourceSettingsScreen() {
         visible={alertState.visible}
       />
     </SafeAreaView>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -330,11 +346,11 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.backgroundCard,
     borderWidth: 1,
     borderColor: theme.colors.divider,
-    overflow: "hidden",
+    overflow: 'hidden',
   },
   row: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 10,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.md,
@@ -346,13 +362,26 @@ const styles = StyleSheet.create({
   },
   dot: { width: 10, height: 10, borderRadius: 999, backgroundColor: theme.colors.grayLight },
   meta: { flex: 1, gap: 2 },
-  name: { color: theme.colors.white, fontSize: 14, fontWeight: "700" },
+  name: { color: theme.colors.white, fontSize: 14, fontWeight: '700' },
   nameInactive: { color: theme.colors.grayLight },
-  status: { color: theme.colors.grayLight, fontSize: 11, fontWeight: "700" },
-  actions: { flexDirection: "row", alignItems: "center", gap: 12 },
-  sheetTitle: { color: theme.colors.white, fontSize: 22, fontWeight: "700", marginBottom: 8 },
+  status: { color: theme.colors.grayLight, fontSize: 11, fontWeight: '700' },
+  actions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  loadingState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.lg,
+  },
+  loadingText: {
+    color: theme.colors.grayLight,
+    fontSize: 13,
+    lineHeight: 20,
+    textAlign: 'center',
+  },
+  sheetTitle: { color: theme.colors.white, fontSize: 22, fontWeight: '700', marginBottom: 8 },
   sheetDescription: { color: theme.colors.grayLight, fontSize: 13, lineHeight: 19, marginBottom: 10 },
-  label: { color: theme.colors.white, fontSize: 14, fontWeight: "700", marginBottom: 8, marginTop: 8 },
+  label: { color: theme.colors.white, fontSize: 14, fontWeight: '700', marginBottom: 8, marginTop: 8 },
   input: {
     borderRadius: 12,
     borderWidth: 1,
@@ -368,10 +397,10 @@ const styles = StyleSheet.create({
     minHeight: 50,
     borderRadius: 14,
     backgroundColor: theme.colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 18,
   },
-  submitButtonText: { color: theme.colors.white, fontSize: 14, fontWeight: "700" },
+  submitButtonText: { color: theme.colors.white, fontSize: 14, fontWeight: '700' },
   pressed: { opacity: 0.88 },
-});
+})

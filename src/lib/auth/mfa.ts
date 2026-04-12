@@ -110,24 +110,41 @@ export async function disableTotpFactor(input: {
   }
 }
 
+export function isTotpEnrollmentSupported() {
+  return process.env.EXPO_PUBLIC_SUPABASE_MFA_TOTP_ENABLED === "true";
+}
+
+export function isTotpEnrollmentDisabledError(error: unknown) {
+  const message = error instanceof Error ? error.message.toLowerCase() : "";
+
+  return (
+    message.includes("mfa enroll is disabled for totp") ||
+    (message.includes("totp") && message.includes("disabled"))
+  );
+}
+
 export function toUserFriendlyMfaError(
   error: unknown,
   fallbackMessage: string,
 ): string {
   const message = error instanceof Error ? error.message.toLowerCase() : "";
 
+  if (isTotpEnrollmentDisabledError(error)) {
+    return "La verificación en dos pasos no está disponible en este entorno todavía.";
+  }
+
   if (
     message.includes("factor") &&
     (message.includes("not found") || message.includes("invalid"))
   ) {
-    return "El factor MFA no es valido o ya no existe. Vuelve a configurarlo.";
+    return "El factor MFA no es válido o ya no existe. Vuelve a configurarlo.";
   }
 
   if (
     message.includes("challenge") &&
     (message.includes("expired") || message.includes("invalid"))
   ) {
-    return "El codigo expiro. Genera un nuevo codigo e intenta otra vez.";
+    return "El código expiró. Genera un nuevo código e intenta otra vez.";
   }
 
   if (
@@ -135,8 +152,16 @@ export function toUserFriendlyMfaError(
     message.includes("invalid code") ||
     message.includes("token has expired")
   ) {
-    return "Codigo incorrecto o expirado. Verifica la hora de tu dispositivo e intenta de nuevo.";
+    return "Código incorrecto o expirado. Verifica la hora de tu dispositivo e intenta de nuevo.";
   }
 
-  return error instanceof Error ? error.message : fallbackMessage;
+  if (
+    message.includes("failed to fetch") ||
+    message.includes("network") ||
+    message.includes("network request failed")
+  ) {
+    return "No se pudo conectar con el servidor. Intenta de nuevo.";
+  }
+
+  return fallbackMessage;
 }

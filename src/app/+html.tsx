@@ -24,8 +24,8 @@ export default function Html({ children }: { children: ReactNode }) {
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="FinFlow IQ" />
-        <link rel="manifest" href="./manifest.json" />
-        <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+        <link rel="manifest" href="/manifest.json" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <title>FinFlow IQ</title>
         <meta name="description" content="FinFlow IQ es una app de finanzas personales que te ayuda a controlar tu dinero." />
         <style>{`

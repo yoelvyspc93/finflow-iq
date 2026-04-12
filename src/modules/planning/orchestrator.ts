@@ -21,6 +21,8 @@ import type { RecurringExpense } from '@/modules/commitments/types'
 import type { Wish } from '@/modules/wishes/types'
 import type { SalaryOverview } from '@/modules/salary/calculations'
 
+export type FinancialMetricScope = 'portfolio' | 'wallet'
+
 export type PlanningOverview = {
   assignableAmount: number
   availableBalance: number
@@ -88,6 +90,58 @@ export function averageMonthlyIncome(args: {
   )
 }
 
+export function getScopedWallets(args: {
+  scope: FinancialMetricScope
+  selectedWalletId?: string | null
+  wallets: Wallet[]
+}) {
+  const activeWallets = args.wallets.filter((wallet) => wallet.isActive)
+
+  if (args.scope === 'wallet') {
+    return activeWallets.filter((wallet) => wallet.id === args.selectedWalletId)
+  }
+
+  return activeWallets
+}
+
+export function getScopedRecurringExpenses(args: {
+  recurringExpenses: RecurringExpense[]
+  scope: FinancialMetricScope
+  selectedWalletId?: string | null
+}) {
+  if (args.scope === 'wallet') {
+    return args.recurringExpenses.filter(
+      (expense) => expense.walletId === args.selectedWalletId,
+    )
+  }
+
+  return args.recurringExpenses
+}
+
+export function getScopedWishes(args: {
+  scope: FinancialMetricScope
+  selectedWalletId?: string | null
+  wishes: Wish[]
+}) {
+  if (args.scope === 'wallet') {
+    return args.wishes.filter((wish) => wish.walletId === args.selectedWalletId)
+  }
+
+  return args.wishes
+}
+
+export function calculateReserveAmount(args: {
+  monthlyCommitmentAverage: number
+  monthsWithoutPayment: number
+  savingsGoalPercent: number
+}) {
+  return (
+    args.monthsWithoutPayment *
+    args.monthlyCommitmentAverage *
+    (1 + args.savingsGoalPercent / 100)
+  )
+}
+
 export function buildPlanningOverview(args: {
   availableBalance: number
   committedAmount: number
@@ -109,6 +163,52 @@ export function buildPlanningOverview(args: {
     totalWishEstimated: args.wishProjections
       .filter((projection) => !projection.wish.isPurchased)
       .reduce((total, projection) => total + projection.wish.estimatedAmount, 0),
+  }
+}
+
+export function buildFinancialSnapshot(args: {
+  availableBalance: number
+  committedAmount: number
+  monthlyCommitmentAverage: number
+  monthlyIncome: number
+  monthsWithoutPayment: number
+  pendingSalaryAmount: number
+  savingsGoalPercent: number
+  wishProjections: WishProjection[]
+}) {
+  const reserveAmount = calculateReserveAmount({
+    monthlyCommitmentAverage: args.monthlyCommitmentAverage,
+    monthsWithoutPayment: args.monthsWithoutPayment,
+    savingsGoalPercent: args.savingsGoalPercent,
+  })
+  const assignableAmount =
+    args.availableBalance - args.committedAmount - reserveAmount
+  const breakdown = calculateFinancialScore({
+    assignableAmount,
+    availableBalance: args.availableBalance,
+    committedAmount: args.committedAmount,
+    monthlyCommitmentAverage: args.monthlyCommitmentAverage,
+    monthlyIncome: args.monthlyIncome,
+    monthsWithoutPayment: args.monthsWithoutPayment,
+    pendingSalaryAmount: args.pendingSalaryAmount,
+    savingsGoalPercent: args.savingsGoalPercent,
+    wishProjections: args.wishProjections,
+  })
+  const overview = buildPlanningOverview({
+    availableBalance: args.availableBalance,
+    committedAmount: args.committedAmount,
+    monthlyCommitmentAverage: args.monthlyCommitmentAverage,
+    monthlyIncome: args.monthlyIncome,
+    pendingSalaryAmount: args.pendingSalaryAmount,
+    reserveAmount,
+    wishProjections: args.wishProjections,
+  })
+
+  return {
+    assignableAmount,
+    breakdown,
+    overview,
+    reserveAmount,
   }
 }
 
@@ -140,11 +240,31 @@ export function evaluatePlanningState(args: {
   recurringExpenses: RecurringExpense[]
   salaryPayments: SalaryPayment[]
   salaryPeriods: SalaryPeriod[]
+  scope?: FinancialMetricScope
+  selectedWalletId?: string | null
   settings: AppSettings | null
   userId: string
   wallets: Wallet[]
   wishes: Wish[]
 }) {
+  const scope = args.scope ?? 'portfolio'
+  const scopedWalletId =
+    scope === 'wallet' ? args.selectedWalletId ?? '__missing_wallet__' : null
+  const scopedWallets = getScopedWallets({
+    scope,
+    selectedWalletId: args.selectedWalletId,
+    wallets: args.wallets,
+  })
+  const scopedRecurringExpenses = getScopedRecurringExpenses({
+    recurringExpenses: args.recurringExpenses,
+    scope,
+    selectedWalletId: args.selectedWalletId,
+  })
+  const scopedWishes = getScopedWishes({
+    scope,
+    selectedWalletId: args.selectedWalletId,
+    wishes: args.wishes,
+  })
   const salaryOverview = calculateSalaryOverview(
     args.salaryPeriods,
     args.salaryPayments,
@@ -154,21 +274,22 @@ export function evaluatePlanningState(args: {
     month: args.currentMonth,
     paymentEntries: args.paymentEntries,
     recurringExpenses: args.recurringExpenses,
-    walletId: null,
+    walletId: scopedWalletId,
   })
-  const availableBalance = args.wallets.reduce(
-    (total, wallet) => total + (wallet.isActive ? wallet.balance : 0),
+  const availableBalance = scopedWallets.reduce(
+    (total, wallet) => total + wallet.balance,
     0,
   )
-  const monthlyCommitmentAverage = averageMonthlyCommitments(args.recurringExpenses)
+  const monthlyCommitmentAverage = averageMonthlyCommitments(scopedRecurringExpenses)
   const monthlyIncome = averageMonthlyIncome({
     fallback: args.settings?.salaryReferenceAmount ?? null,
     payments: args.salaryPayments,
   })
-  const reserveAmount =
-    (args.settings?.avgMonthsWithoutPayment ?? 0) *
-    monthlyCommitmentAverage *
-    (1 + (args.settings?.savingsGoalPercent ?? 0) / 100)
+  const reserveAmount = calculateReserveAmount({
+    monthlyCommitmentAverage,
+    monthsWithoutPayment: args.settings?.avgMonthsWithoutPayment ?? 0,
+    savingsGoalPercent: args.settings?.savingsGoalPercent ?? 0,
+  })
   const assignableAmount =
     availableBalance - commitmentOverview.totalRemaining - reserveAmount
   const salaryStabilityScore = calculateSalaryStabilityScore({
@@ -184,10 +305,9 @@ export function evaluatePlanningState(args: {
     assignableAmount,
     monthlySavingCapacity,
     salaryStabilityScore,
-    wishes: args.wishes,
+    wishes: scopedWishes,
   })
-  const breakdown = calculateFinancialScore({
-    assignableAmount,
+  const snapshot = buildFinancialSnapshot({
     availableBalance,
     committedAmount: commitmentOverview.totalRemaining,
     monthlyCommitmentAverage,
@@ -197,25 +317,16 @@ export function evaluatePlanningState(args: {
     savingsGoalPercent: args.settings?.savingsGoalPercent ?? 0,
     wishProjections,
   })
-  const overview = buildPlanningOverview({
-    availableBalance,
-    committedAmount: commitmentOverview.totalRemaining,
-    monthlyCommitmentAverage,
-    monthlyIncome,
-    pendingSalaryAmount: salaryOverview.pendingTotal,
-    reserveAmount,
-    wishProjections,
-  })
   const lastCalculatedAt = args.nowIso ?? new Date().toISOString()
 
   return {
     commitmentOverview,
-    currentScoreInput: breakdown,
+    currentScoreInput: snapshot.breakdown,
     currentScorePayload: {
-      breakdown,
+      breakdown: snapshot.breakdown,
       userId: args.userId,
     },
-    overview,
+    overview: snapshot.overview,
     salaryOverview,
     salaryStabilityScore,
     wishProjectionSyncInputs: wishProjections.map((projection) => ({

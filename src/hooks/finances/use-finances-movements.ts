@@ -25,6 +25,34 @@ import {
 } from '@/modules/salary/types'
 import type { Wallet } from '@/modules/wallets/types'
 
+export type FinancesSubmitResult = {
+  errorMessage: string | null
+  handled: boolean
+  success: boolean
+}
+
+const UNHANDLED_RESULT: FinancesSubmitResult = {
+  errorMessage: null,
+  handled: false,
+  success: false,
+}
+
+function successResult(): FinancesSubmitResult {
+  return {
+    errorMessage: null,
+    handled: true,
+    success: true,
+  }
+}
+
+function errorResult(errorMessage: string): FinancesSubmitResult {
+  return {
+    errorMessage,
+    handled: true,
+    success: false,
+  }
+}
+
 export function useFinancesMovements(args: {
   activeWalletCurrency: string | null | undefined
   draft: FinancesDraft
@@ -87,7 +115,9 @@ export function useFinancesMovements(args: {
     }, [loadReferenceData]),
   )
 
-  async function submitMovementSheet(sheet: FinancesFormSheetMode) {
+  async function submitMovementSheet(
+    sheet: FinancesFormSheetMode,
+  ): Promise<FinancesSubmitResult> {
     const baseValidationError = validateFinancesBaseSubmit({
       amountText: args.draft.amount,
       selectedWalletId: args.selectedWalletId,
@@ -95,17 +125,21 @@ export function useFinancesMovements(args: {
     })
     if (baseValidationError) {
       args.setError(baseValidationError)
-      return true
+      return errorResult(baseValidationError)
     }
+
     const userId = args.userId
     const selectedWalletId = args.selectedWalletId
     if (!userId || !selectedWalletId) {
-      return true
+      const message = 'Selecciona una billetera válida.'
+      args.setError(message)
+      return errorResult(message)
     }
+
     const amount = Number(args.draft.amount)
 
     if (sheet !== 'expense' && sheet !== 'income' && sheet !== 'transfer') {
-      return false
+      return UNHANDLED_RESULT
     }
 
     args.setIsSubmitting(true)
@@ -143,12 +177,15 @@ export function useFinancesMovements(args: {
         if (transferValidationError) {
           args.setError(transferValidationError)
           args.setIsSubmitting(false)
-          return true
+          return errorResult(transferValidationError)
         }
+
         const destinationWalletId = args.draft.destinationWalletId
         if (!destinationWalletId) {
+          const message = 'Selecciona una billetera de destino.'
+          args.setError(message)
           args.setIsSubmitting(false)
-          return true
+          return errorResult(message)
         }
 
         const destinationAmount = Number(args.draft.destinationAmount || args.draft.amount)
@@ -167,22 +204,22 @@ export function useFinancesMovements(args: {
       }
 
       args.setIsSubmitting(false)
-      return true
+      return successResult()
     } catch (caughtError) {
-      args.setError(
+      const message =
         caughtError instanceof Error
           ? caughtError.message
-          : 'No se pudo completar la acción.',
-      )
+          : 'No se pudo completar la acción.'
+      args.setError(message)
       args.setIsSubmitting(false)
-      return true
+      return errorResult(message)
     }
   }
 
   async function submitSalarySheet(argsForSalary: {
     sheet: FinancesFormSheetMode
     salaryCurrency: SalaryCurrency | null
-  }) {
+  }): Promise<FinancesSubmitResult> {
     const baseValidationError = validateFinancesBaseSubmit({
       amountText: args.draft.amount,
       selectedWalletId: args.selectedWalletId,
@@ -190,28 +227,31 @@ export function useFinancesMovements(args: {
     })
     if (baseValidationError) {
       args.setError(baseValidationError)
-      return true
+      return errorResult(baseValidationError)
     }
+
     const selectedWalletId = args.selectedWalletId
     if (!selectedWalletId) {
-      return true
+      const message = 'Selecciona una billetera válida.'
+      args.setError(message)
+      return errorResult(message)
     }
-    const amount = Number(args.draft.amount)
 
+    const amount = Number(args.draft.amount)
     const { salaryCurrency, sheet } = argsForSalary
     if (sheet !== 'salary-period' && sheet !== 'salary-payment') {
-      return false
+      return UNHANDLED_RESULT
     }
 
     const salaryCurrencyError = validateSalaryCurrency(salaryCurrency)
     if (salaryCurrencyError) {
       args.setError(salaryCurrencyError)
-      return true
+      return errorResult(salaryCurrencyError)
     }
+
     if (!salaryCurrency) {
-      return true
+      return errorResult('La billetera activa debe ser USD o CUP.')
     }
-    const currency = salaryCurrency
 
     args.setIsSubmitting(true)
     args.setError(null)
@@ -222,13 +262,13 @@ export function useFinancesMovements(args: {
         if (periodValidationError) {
           args.setError(periodValidationError)
           args.setIsSubmitting(false)
-          return true
+          return errorResult(periodValidationError)
         }
 
         const periodToken = args.draft.date.slice(0, 7)
         const periodMonth = `${periodToken}-01`
         await createSalaryPeriod({
-          currency,
+          currency: salaryCurrency,
           expectedAmount: amount,
           notes: args.draft.description || undefined,
           periodMonth,
@@ -250,7 +290,7 @@ export function useFinancesMovements(args: {
         await registerSalaryPayment({
           allocations,
           amount,
-          currency,
+          currency: salaryCurrency,
           description: args.draft.description || undefined,
           paymentDate: args.draft.date,
           walletId: selectedWalletId,
@@ -259,15 +299,15 @@ export function useFinancesMovements(args: {
       }
 
       args.setIsSubmitting(false)
-      return true
+      return successResult()
     } catch (caughtError) {
-      args.setError(
+      const message =
         caughtError instanceof Error
           ? caughtError.message
-          : 'No se pudo completar la acción.',
-      )
+          : 'No se pudo completar la acción.'
+      args.setError(message)
       args.setIsSubmitting(false)
-      return true
+      return errorResult(message)
     }
   }
 

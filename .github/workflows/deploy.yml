@@ -7,17 +7,17 @@ on:
   workflow_dispatch:
     inputs:
       publish_update:
-        description: "Publicar OTA update"
+        description: 'Publicar OTA update'
         required: false
-        default: "false"
+        default: 'false'
       channel:
-        description: "Canal de EAS Update"
+        description: 'Canal de EAS Update'
         required: false
-        default: "staging"
+        default: 'staging'
       message:
-        description: "Mensaje del update"
+        description: 'Mensaje del update'
         required: false
-        default: "Manual OTA release"
+        default: 'Manual OTA release'
 
 permissions:
   contents: read
@@ -34,11 +34,16 @@ jobs:
     environment:
       name: github-pages
     env:
-      EXPO_PUBLIC_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL || secrets.EXPO_PUBLIC_SUPABASE_URL || '' }}
-      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.EXPO_PUBLIC_SUPABASE_ANON_KEY || secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || '' }}
-      EXPO_PUBLIC_WEB_URL: ${{ vars.EXPO_PUBLIC_WEB_URL || secrets.EXPO_PUBLIC_WEB_URL || 'https://yoelvyspc93.github.io/finflow-iq' }}
-      EAS_PROJECT_ID: ${{ vars.EAS_PROJECT_ID || secrets.EAS_PROJECT_ID || '' }}
-      EXPO_PUBLIC_EAS_PROJECT_ID: ${{ vars.EAS_PROJECT_ID || secrets.EAS_PROJECT_ID || '' }}
+      EXPO_PUBLIC_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL || '' }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.EXPO_PUBLIC_SUPABASE_ANON_KEY || '' }}
+      EXPO_PUBLIC_WEB_URL: ${{ vars.EXPO_PUBLIC_WEB_URL || 'https://yoelvyspc93.github.io/finflow-iq' }}
+      EAS_PROJECT_ID: ${{ vars.EAS_PROJECT_ID || '' }}
+      EXPO_PUBLIC_EAS_PROJECT_ID: ${{ vars.EAS_PROJECT_ID || '' }}
+      GROQ_API_KEY: ${{ vars.GROQ_API_KEY || '' }}
+      AI_DEFAULT_PROVIDER: ${{ vars.AI_DEFAULT_PROVIDER || '' }}
+      AI_MODEL: ${{ vars.AI_MODEL || '' }}
+      PROCESS_FINANCIAL_AI_CRON_SECRET: ${{ vars.PROCESS_FINANCIAL_AI_CRON_SECRET || '' }}
+      AI_SCOPE_MODEL_MAP: ${{ vars.AI_SCOPE_MODEL_MAP || '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -59,11 +64,16 @@ jobs:
     environment:
       name: github-pages
     env:
-      EXPO_PUBLIC_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL || secrets.EXPO_PUBLIC_SUPABASE_URL || '' }}
-      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.EXPO_PUBLIC_SUPABASE_ANON_KEY || secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY || '' }}
-      EXPO_PUBLIC_WEB_URL: ${{ vars.EXPO_PUBLIC_WEB_URL || secrets.EXPO_PUBLIC_WEB_URL || 'https://yoelvyspc93.github.io/finflow-iq' }}
-      EAS_PROJECT_ID: ${{ vars.EAS_PROJECT_ID || secrets.EAS_PROJECT_ID || '' }}
-      EXPO_PUBLIC_EAS_PROJECT_ID: ${{ vars.EAS_PROJECT_ID || secrets.EAS_PROJECT_ID || '' }}
+      EXPO_PUBLIC_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL || '' }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.EXPO_PUBLIC_SUPABASE_ANON_KEY || '' }}
+      EXPO_PUBLIC_WEB_URL: ${{ vars.EXPO_PUBLIC_WEB_URL || 'https://yoelvyspc93.github.io/finflow-iq' }}
+      EAS_PROJECT_ID: ${{ vars.EAS_PROJECT_ID || '' }}
+      EXPO_PUBLIC_EAS_PROJECT_ID: ${{ vars.EAS_PROJECT_ID || '' }}
+      GROQ_API_KEY: ${{ vars.GROQ_API_KEY || '' }}
+      AI_DEFAULT_PROVIDER: ${{ vars.AI_DEFAULT_PROVIDER || '' }}
+      AI_MODEL: ${{ vars.AI_MODEL || '' }}
+      PROCESS_FINANCIAL_AI_CRON_SECRET: ${{ vars.PROCESS_FINANCIAL_AI_CRON_SECRET || '' }}
+      AI_SCOPE_MODEL_MAP: ${{ vars.AI_SCOPE_MODEL_MAP || '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

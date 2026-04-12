@@ -1,5 +1,5 @@
 import { theme } from "@/utils/theme";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import type { SegmentedOption } from "./segmented-control";
 
@@ -26,6 +26,7 @@ export function FilterList<T extends string>({
 
         return (
           <Pressable
+            accessibilityRole="button"
             key={option.value}
             onPress={() => onChange(option.value)}
             style={[styles.segment, isActive && styles.segmentActive]}
@@ -64,11 +65,15 @@ const styles = StyleSheet.create({
   },
   segmentActive: {
     backgroundColor: theme.colors.primary,
-    shadowColor: theme.colors.primary,
-    shadowOpacity: 0.24,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
     elevation: 3,
+    ...(Platform.OS === "web"
+      ? { boxShadow: "0px 4px 12px rgba(75, 105, 255, 0.24)" }
+      : {
+          shadowColor: theme.colors.primary,
+          shadowOpacity: 0.24,
+          shadowRadius: 10,
+          shadowOffset: { width: 0, height: 4 },
+        }),
   },
   segmentText: {
     color: theme.colors.grayLight,

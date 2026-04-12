@@ -104,8 +104,8 @@ describe('finances view model', () => {
     expect(resolveActiveFinancesFormSheet('quick')).toBeNull()
     expect(resolveActiveFinancesFormSheet('income')).toBe('income')
     expect(getFinancesFormCopy('salary-payment')).toEqual({
-      submitLabel: 'Guardar Salario',
-      title: 'Registrar Salario',
+      submitLabel: 'Guardar pago',
+      title: 'Registrar pago salarial',
     })
   })
 

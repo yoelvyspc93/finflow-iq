@@ -4,7 +4,7 @@ import { Image } from "expo-image";
 
 export function DecorativeBackground() {
   return (
-    <View pointerEvents="none" style={styles.root}>
+    <View style={styles.root}>
       <Image
         contentFit="cover"
         source={require("@/assets/texture.png")}
@@ -19,6 +19,7 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     overflow: "hidden",
     backgroundColor: "#0F1223",
+    pointerEvents: "none",
   },
   texture: {
     ...StyleSheet.absoluteFillObject,

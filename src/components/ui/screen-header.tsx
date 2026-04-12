@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Platform, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { theme } from "@/utils/theme";
 import { Feather, Ionicons } from "@expo/vector-icons";
@@ -26,6 +26,13 @@ function resolveIconColor(icon: HeaderActionIcon, filled: boolean) {
   }
 
   return icon === "bell" ? theme.colors.grayLight : theme.colors.white;
+}
+
+function getActionLabel(icon: HeaderActionIcon) {
+  if (icon === "bell") return "Abrir notificaciones";
+  if (icon === "back") return "Volver";
+  if (icon === "close") return "Cerrar";
+  return "Agregar";
 }
 
 function HeaderIcon({
@@ -61,6 +68,8 @@ function ActionButton({
 
   return (
     <Pressable
+      accessibilityLabel={getActionLabel(action.icon)}
+      accessibilityRole="button"
       disabled={!action.onPress}
       onPress={action.onPress}
       style={({ pressed }) => [
@@ -172,11 +181,15 @@ const styles = StyleSheet.create({
   actionButtonFilled: {
     backgroundColor: theme.colors.primary,
     borderColor: "rgba(112, 135, 255, 0.42)",
-    shadowColor: theme.colors.primary,
-    shadowOpacity: 0.22,
-    shadowRadius: theme.radii.pill,
-    shadowOffset: { width: 0, height: 8 },
     elevation: 4,
+    ...(Platform.OS === "web"
+      ? { boxShadow: "0px 8px 22px rgba(75, 105, 255, 0.24)" }
+      : {
+          shadowColor: theme.colors.primary,
+          shadowOpacity: 0.22,
+          shadowRadius: theme.radii.pill,
+          shadowOffset: { width: 0, height: 8 },
+        }),
   },
   actionButtonDisabled: {
     opacity: 0.72,
@@ -192,10 +205,14 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
     backgroundColor: theme.colors.primary,
-    shadowColor: theme.colors.primary,
-    shadowOpacity: 0.55,
-    shadowRadius: theme.radii.pill,
-    shadowOffset: { width: 0, height: 0 },
+    ...(Platform.OS === "web"
+      ? { boxShadow: "0px 0px 12px rgba(75, 105, 255, 0.55)" }
+      : {
+          shadowColor: theme.colors.primary,
+          shadowOpacity: 0.55,
+          shadowRadius: theme.radii.pill,
+          shadowOffset: { width: 0, height: 0 },
+        }),
   },
   divider: {
     height: 1,

@@ -19,6 +19,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { DecorativeBackground } from "@/components/ui/decorative-background";
 import { ScreenHeader } from "@/components/ui/screen-header";
 import { selectActiveWallet } from "@/modules/ledger/selectors";
+import { buildFinancialSnapshot } from "@/modules/planning/orchestrator";
 import { useAppStore } from "@/stores/app-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { useCommitmentStore } from "@/stores/commitment-store";
@@ -72,8 +73,6 @@ function MetricCard({
         <Text style={styles.metricLabel}>{label}</Text>
         <Text style={styles.metricValue}>{amount}</Text>
       </View>
-
-      <Feather color="#7C89A8" name="chevron-right" size={18} />
     </View>
   );
 }
@@ -91,7 +90,8 @@ export default function DashboardScreen() {
     (state) => state.refreshCommitmentData,
   );
   const commitmentOverview = useCommitmentStore((state) => state.overview);
-  const currentScore = usePlanningStore((state) => state.currentScore);
+  const planningOverview = usePlanningStore((state) => state.overview);
+  const wishProjections = usePlanningStore((state) => state.wishProjections);
   const refreshPlanningData = usePlanningStore((state) => state.refreshPlanningData);
   const refreshSalaryData = useSalaryStore((state) => state.refreshSalaryData);
   const salaryOverview = useSalaryStore((state) => state.overview);
@@ -132,29 +132,35 @@ export default function DashboardScreen() {
 
   const effectiveSalaryOverview = salaryOverview;
   const committedAmount = commitmentOverview?.totalRemaining ?? 0;
+  const walletWishProjections = wishProjections.filter(
+    (projection) => projection.wish.walletId === selectedWalletId,
+  );
+  const walletSnapshot = buildFinancialSnapshot({
+    availableBalance: activeWallet?.balance ?? 0,
+    committedAmount,
+    monthlyCommitmentAverage: commitmentOverview?.recurringCommitted ?? 0,
+    monthlyIncome: planningOverview?.monthlyIncome ?? settings?.salaryReferenceAmount ?? 0,
+    monthsWithoutPayment: effectiveSalaryOverview?.monthsWithoutPayment ?? 0,
+    pendingSalaryAmount: effectiveSalaryOverview?.pendingTotal ?? 0,
+    savingsGoalPercent: settings?.savingsGoalPercent ?? 0,
+    wishProjections: walletWishProjections,
+  });
   const freeAmount = Math.max(0, (activeWallet?.balance ?? 0) - committedAmount);
-  const reserveAmount =
-    (commitmentOverview?.recurringCommitted ?? 0) *
-    (effectiveSalaryOverview?.monthsWithoutPayment ?? 0) *
-    (1 + (settings?.savingsGoalPercent ?? 0) / 100);
-  const assignableAmount = Math.max(0, freeAmount - reserveAmount);
+  const reserveAmount = walletSnapshot.reserveAmount;
+  const assignableAmount = Math.max(0, walletSnapshot.overview.assignableAmount);
   const liquidityRatio =
     activeWallet?.balance && activeWallet.balance > 0
       ? clamp(freeAmount / activeWallet.balance, 0, 1)
       : 0;
-  const healthScore = currentScore?.score ?? Math.round(
-    clamp(
-      38 +
-        liquidityRatio * 34 +
-        Math.min(settings?.savingsGoalPercent ?? 0, 25) -
-        (effectiveSalaryOverview?.monthsWithoutPayment ?? 0) * 3,
-      0,
-      100,
-    ),
-  );
+  const healthScore = walletSnapshot.breakdown.total_score;
   const weeklyTip =
-    currentScore?.aiTip ??
-    "Si reduces un poco los gastos variables este mes, tendras mas margen para cubrir compromisos y planificar compras.";
+    assignableAmount <= 0
+      ? "Esta billetera no tiene margen libre ahora mismo. Reduce compromisos o mueve saldo antes de planificar compras."
+      : committedAmount > (activeWallet?.balance ?? 0) * 0.7
+        ? "La mayor parte del saldo ya está comprometida. Mantén esta billetera para pagos prioritarios."
+        : `Tienes ${formatMoney(assignableAmount)} ${
+            activeWallet?.currency ?? settings?.primaryCurrency ?? "USD"
+          } disponibles para nuevas decisiones sin tocar la reserva.`;
   const budgetAlert = activeWallet?.balance
     ? Math.round(clamp((committedAmount / activeWallet.balance) * 100, 0, 100))
     : 0;
@@ -221,7 +227,7 @@ export default function DashboardScreen() {
             <View style={[styles.walletCard, styles.walletCardMuted]}>
               <Text style={styles.walletName}>Sin billeteras</Text>
               <Text style={styles.walletAmount}>USD 0.00</Text>
-              <Text style={styles.walletMeta}>Completa la configuracion inicial</Text>
+              <Text style={styles.walletMeta}>Completa la configuración inicial</Text>
             </View>
           )}
         </ScrollView>
@@ -251,7 +257,9 @@ export default function DashboardScreen() {
 
         <View style={styles.sectionRow}>
           <Text style={styles.sectionTitle}>Estado salarial</Text>
-          <Text style={styles.badge}>PENDIENTE</Text>
+          <Text style={styles.badge}>
+            {(effectiveSalaryOverview?.pendingTotal ?? 0) > 0 ? "PENDIENTE" : "AL DÍA"}
+          </Text>
         </View>
 
         <View style={styles.salaryCard}>
@@ -269,7 +277,7 @@ export default function DashboardScreen() {
                     width: `${clamp(
                       ((effectiveSalaryOverview?.pendingTotal ?? 0) /
                         Math.max((effectiveSalaryOverview?.pendingTotal ?? 0) + 1, 1)) *
-                        100,
+                      100,
                       16,
                       82,
                     )}%`,
@@ -287,7 +295,7 @@ export default function DashboardScreen() {
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>Salud financiera</Text>
+        <Text style={styles.sectionTitle}>Salud financiera de esta billetera</Text>
 
         <View style={styles.healthCard}>
           <View style={styles.ringTrack}>
@@ -310,7 +318,7 @@ export default function DashboardScreen() {
         </View>
 
         <View style={styles.sectionRow}>
-          <Text style={styles.sectionTitle}>Resumen rapido</Text>
+          <Text style={styles.sectionTitle}>Resumen rápido</Text>
           <Pressable
             onPress={() => router.push("/insights")}
             style={({ pressed }) => [styles.insightLink, pressed && styles.pressed]}
@@ -324,20 +332,24 @@ export default function DashboardScreen() {
             <View style={styles.insightIconBlue}>
               <Ionicons color="#6C83FF" name="trending-up-outline" size={15} />
             </View>
-            <Text style={styles.insightLabel}>Crecimiento</Text>
-            <Text style={styles.insightValue}>
-              +{liquidityRatio * 100 > 0 ? Math.round(liquidityRatio * 12.4) : 0}.4%
+            <Text style={styles.insightLabel}>Liquidez libre</Text>
+            <Text style={styles.insightValue}>{Math.round(liquidityRatio * 100)}%</Text>
+            <Text style={styles.insightMetaPositive}>
+              {formatMoney(freeAmount)} {activeWallet?.currency ?? settings?.primaryCurrency ?? "USD"} tras compromisos
             </Text>
-            <Text style={styles.insightMetaPositive}>+ $1,200 este mes</Text>
           </View>
 
           <View style={styles.insightCard}>
             <View style={styles.insightIconRed}>
               <Ionicons color="#FF6B6D" name="warning-outline" size={15} />
             </View>
-            <Text style={styles.insightLabel}>Alerta de presupuesto</Text>
-            <Text style={styles.insightValue}>{budgetAlert}%</Text>
-            <Text style={styles.insightMetaNegative}>Limite de ocio</Text>
+            <Text style={styles.insightLabel}>Reserva objetivo</Text>
+            <Text style={styles.insightValue}>
+              {formatMoney(reserveAmount)}
+            </Text>
+            <Text style={styles.insightMetaNegative}>
+              {budgetAlert}% del saldo comprometido este mes
+            </Text>
           </View>
         </View>
       </ScrollView>
@@ -499,7 +511,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   salaryAside: {
-    width: 82,
+    width: 100,
     alignItems: "flex-end",
     gap: 6,
   },

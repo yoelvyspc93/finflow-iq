@@ -87,11 +87,15 @@ export function BottomSheet({ children, onClose, visible }: BottomSheetProps) {
 
 const styles = StyleSheet.create({
   sheet: {
-    shadowColor: "#020617",
-    shadowOpacity: 0.44,
-    shadowRadius: 26,
-    shadowOffset: { width: 0, height: -12 },
     elevation: 16,
+    ...(Platform.OS === "web"
+      ? { boxShadow: "0px -12px 26px rgba(2, 6, 23, 0.44)" }
+      : {
+          shadowColor: "#020617",
+          shadowOpacity: 0.44,
+          shadowRadius: 26,
+          shadowOffset: { width: 0, height: -12 },
+        }),
   },
   webSheet: {
     width: "100%",

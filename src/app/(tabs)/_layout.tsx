@@ -1,65 +1,66 @@
-import { StyleSheet, View } from "react-native";
+import { StyleSheet, View } from 'react-native'
 
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { Redirect, Tabs } from "expo-router";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
+import { Redirect, Tabs } from 'expo-router'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 
-import { AppLoadingScreen } from "@/components/app/app-loading-screen";
-import { useOnboardingGuard } from "@/hooks/use-onboarding-guard";
-import { theme } from "@/utils/theme";
+import { AppLoadingScreen } from '@/components/app/app-loading-screen'
+import { useOnboardingGuard } from '@/hooks/use-onboarding-guard'
+import { theme } from '@/utils/theme'
+
 function TabGlyph({
   focused,
   icon,
 }: {
-  focused: boolean;
-  icon: "dashboard" | "finances" | "planning" | "settings";
+  focused: boolean
+  icon: 'dashboard' | 'finances' | 'planning' | 'settings'
 }) {
-  const color = focused ? theme.colors.primary : theme.colors.grayLight;
+  const color = focused ? theme.colors.primary : theme.colors.grayLight
 
   return (
     <View style={styles.tabGlyphWrap}>
-      {icon === "dashboard" ? (
-        <Ionicons color={color} name={focused ? "home" : "home-outline"} size={20} />
+      {icon === 'dashboard' ? (
+        <Ionicons color={color} name={focused ? 'home' : 'home-outline'} size={20} />
       ) : null}
-      {icon === "finances" ? (
+      {icon === 'finances' ? (
         <MaterialCommunityIcons
           color={color}
-          name={focused ? "plus-circle" : "plus-circle-outline"}
+          name={focused ? 'plus-circle' : 'plus-circle-outline'}
           size={20}
         />
       ) : null}
-      {icon === "planning" ? (
+      {icon === 'planning' ? (
         <Ionicons
           color={color}
-          name={focused ? "calendar" : "calendar-outline"}
+          name={focused ? 'calendar' : 'calendar-outline'}
           size={20}
         />
       ) : null}
-      {icon === "settings" ? (
+      {icon === 'settings' ? (
         <Ionicons
           color={color}
-          name={focused ? "settings" : "settings-outline"}
+          name={focused ? 'settings' : 'settings-outline'}
           size={20}
         />
       ) : null}
     </View>
-  );
+  )
 }
 
 export default function TabsLayout() {
-  const guard = useOnboardingGuard();
-  const insets = useSafeAreaInsets();
+  const guard = useOnboardingGuard()
+  const insets = useSafeAreaInsets()
 
   if (guard.isLoading) {
-    return <AppLoadingScreen message={guard.loadingMessage} />;
+    return <AppLoadingScreen message={guard.loadingMessage} />
   }
 
   if (guard.redirectTo) {
-    return <Redirect href={guard.redirectTo} />;
+    return <Redirect href={guard.redirectTo} />
   }
 
   if (guard.requiresOnboarding) {
-    return <Redirect href="/onboarding" />;
+    return <Redirect href="/onboarding" />
   }
 
   return (
@@ -83,28 +84,32 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="dashboard"
         options={{
-          tabBarLabel: "Inicio",
+          tabBarAccessibilityLabel: 'Ir a Inicio',
+          tabBarLabel: 'Inicio',
           tabBarIcon: ({ focused }) => <TabGlyph focused={focused} icon="dashboard" />,
         }}
       />
       <Tabs.Screen
         name="finances"
         options={{
-          tabBarLabel: "Finanzas",
+          tabBarAccessibilityLabel: 'Ir a Finanzas',
+          tabBarLabel: 'Finanzas',
           tabBarIcon: ({ focused }) => <TabGlyph focused={focused} icon="finances" />,
         }}
       />
       <Tabs.Screen
         name="planning"
         options={{
-          tabBarLabel: "Planificación",
+          tabBarAccessibilityLabel: 'Ir a Planificación',
+          tabBarLabel: 'Planificación',
           tabBarIcon: ({ focused }) => <TabGlyph focused={focused} icon="planning" />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
-          tabBarLabel: "Ajustes",
+          tabBarAccessibilityLabel: 'Ir a Ajustes',
+          tabBarLabel: 'Ajustes',
           tabBarIcon: ({ focused }) => <TabGlyph focused={focused} icon="settings" />,
         }}
       />
@@ -115,7 +120,7 @@ export default function TabsLayout() {
         }}
       />
     </Tabs>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -123,19 +128,19 @@ const styles = StyleSheet.create({
     height: 74,
     paddingTop: theme.spacing.xs,
     paddingBottom: theme.spacing.xs,
-    backgroundColor: theme.colors.background,
+    backgroundColor: theme.colors.backgroundToolbar,
     borderTopWidth: 0,
   },
   tabBarLabel: {
     fontSize: 11,
-    fontWeight: "700",
+    fontWeight: '700',
   },
   tabItem: {
     paddingVertical: 2,
   },
   tabGlyphWrap: {
     minWidth: 26,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-});
+})

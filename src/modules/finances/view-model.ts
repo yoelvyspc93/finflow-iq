@@ -25,50 +25,50 @@ export type FinancesQuickActionDescriptor = {
 const FINANCES_QUICK_ACTIONS: FinancesQuickActionDescriptor[] = [
   {
     icon: 'arrow-up-right',
-    label: 'Registrar Gasto',
+    label: 'Registrar gasto',
     sheet: 'expense',
     tone: 'red',
   },
   {
     icon: 'arrow-down-left',
-    label: 'Registrar Ingreso',
+    label: 'Registrar ingreso',
     sheet: 'income',
     tone: 'green',
   },
   {
     icon: 'repeat',
-    label: 'Transferir Moneda',
+    label: 'Transferir fondos',
     sheet: 'transfer',
     tone: 'orange',
   },
   {
     icon: 'calendar-outline',
-    label: 'Registrar Nomina',
+    label: 'Crear período salarial',
     sheet: 'salary-period',
     tone: 'blue',
   },
   {
     icon: 'wallet-outline',
-    label: 'Registrar Salario',
+    label: 'Registrar pago salarial',
     sheet: 'salary-payment',
     tone: 'blue',
   },
 ]
 
 const FORM_TITLE_BY_SHEET: Record<Exclude<FinancesFormSheetMode, null>, string> = {
-  expense: 'Registrar Gastos',
-  income: 'Registrar Ingreso',
-  'salary-payment': 'Registrar Salario',
-  'salary-period': 'Registrar Nomina',
-  transfer: 'Transferir',
+  expense: 'Registrar gasto',
+  income: 'Registrar ingreso',
+  'salary-payment': 'Registrar pago salarial',
+  'salary-period': 'Crear período salarial',
+  transfer: 'Transferir fondos',
 }
 
 const SUBMIT_LABEL_BY_SHEET: Record<Exclude<FinancesFormSheetMode, null>, string> = {
-  expense: 'Guardar Gasto',
-  income: 'Guardar Ingreso',
-  'salary-payment': 'Guardar Salario',
-  'salary-period': 'Guardar Nomina',
-  transfer: 'Guardar Transferencia',
+  expense: 'Guardar gasto',
+  income: 'Guardar ingreso',
+  'salary-payment': 'Guardar pago',
+  'salary-period': 'Guardar período',
+  transfer: 'Guardar transferencia',
 }
 
 export function asSalaryCurrency(value: string | null): SalaryCurrency | null {
